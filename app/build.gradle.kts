@@ -93,6 +93,7 @@ dependencies {
     // ── Parsers ───────────────────────────────────────────────────────────────
     implementation(libs.pdfbox.android)          // PDFs: BanReservas, Qik
     implementation(libs.poi)                     // XLS legacy HSSF: Cibao (.xls)
+    implementation(libs.poi.ooxml)               // XLSX XSSF: Cibao (.xlsx)
     implementation(libs.opencsv)                 // CSV: Popular
     implementation(libs.fastexcel)               // Exportar XLSX (escritura)
 

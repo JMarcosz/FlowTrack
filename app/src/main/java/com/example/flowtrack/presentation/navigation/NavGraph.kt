@@ -14,9 +14,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.flowtrack.presentation.components.FinanzasBottomNav
 import com.example.flowtrack.presentation.screens.configuracion.ConfiguracionScreen
 import com.example.flowtrack.presentation.screens.dashboard.DashboardScreen
+import com.example.flowtrack.presentation.screens.duplicados.DuplicadosScreen
 import com.example.flowtrack.presentation.screens.historial.HistorialScreen
 import com.example.flowtrack.presentation.screens.login.LoginScreen
 import com.example.flowtrack.presentation.screens.resumen.ResumenScreen
+import com.example.flowtrack.presentation.screens.revision.RevisionScreen
 import com.example.flowtrack.presentation.screens.tarjetas.TarjetasScreen
 import com.example.flowtrack.presentation.screens.transacciones.TransaccionesScreen
 import com.example.flowtrack.presentation.screens.upload.UploadScreen
@@ -30,6 +32,8 @@ sealed class Screen(val route: String) {
     object Configuracion  : Screen("configuracion")
     object Upload         : Screen("upload")
     object Historial      : Screen("historial")
+    object Revision       : Screen("revision")
+    object Duplicados     : Screen("duplicados")
 }
 
 private val bottomNavRoutes = setOf(
@@ -68,6 +72,8 @@ fun AppNavGraph(
             composable(Screen.Configuracion.route) { ConfiguracionScreen() }
             composable(Screen.Upload.route)        { UploadScreen(navController) }
             composable(Screen.Historial.route)     { HistorialScreen(navController) }
+            composable(Screen.Revision.route)      { RevisionScreen(navController) }
+            composable(Screen.Duplicados.route)    { DuplicadosScreen(navController) }
         }
     }
 }
