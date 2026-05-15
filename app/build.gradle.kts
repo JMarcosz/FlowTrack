@@ -2,6 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -39,17 +42,84 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            // Conflictos comunes de Apache POI, PdfBox y librerías Apache Commons
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/NOTICE.txt"
+            excludes += "/META-INF/LICENSE"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "mozilla/public-suffix-list.txt"
+        }
+    }
 }
 
 dependencies {
+
+    // ── AndroidX Core ────────────────────────────────────────────────────────
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+
+    // ── Compose ──────────────────────────────────────────────────────────────
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons)
+
+    // ── Navigation ───────────────────────────────────────────────────────────
+    implementation(libs.navigation.compose)
+
+    // ── Hilt ─────────────────────────────────────────────────────────────────
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
+
+    // ── Coroutines ───────────────────────────────────────────────────────────
+    implementation(libs.coroutines.core)
+    implementation(libs.coroutines.android)
+    implementation(libs.coroutines.play.services)
+
+    // ── Google Sign-In (Credential Manager) ──────────────────────────────────
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services)
+    implementation(libs.googleid)
+
+    // ── Parsers ───────────────────────────────────────────────────────────────
+    implementation(libs.pdfbox.android)          // PDFs: BanReservas, Qik
+    implementation(libs.poi)                     // XLS legacy HSSF: Cibao (.xls)
+    implementation(libs.opencsv)                 // CSV: Popular
+    implementation(libs.fastexcel)               // Exportar XLSX (escritura)
+
+    // ── Charts ────────────────────────────────────────────────────────────────
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
+
+    // ── Images ────────────────────────────────────────────────────────────────
+    implementation(libs.coil.compose)
+
+    // ── Local storage ─────────────────────────────────────────────────────────
+    implementation(libs.datastore.preferences)
+
+    // ── WorkManager (notificaciones programadas — Sprint 7) ───────────────────
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.androidx.compiler)
+
+    // ── Firebase ──────────────────────────────────────────────────────────────
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    // Crashlytics requiere su Gradle plugin — se agrega en Sprint 9 (release)
+    // implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
+
+    // ── Testing ───────────────────────────────────────────────────────────────
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
