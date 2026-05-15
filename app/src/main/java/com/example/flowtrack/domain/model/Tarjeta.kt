@@ -64,3 +64,5 @@ data class MovimientoTarjeta(
     val metadataBanco: Map<String, String> = emptyMap(),
     val creadoEn: Instant,
 )
+
+
