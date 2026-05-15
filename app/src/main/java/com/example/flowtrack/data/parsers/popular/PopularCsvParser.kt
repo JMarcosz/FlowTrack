@@ -105,13 +105,23 @@ class PopularCsvParser @Inject constructor() : BankParser {
                 }
                 if (fecha == null) { fallidas++; continue }
 
-                val monto: BigDecimal
-                val tipo: TipoTransaccion
-                when {
-                    debito != null && debito > BigDecimal.ZERO -> { monto = debito; tipo = TipoTransaccion.DEBITO }
-                    credito != null && credito > BigDecimal.ZERO -> { monto = credito; tipo = TipoTransaccion.CREDITO }
-                    else -> { fallidas++; continue }
+                var montoRaw: BigDecimal? = null
+                var tipoRaw: TipoTransaccion? = null
+                if (debito != null && debito > BigDecimal.ZERO) {
+                    montoRaw = debito
+                    tipoRaw = TipoTransaccion.DEBITO
+                } else if (credito != null && credito > BigDecimal.ZERO) {
+                    montoRaw = credito
+                    tipoRaw = TipoTransaccion.CREDITO
                 }
+                
+                if (montoRaw == null || tipoRaw == null) {
+                    fallidas++
+                    continue
+                }
+                
+                val monto: BigDecimal = montoRaw
+                val tipo: TipoTransaccion = tipoRaw
 
                 txs.add(TransaccionNormalizada(
                     fecha = fecha, fechaPosteo = null,

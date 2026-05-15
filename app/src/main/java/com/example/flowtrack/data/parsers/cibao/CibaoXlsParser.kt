@@ -157,39 +157,47 @@ class CibaoXlsParser @Inject constructor() : BankParser {
             val debitoStr = celdas.getOrNull(2)?.toString()?.trim() ?: ""
             val creditoStr = celdas.getOrNull(3)?.toString()?.trim() ?: ""
 
-            // Parsear fecha — puede ser string o número Excel
-            val fecha: LocalDate = when {
+            var fechaParseada: LocalDate? = null
+            when {
                 celdaFecha?.cellType == CellType.NUMERIC -> {
                     try {
-                        DateUtil.getJavaDate(celdaFecha.numericCellValue)
+                        fechaParseada = DateUtil.getJavaDate(celdaFecha.numericCellValue)
                             .toInstant().atZone(ZONA).toLocalDate()
-                    } catch (_: Exception) { fallidas++; continue }
+                    } catch (_: Exception) {}
                 }
                 else -> {
                     val fechaStr = celdaFecha?.toString()?.trim() ?: ""
-
-                    val fechaParseada = runCatching {
+                    fechaParseada = runCatching {
                         LocalDate.parse(fechaStr, dateFormatter)
                     }.getOrNull()
-
-                    if (fechaParseada == null) {
-                        fallidas++
-                        continue
-                    }
-
-                    fechaParseada
                 }
             }
 
+            if (fechaParseada == null) {
+                fallidas++
+                continue
+            }
+            val fecha: LocalDate = fechaParseada
+
             val debito = debitoStr.toBigDecimalSafe()
             val credito = creditoStr.toBigDecimalSafe()
-            val monto: BigDecimal
-            val tipoBase: TipoMovimientoTarjeta
-            when {
-                debito != null && debito > BigDecimal.ZERO -> { monto = debito; tipoBase = TipoMovimientoTarjeta.COMPRA }
-                credito != null && credito > BigDecimal.ZERO -> { monto = credito; tipoBase = TipoMovimientoTarjeta.PAGO }
-                else -> { fallidas++; continue }
+            var montoRaw: BigDecimal? = null
+            var tipoBaseRaw: TipoMovimientoTarjeta? = null
+            if (debito != null && debito > BigDecimal.ZERO) {
+                montoRaw = debito
+                tipoBaseRaw = TipoMovimientoTarjeta.COMPRA
+            } else if (credito != null && credito > BigDecimal.ZERO) {
+                montoRaw = credito
+                tipoBaseRaw = TipoMovimientoTarjeta.PAGO
             }
+            
+            if (montoRaw == null || tipoBaseRaw == null) {
+                fallidas++
+                continue
+            }
+            
+            val monto: BigDecimal = montoRaw
+            val tipoBase: TipoMovimientoTarjeta = tipoBaseRaw
 
             val descNorm = desc.uppercase().normalizarDescripcion()
             val tipo = when {
