@@ -17,3 +17,7 @@ local.properties
 /scripts/serviceAccount.json
 /app/google-services.json
 /node_modules
+nul
+NUL
+**/nul
+**/NUL
