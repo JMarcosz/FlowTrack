@@ -1,0 +1,54 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "transacciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cuentaId", "order": "ASCENDING" },
+        { "fieldPath": "fecha",    "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transacciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "bancoCodigo", "order": "ASCENDING" },
+        { "fieldPath": "fecha",       "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transacciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "categoriaId", "order": "ASCENDING" },
+        { "fieldPath": "fecha",       "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transacciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tipo",    "order": "ASCENDING" },
+        { "fieldPath": "moneda",  "order": "ASCENDING" },
+        { "fieldPath": "fecha",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "movimientosTarjeta",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tarjetaId", "order": "ASCENDING" },
+        { "fieldPath": "fechaTransaccion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reglasCategorias",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "activa",    "order": "ASCENDING" },
+        { "fieldPath": "confianza", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
