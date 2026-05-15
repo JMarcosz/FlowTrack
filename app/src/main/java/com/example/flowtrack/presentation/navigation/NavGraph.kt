@@ -14,10 +14,12 @@ import androidx.navigation.compose.rememberNavController
 import com.example.flowtrack.presentation.components.FinanzasBottomNav
 import com.example.flowtrack.presentation.screens.configuracion.ConfiguracionScreen
 import com.example.flowtrack.presentation.screens.dashboard.DashboardScreen
+import com.example.flowtrack.presentation.screens.historial.HistorialScreen
 import com.example.flowtrack.presentation.screens.login.LoginScreen
 import com.example.flowtrack.presentation.screens.resumen.ResumenScreen
 import com.example.flowtrack.presentation.screens.tarjetas.TarjetasScreen
 import com.example.flowtrack.presentation.screens.transacciones.TransaccionesScreen
+import com.example.flowtrack.presentation.screens.upload.UploadScreen
 
 sealed class Screen(val route: String) {
     object Login          : Screen("login")
@@ -26,6 +28,8 @@ sealed class Screen(val route: String) {
     object Resumen        : Screen("resumen")
     object Tarjetas       : Screen("tarjetas")
     object Configuracion  : Screen("configuracion")
+    object Upload         : Screen("upload")
+    object Historial      : Screen("historial")
 }
 
 private val bottomNavRoutes = setOf(
@@ -57,11 +61,13 @@ fun AppNavGraph(
             exitTransition   = { fadeOut(fadeSpec) },
         ) {
             composable(Screen.Login.route)         { LoginScreen(navController) }
-            composable(Screen.Dashboard.route)     { DashboardScreen() }
+            composable(Screen.Dashboard.route)     { DashboardScreen(navController) }
             composable(Screen.Transacciones.route) { TransaccionesScreen() }
             composable(Screen.Resumen.route)       { ResumenScreen() }
             composable(Screen.Tarjetas.route)      { TarjetasScreen() }
             composable(Screen.Configuracion.route) { ConfiguracionScreen() }
+            composable(Screen.Upload.route)        { UploadScreen(navController) }
+            composable(Screen.Historial.route)     { HistorialScreen(navController) }
         }
     }
 }
