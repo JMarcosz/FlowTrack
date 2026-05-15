@@ -22,6 +22,7 @@ import com.example.flowtrack.presentation.screens.revision.RevisionScreen
 import com.example.flowtrack.presentation.screens.tarjetas.TarjetasScreen
 import com.example.flowtrack.presentation.screens.transacciones.TransaccionesScreen
 import com.example.flowtrack.presentation.screens.conversor.ConversorScreen
+import com.example.flowtrack.presentation.screens.sugerencias.SugerenciasScreen
 import com.example.flowtrack.presentation.screens.upload.UploadScreen
 
 sealed class Screen(val route: String) {
@@ -36,6 +37,7 @@ sealed class Screen(val route: String) {
     object Revision       : Screen("revision")
     object Duplicados     : Screen("duplicados")
     object Conversor      : Screen("conversor")
+    object Sugerencias    : Screen("sugerencias")
 }
 
 private val bottomNavRoutes = setOf(
@@ -77,6 +79,7 @@ fun AppNavGraph(
             composable(Screen.Revision.route)      { RevisionScreen(navController) }
             composable(Screen.Duplicados.route)    { DuplicadosScreen(navController) }
             composable(Screen.Conversor.route)     { ConversorScreen() }
+            composable(Screen.Sugerencias.route)   { SugerenciasScreen() }
         }
     }
 }
