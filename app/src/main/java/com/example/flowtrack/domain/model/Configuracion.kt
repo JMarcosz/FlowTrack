@@ -9,6 +9,7 @@ data class ConfiguracionUsuario(
     val formatoFecha: String = "dd/MM/yyyy",
     val formatoMoneda: String = "RD$ 0.00",
     val monedaPredeterminada: Moneda = Moneda.DOP,
+    val temaOscuro: Boolean = false,
     val ultimoBackup: Instant? = null,
 )
 
