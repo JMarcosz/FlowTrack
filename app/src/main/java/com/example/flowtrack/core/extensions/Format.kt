@@ -81,9 +81,10 @@ fun formatDateRelative(date: LocalDate): String {
  * Ejemplo: "RD$ 42,850.00" → BigDecimal("42850.00")
  */
 fun String.toBigDecimalSafe(): BigDecimal? {
+    // Quitar prefijos de moneda (RD$, US$), comas y espacios
     val cleaned = this
-        .replace(Regex("[RDrd$US\\s]"), "") // quitar prefijos de moneda
-        .replace(",", "")                   // separador de miles
+        .replace("RD$", "").replace("US$", "")
+        .replace(Regex("[,\\s]"), "")
         .trim()
     return try {
         if (cleaned.isEmpty()) null else BigDecimal(cleaned)
