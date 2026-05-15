@@ -82,8 +82,9 @@ fun formatDateRelative(date: LocalDate): String {
  */
 fun String.toBigDecimalSafe(): BigDecimal? {
     // Quitar prefijos de moneda (RD$, US$), comas y espacios
+    // Nota: en Kotlin, $ dentro de strings debe escaparse como \$
     val cleaned = this
-        .replace("RD$", "").replace("US$", "")
+        .replace("RD\$", "").replace("US\$", "")
         .replace(Regex("[,\\s]"), "")
         .trim()
     return try {
