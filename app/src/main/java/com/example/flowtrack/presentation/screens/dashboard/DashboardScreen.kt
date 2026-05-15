@@ -1,51 +1,187 @@
 package com.example.flowtrack.presentation.screens.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CloudUpload
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.flowtrack.core.extensions.formatMoney
+import com.example.flowtrack.domain.model.Cuenta
+import com.example.flowtrack.domain.model.TipoTransaccion
+import com.example.flowtrack.domain.model.Transaccion
+import com.example.flowtrack.presentation.components.DonutChart
+import com.example.flowtrack.presentation.components.DonutSlice
+import com.example.flowtrack.presentation.components.StatCard
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Spacing
-import com.example.flowtrack.ui.theme.TextSecondary
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardScreen(
+    navController: NavController? = null,
+    viewModel: DashboardViewModel = hiltViewModel()
+) {
+    val estado by viewModel.estado.collectAsState()
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController?.navigate(Screen.Upload.route) }) {
+                Icon(Icons.Default.Add, contentDescription = "Importar")
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            when (val st = estado) {
+                is DashboardEstado.Cargando -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                is DashboardEstado.Error -> {
+                    Text(
+                        text = st.mensaje,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                is DashboardEstado.Exito -> {
+                    DashboardContent(st, navController)
+                }
+            }
+        }
+    }
+}
 
 @Composable
-fun DashboardScreen(navController: NavController? = null) {
-    Box(
-        modifier         = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
+private fun DashboardContent(
+    estado: DashboardEstado.Exito,
+    navController: NavController?
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Text("Inicio", style = MaterialTheme.typography.titleLarge)
-            Text(
-                "Importa tu primer estado de cuenta",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
-            )
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = { navController?.navigate(Screen.Upload.route) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2F6FED)),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Icon(Icons.Outlined.CloudUpload, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Importar estado de cuenta", fontWeight = FontWeight.SemiBold)
+        item {
+            Spacer(modifier = Modifier.height(Spacing.md))
+            Text("Resumen del Mes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                StatCard(
+                    label = "Gastos Actuales",
+                    value = formatMoney(estado.comparativa.gastoActual),
+                    modifier = Modifier.weight(1f)
+                )
+                
+                val perc = estado.comparativa.porcentaje?.let { "%.1f%%".format(it) } ?: "N/A"
+                val percStr = if (estado.comparativa.esIncremento) "+$perc" else "-$perc"
+                val percColor = if (estado.comparativa.esIncremento) Color.Red else Color(0xFF00C853)
+                
+                StatCard(
+                    label = "vs Mes Anterior",
+                    value = percStr,
+                    valueColor = if (estado.comparativa.porcentaje != null) percColor else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
             }
+        }
+
+        item {
+            Text("Categorías", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            
+            val gastosPorCategoria = estado.transaccionesMes
+                .filter { it.tipo == TipoTransaccion.DEBITO }
+                .groupBy { it.categoriaId ?: "Sin Categorizar" }
+                .mapValues { (_, txs) -> txs.sumOf { it.monto } }
+                .toList()
+                .sortedByDescending { it.second }
+                .take(5)
+            
+            val colors = listOf(Color(0xFF2F6FED), Color(0xFFE91E63), Color(0xFFFF9800), Color(0xFF4CAF50), Color(0xFF9C27B0))
+            val slices = gastosPorCategoria.mapIndexed { index, pair ->
+                DonutSlice(pair.second.toFloat(), colors[index % colors.size], pair.first)
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                DonutChart(
+                    slices = slices,
+                    modifier = Modifier.size(140.dp),
+                    centerText = "Total",
+                    strokeWidth = 30f
+                )
+                Spacer(modifier = Modifier.width(Spacing.md))
+                Column {
+                    slices.forEach { slice ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(slice.color))
+                            Spacer(modifier = Modifier.width(Spacing.xs))
+                            Text(slice.label, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+            }
+        }
+
+        item {
+            Text("Tus Cuentas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        }
+
+        if (estado.cuentas.isEmpty()) {
+            item {
+                Text(
+                    "No hay cuentas configuradas o sincronizadas.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            items(estado.cuentas) { cuenta ->
+                CuentaItem(cuenta)
+                Spacer(modifier = Modifier.height(Spacing.sm))
+            }
+        }
+        
+        item {
+            Spacer(modifier = Modifier.height(Spacing.xl))
+        }
+    }
+}
+
+@Composable
+fun CuentaItem(cuenta: Cuenta) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Outlined.AccountBalance, contentDescription = null, modifier = Modifier.size(32.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(cuenta.alias, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(cuenta.bancoCodigo, style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                cuenta.balanceActual?.let { formatMoney(it) } ?: "RD$ 0.00",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
