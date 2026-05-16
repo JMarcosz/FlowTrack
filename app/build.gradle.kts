@@ -42,6 +42,9 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true   // allows Android Log, etc. in JVM unit tests
+    }
     packaging {
         resources {
             // Conflictos comunes de Apache POI, PdfBox y librerías Apache Commons
@@ -123,6 +126,8 @@ dependencies {
     // ── Testing ───────────────────────────────────────────────────────────────
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

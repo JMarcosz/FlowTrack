@@ -2,6 +2,7 @@ package com.example.flowtrack.data.firestore.repositories
 
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
+import com.example.flowtrack.data.firestore.mappers.toDto
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.OrigenTasa
@@ -10,6 +11,7 @@ import com.example.flowtrack.domain.model.EstadoTarjeta
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 import java.math.BigDecimal
 import java.time.Instant
@@ -96,6 +98,43 @@ class TarjetaRepository @Inject constructor(
             AppResult.Success(estados)
         } catch (e: Exception) {
             AppResult.Error(ErrorApp.FirestoreError("Error al cargar historial de la tarjeta: ${e.message}", e))
+        }
+    }
+
+    suspend fun guardarTarjeta(tarjeta: Tarjeta): AppResult<Unit> {
+        return try {
+            firestore.collection("usuarios").document(tarjeta.uidUsuario)
+                .collection("tarjetas").document(tarjeta.id)
+                .set(tarjeta.toDto())
+                .await()
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error al guardar tarjeta: ${e.message}", e))
+        }
+    }
+
+    suspend fun actualizarTarjeta(tarjeta: Tarjeta): AppResult<Unit> {
+        return try {
+            firestore.collection("usuarios").document(tarjeta.uidUsuario)
+                .collection("tarjetas").document(tarjeta.id)
+                .set(tarjeta.toDto(), SetOptions.merge())
+                .await()
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error al actualizar tarjeta: ${e.message}", e))
+        }
+    }
+
+    /** Soft-delete: marca la tarjeta como inactiva. */
+    suspend fun eliminarTarjeta(uid: String, tarjetaId: String): AppResult<Unit> {
+        return try {
+            firestore.collection("usuarios").document(uid)
+                .collection("tarjetas").document(tarjetaId)
+                .update("activa", false)
+                .await()
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error al eliminar tarjeta: ${e.message}", e))
         }
     }
 }

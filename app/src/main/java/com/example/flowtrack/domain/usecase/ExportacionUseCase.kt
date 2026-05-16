@@ -29,7 +29,7 @@ class ExportacionUseCase @Inject constructor(
         
         val transacciones = (result as AppResult.Success).data
         if (transacciones.isEmpty()) {
-            return AppResult.Error(ErrorApp.UnknownError("No hay transacciones en el rango seleccionado."))
+            return AppResult.Error(ErrorApp.Desconocido("No hay transacciones en el rango seleccionado."))
         }
 
         return try {
@@ -43,7 +43,7 @@ class ExportacionUseCase @Inject constructor(
             val zona = ZoneId.of("America/Santo_Domingo")
 
             for (tx in transacciones) {
-                val fechaStr = formatDate(tx.fechaTransaccion.atZone(zona).toLocalDate())
+                val fechaStr = formatDate(tx.fecha.atZone(zona).toLocalDate())
                 val tipo = if (tx.tipo == TipoTransaccion.CREDITO) "Ingreso" else "Gasto"
                 val catNombre = tx.categoriaId?.let { categoriaRegistry[it]?.nombre } ?: "Sin Categorizar"
                 
@@ -62,7 +62,7 @@ class ExportacionUseCase @Inject constructor(
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
             AppResult.Success(uri)
         } catch (e: Exception) {
-            AppResult.Error(ErrorApp.UnknownError("Error generando CSV: ${e.message}", e))
+            AppResult.Error(ErrorApp.Desconocido("Error generando CSV: ${e.message}", e))
         }
     }
 }

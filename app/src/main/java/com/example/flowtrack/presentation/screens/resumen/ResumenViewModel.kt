@@ -39,10 +39,6 @@ class ResumenViewModel @Inject constructor(
     )
     val state: StateFlow<ResumenState> = _state
 
-    init {
-        cargarResumen()
-    }
-
     fun setFechas(inicio: LocalDate, fin: LocalDate) {
         _state.value = _state.value.copy(fechaInicio = inicio, fechaFin = fin)
         cargarResumen()
@@ -66,7 +62,7 @@ class ResumenViewModel @Inject constructor(
         setFechas(inicio, fin)
     }
 
-    private fun cargarResumen() {
+    fun cargarResumen() {
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)

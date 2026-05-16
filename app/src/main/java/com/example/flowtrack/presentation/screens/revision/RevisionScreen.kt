@@ -25,6 +25,20 @@ import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.data.parsers.core.TransaccionNormalizada
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.presentation.navigation.Screen
+import com.example.flowtrack.ui.theme.BgScreen
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Income
+import com.example.flowtrack.ui.theme.Income50
+import com.example.flowtrack.ui.theme.Ink
+import com.example.flowtrack.ui.theme.Line
+import com.example.flowtrack.ui.theme.Line2
+import com.example.flowtrack.ui.theme.Muted
+import com.example.flowtrack.ui.theme.Muted2
+import com.example.flowtrack.ui.theme.Primary
+import com.example.flowtrack.ui.theme.Primary50
+import com.example.flowtrack.ui.theme.TabularNumber
+import com.example.flowtrack.ui.theme.TextBody
+import com.example.flowtrack.ui.theme.Warning
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +49,7 @@ fun RevisionScreen(
     val estado by viewModel.estado.collectAsState()
 
     Scaffold(
-        containerColor = Color(0xFFF4F6FA),
+        containerColor = BgScreen,
         topBar = {
             TopAppBar(
                 title = { Text("Revisar importación", fontWeight = FontWeight.SemiBold) },
@@ -44,13 +58,13 @@ fun RevisionScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF4F6FA)),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
             )
         },
         bottomBar = {
             if (estado is RevisionEstado.Listo) {
                 val listo = estado as RevisionEstado.Listo
-                Surface(shadowElevation = 8.dp, color = Color.White) {
+                Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
                     Row(
                         Modifier.fillMaxWidth().padding(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -62,7 +76,7 @@ fun RevisionScreen(
                         ) { Text("Cancelar") }
                         Button(
                             onClick = { viewModel.confirmar() },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2F6FED)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                         ) { Text("Confirmar (${listo.transacciones.size})", fontWeight = FontWeight.SemiBold) }
@@ -90,8 +104,8 @@ fun RevisionScreen(
 private fun LoadingContent(modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CircularProgressIndicator(color = Color(0xFF2F6FED))
-            Text("Analizando archivo...", color = Color(0xFF64748B))
+            CircularProgressIndicator(color = Primary)
+            Text("Analizando archivo...", color = Muted)
         }
     }
 }
@@ -99,7 +113,7 @@ private fun LoadingContent(modifier: Modifier) {
 @Composable
 private fun ErrorContent(mensaje: String, modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(mensaje, color = Color(0xFFDC2626), textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
+        Text(mensaje, color = Expense, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
     }
 }
 
@@ -139,7 +153,7 @@ private fun RevisionContent(
                 "Transacciones (${estado.transacciones.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF0F172A),
+                color = Ink,
             )
         }
 
@@ -156,28 +170,28 @@ private fun RevisionContent(
 private fun ResumenCargaCard(estado: RevisionEstado.Listo) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 1.dp,
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(
-                    Modifier.size(40.dp).background(Color(0xFFEAF1FE), RoundedCornerShape(10.dp)),
+                    Modifier.size(40.dp).background(Primary50, RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Outlined.Description, null, tint = Color(0xFF2F6FED), modifier = Modifier.size(20.dp)) }
+                ) { Icon(Icons.Outlined.Description, null, tint = Primary, modifier = Modifier.size(20.dp)) }
                 Column {
-                    Text(estado.nombreArchivo, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(estado.banco, style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B))
+                    Text(estado.nombreArchivo, fontWeight = FontWeight.SemiBold, color = Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(estado.banco, style = MaterialTheme.typography.bodySmall, color = Muted)
                 }
             }
-            HorizontalDivider(color = Color(0xFFE2E8F0))
+            HorizontalDivider(color = Line)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 StatMini("Transacciones", "${estado.transacciones.size}")
                 StatMini("Débitos", formatMoney(estado.totalDebitos))
                 StatMini("Créditos", formatMoney(estado.totalCreditos))
             }
             if (estado.periodo.isNotBlank()) {
-                Text(estado.periodo, style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B))
+                Text(estado.periodo, style = MaterialTheme.typography.bodySmall, color = Muted)
             }
         }
     }
@@ -186,8 +200,8 @@ private fun ResumenCargaCard(estado: RevisionEstado.Listo) {
 @Composable
 private fun StatMini(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A), fontSize = 13.sp)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8), fontSize = 10.sp)
+        Text(value, fontWeight = FontWeight.Bold, color = Ink, fontSize = 13.sp, style = TabularNumber)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = Muted2, fontSize = 10.sp)
     }
 }
 
@@ -199,22 +213,22 @@ private fun DuplicadosAlertCard(duplicados: Int, onVer: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(Icons.Outlined.Warning, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.Warning, null, tint = Warning, modifier = Modifier.size(20.dp))
             Column(Modifier.weight(1f)) {
                 Text("Posibles duplicados: $duplicados", fontWeight = FontWeight.SemiBold, color = Color(0xFF92400E), fontSize = 13.sp)
                 Text("Toca para ver detalles", style = MaterialTheme.typography.bodySmall, color = Color(0xFFA16207))
             }
-            Icon(Icons.Outlined.ChevronRight, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.ChevronRight, null, tint = Warning, modifier = Modifier.size(16.dp))
         }
     }
 }
 
 @Composable
 private fun AdvertenciasCard(advertencias: List<String>) {
-    Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFF8FAFC)) {
+    Surface(shape = RoundedCornerShape(12.dp), color = Line2) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Advertencias del parser", fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B), fontSize = 12.sp)
-            advertencias.forEach { adv -> Text("• $adv", style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8)) }
+            Text("Advertencias del parser", fontWeight = FontWeight.SemiBold, color = Muted, fontSize = 12.sp)
+            advertencias.forEach { adv -> Text("• $adv", style = MaterialTheme.typography.bodySmall, color = Muted2) }
         }
     }
 }
@@ -222,31 +236,31 @@ private fun AdvertenciasCard(advertencias: List<String>) {
 @Composable
 private fun TransaccionRevisionRow(tx: TransaccionNormalizada) {
     val esCredito = tx.tipo == TipoTransaccion.CREDITO
-    val colorMonto = if (esCredito) Color(0xFF16A34A) else Color(0xFF0F172A)
+    val colorMonto = if (esCredito) Income else Ink
     val signo = if (esCredito) "+" else "-"
 
-    Surface(shape = RoundedCornerShape(12.dp), color = Color.White, shadowElevation = 0.5.dp) {
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 0.5.dp) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(
-                Modifier.size(36.dp).background(if (esCredito) Color(0xFFE7F7EC) else Color(0xFFEEF1F5), RoundedCornerShape(10.dp)),
+                Modifier.size(36.dp).background(if (esCredito) Income50 else Line2, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     if (esCredito) Icons.Outlined.ArrowDownward else Icons.Outlined.ArrowUpward,
                     null,
-                    tint = if (esCredito) Color(0xFF16A34A) else Color(0xFF334155),
+                    tint = if (esCredito) Income else TextBody,
                     modifier = Modifier.size(16.dp),
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text(tx.descripcionCorta, fontWeight = FontWeight.Medium, color = Color(0xFF0F172A), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(tx.fecha.toString(), style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8))
+                Text(tx.descripcionCorta, fontWeight = FontWeight.Medium, color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(tx.fecha.toString(), style = MaterialTheme.typography.bodySmall, color = Muted2)
             }
-            Text("$signo ${formatMoney(tx.monto)}", fontWeight = FontWeight.SemiBold, color = colorMonto, fontSize = 13.sp)
+            Text("$signo ${formatMoney(tx.monto)}", fontWeight = FontWeight.SemiBold, color = colorMonto, fontSize = 13.sp, style = TabularNumber)
         }
     }
 }

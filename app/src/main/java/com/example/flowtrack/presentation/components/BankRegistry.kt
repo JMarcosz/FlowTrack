@@ -1,6 +1,12 @@
 package com.example.flowtrack.presentation.components
 
 import androidx.compose.ui.graphics.Color
+import com.example.flowtrack.ui.theme.BancoBanReservas
+import com.example.flowtrack.ui.theme.BancoBhd
+import com.example.flowtrack.ui.theme.BancoCibao
+import com.example.flowtrack.ui.theme.BancoPopular
+import com.example.flowtrack.ui.theme.BancoQik
+import com.example.flowtrack.ui.theme.Muted
 
 data class BancoUI(
     val codigo: String,
@@ -9,12 +15,12 @@ data class BancoUI(
 )
 
 val bancoRegistry: Map<String, BancoUI> = listOf(
-    BancoUI("BANRESERVAS", "BanReservas",      Color(0xFF005DA8)),
-    BancoUI("POPULAR",     "Banco Popular",    Color(0xFF005CAA)),
-    BancoUI("QIK",         "Qik",              Color(0xFF0099E5)),
-    BancoUI("CIBAO",       "Asociación Cibao", Color(0xFFE30613)),
-    BancoUI("BHD",         "BHD",              Color(0xFF003F7F)),
+    BancoUI("BANRESERVAS", "BanReservas",      BancoBanReservas),
+    BancoUI("POPULAR",     "Banco Popular",    BancoPopular),
+    BancoUI("QIK",         "Qik",              BancoQik),
+    BancoUI("CIBAO",       "Asociación Cibao", BancoCibao),
+    BancoUI("BHD",         "BHD (próximamente)", BancoBhd),
 ).associateBy { it.codigo }
 
 fun bancoPorCodigo(codigo: String): BancoUI =
-    bancoRegistry[codigo] ?: BancoUI(codigo, codigo, Color(0xFF4A5A70))
+    bancoRegistry[codigo] ?: BancoUI(codigo, codigo, Muted)

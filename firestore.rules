@@ -8,14 +8,8 @@ service cloud.firestore {
     function isOwner(uid) {
       return isAuth() && request.auth.uid == uid;
     }
-    function isValidString(field, maxLen) {
-      return field is string && field.size() > 0 && field.size() <= maxLen;
-    }
-    function isPositiveNumber(field) {
-      return field is number && field >= 0;
-    }
 
-    // ── Catálogos públicos (solo lectura autenticada) ─────────────────────────
+    // ── Catálogos públicos (solo lectura autenticada, escritura bloqueada) ────
 
     match /catalogoBancos/{codigo} {
       allow read: if isAuth();
@@ -32,81 +26,21 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Tasas de cambio: cualquier usuario autenticado puede leer y cachear
     match /tasasCambio/{fecha} {
       allow read: if isAuth();
       allow write: if isAuth();
     }
 
-    // ── Datos de usuario (aislados por uid) ───────────────────────────────────
+    // ── Datos de usuario: el owner tiene acceso completo a toda su jerarquía ─
+    // La validación de integridad de datos es responsabilidad del cliente
+    // (parsers + mappers + use cases en Kotlin). Las reglas solo garantizan
+    // aislamiento por uid.
 
     match /usuarios/{uid} {
       allow read, write: if isOwner(uid);
 
-      match /configuracion/{docId} {
-        allow read, write: if isOwner(uid)
-                           && docId in ['preferencias', 'notificaciones'];
-      }
-
-      match /cuentas/{cuentaId} {
-        allow read: if isOwner(uid);
-        allow create: if isOwner(uid)
-                      && isValidString(request.resource.data.bancoCodigo, 50)
-                      && isValidString(request.resource.data.numeroCuenta, 50);
-        allow update, delete: if isOwner(uid);
-      }
-
-      match /tarjetas/{tarjetaId} {
-        allow read: if isOwner(uid);
-        allow create: if isOwner(uid)
-                      && isValidString(request.resource.data.bancoCodigo, 50)
-                      && isValidString(request.resource.data.ultimos4, 4)
-                      && isPositiveNumber(request.resource.data.limiteCredito);
-        allow update, delete: if isOwner(uid);
-      }
-
-      match /transacciones/{txId} {
-        allow read: if isOwner(uid);
-        allow create: if isOwner(uid)
-                      && request.resource.data.monto is number
-                      && request.resource.data.fecha is timestamp;
-        // Solo se permite editar categoría y nota; el resto es inmutable
-        allow update: if isOwner(uid)
-                      && request.resource.data.diff(resource.data)
-                         .affectedKeys()
-                         .hasOnly(['categoriaId', 'categoriaAutomatica', 'notaUsuario']);
-        allow delete: if isOwner(uid);
-      }
-
-      match /movimientosTarjeta/{movId} {
-        allow read: if isOwner(uid);
-        allow create, update, delete: if isOwner(uid);
-      }
-
-      match /estadosTarjeta/{estadoId} {
-        allow read: if isOwner(uid);
-        allow create, update, delete: if isOwner(uid);
-      }
-
-      match /reglasCategorias/{reglaId} {
+      match /{coleccion}/{docId} {
         allow read, write: if isOwner(uid);
-      }
-
-      match /reglasSugeridas/{reglaId} {
-        allow read: if isOwner(uid);
-        allow create: if isOwner(uid);
-        // Solo se puede actualizar aceptada/resueltaEn (resolución de la sugerencia)
-        allow update: if isOwner(uid)
-                      && request.resource.data.diff(resource.data)
-                         .affectedKeys()
-                         .hasOnly(['aceptada', 'resueltaEn']);
-        allow delete: if isOwner(uid);
-      }
-
-      match /cargas/{cargaId} {
-        allow read: if isOwner(uid);
-        allow create: if isOwner(uid);
-        allow update, delete: if false; // inmutable — auditoría
       }
     }
   }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +22,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.flowtrack.core.extensions.formatDate
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.presentation.components.categoriaRegistry
+import com.example.flowtrack.presentation.components.EmptyState
+import com.example.flowtrack.presentation.components.ResumenShimmerItem
+import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Spacing
 import java.time.Instant
 import java.time.LocalDate
@@ -31,6 +35,7 @@ import java.time.ZoneOffset
 @Composable
 fun ResumenScreen(viewModel: ResumenViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
+    LaunchedEffect(Unit) { viewModel.cargarResumen() }
     var showDatePicker by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -77,7 +82,7 @@ fun ResumenScreen(viewModel: ResumenViewModel = hiltViewModel()) {
                                 state.resumen?.ingresosTotales?.let { formatMoney(it) } ?: "RD$ 0.00",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF00C853)
+                                color = Income
                             )
                         }
                     }
@@ -93,10 +98,18 @@ fun ResumenScreen(viewModel: ResumenViewModel = hiltViewModel()) {
             }
 
             if (state.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                Column(modifier = Modifier.fillMaxSize()) {
+                    repeat(5) { ResumenShimmerItem() }
                 }
             } else if (state.resumen != null) {
+                if (state.resumen!!.porCategoria.isEmpty() && state.tabSeleccionado == 0 || state.resumen!!.porBanco.isEmpty() && state.tabSeleccionado == 1) {
+                    EmptyState(
+                        icon = Icons.Outlined.BarChart,
+                        title = "Sin Datos",
+                        description = "No hay datos para resumir en este rango de fechas.",
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.md),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -113,9 +126,11 @@ fun ResumenScreen(viewModel: ResumenViewModel = hiltViewModel()) {
                         }
                     }
                 }
+                }
             }
         }
     }
+
 
     if (showDatePicker) {
         val dateRangePickerState = rememberDateRangePickerState(

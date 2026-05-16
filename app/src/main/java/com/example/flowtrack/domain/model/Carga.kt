@@ -10,8 +10,6 @@ data class Carga(
     val tamanioBytes: Long,
     val mimeType: String?,
     val bancoCodigo: String,
-    val bancoDetectadoAutomaticamente: Boolean,
-    val confianzaDeteccion: Float,
     val parserVersion: Int,
     val tipoDocumento: TipoDocumento,
     val cuentaId: String?,
@@ -23,4 +21,5 @@ data class Carga(
     val advertencias: List<String> = emptyList(),
     val estado: EstadoCarga,
     val procesadoEn: Instant,
+    val eliminadoEn: Instant? = null,
 )

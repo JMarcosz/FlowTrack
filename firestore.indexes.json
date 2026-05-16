@@ -34,11 +34,52 @@
       ]
     },
     {
+      "collectionGroup": "transacciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uidUsuario", "order": "ASCENDING" },
+        { "fieldPath": "fecha",      "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transacciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "transaccionPadreId", "order": "ASCENDING" },
+        { "fieldPath": "fecha",              "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transacciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uidUsuario",  "order": "ASCENDING" },
+        { "fieldPath": "tipo",        "order": "ASCENDING" },
+        { "fieldPath": "fecha",       "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transacciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cargaId", "order": "ASCENDING" },
+        { "fieldPath": "fecha",   "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "movimientosTarjeta",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tarjetaId", "order": "ASCENDING" },
+        { "fieldPath": "tarjetaId",        "order": "ASCENDING" },
         { "fieldPath": "fechaTransaccion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "estadosTarjeta",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tarjetaId",  "order": "ASCENDING" },
+        { "fieldPath": "fechaCorte", "order": "DESCENDING" }
       ]
     },
     {
@@ -47,6 +88,23 @@
       "fields": [
         { "fieldPath": "activa",    "order": "ASCENDING" },
         { "fieldPath": "confianza", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reglasSugeridas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uidUsuario", "order": "ASCENDING" },
+        { "fieldPath": "aceptada",   "order": "ASCENDING" },
+        { "fieldPath": "creadaEn",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cargas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uidUsuario",  "order": "ASCENDING" },
+        { "fieldPath": "procesadoEn", "order": "DESCENDING" }
       ]
     }
   ],

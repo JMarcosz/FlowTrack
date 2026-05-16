@@ -1,6 +1,8 @@
 package com.example.flowtrack.data.parsers.core
 
+import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.Moneda
+import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.domain.model.TipoCuenta
 import com.example.flowtrack.domain.model.TipoDocumento
 import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
@@ -160,4 +162,110 @@ sealed class ResultadoParseo {
         val excepcion: Throwable? = null,
         val recuperable: Boolean = false,
     ) : ResultadoParseo()
+}
+
+// ─── Modelos del contrato BankStatementParser ────────────────────────────────
+
+/** Identifica unívocamente un parser: banco + tipo de producto + formato de archivo. */
+data class ParserKey(
+    val bancoCodigo: String,
+    val productoTipo: ProductoTipo,
+    val formato: FileFormat,
+)
+
+/** Petición de importación que el caller entrega al parser seleccionado. */
+data class ImportRequest(
+    val uidUsuario: String,
+    val bancoCodigo: String,
+    val productoTipo: ProductoTipo,
+    val formato: FileFormat,
+    val archivo: ArchivoEntrada,
+)
+
+/**
+ * Tipo de movimiento financiero normalizado.
+ * Más granular que DEBITO/CREDITO para permitir mejor categorización automática.
+ */
+enum class TipoMovimiento {
+    INGRESO,        // depósito, nómina, transferencia recibida
+    GASTO,          // consumo POS, pago de servicios, débito general
+    PAGO_TARJETA,   // pago de saldo de tarjeta de crédito
+    INTERES,        // interés por financiamiento
+    COMISION,       // comisión bancaria
+    IMPUESTO,       // DGII, impuestos
+    CASHBACK,       // cashback o rebate
+    TRANSFERENCIA,  // transferencia saliente o ambigua
+    RETIRO_ATM,     // retiro en cajero automático
+    AJUSTE,         // ajuste contable
+    DEVOLUCION,     // reverso, devolución o crédito en cuenta/tarjeta
+}
+
+/** Movimiento individual ya normalizado por el parser. */
+data class MovimientoNormalizado(
+    val fechaTransaccion: LocalDate,
+    val fechaPosteo: LocalDate?,
+    val descripcionOriginal: String,
+    val descripcionNormalizada: String,
+    val descripcionCorta: String,
+    val monto: BigDecimal,
+    val tipo: TipoMovimiento,
+    val moneda: Moneda,
+    val balancePosterior: BigDecimal?,
+    val referencia: String?,
+    val categoriaId: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
+)
+
+/** Estado de cuenta completo ya normalizado por el parser. */
+data class EstadoCuentaNormalizado(
+    val bancoCodigo: String,
+    val productoTipo: ProductoTipo,
+    val productoId: String?,
+    val titular: String?,
+    val moneda: Moneda,
+    val fechaInicio: LocalDate?,
+    val fechaFin: LocalDate?,
+    val balanceInicial: BigDecimal?,
+    val balanceFinal: BigDecimal?,
+    val movimientos: List<MovimientoNormalizado>,
+    // Tarjeta
+    val fechaCorte: LocalDate? = null,
+    val fechaLimitePago: LocalDate? = null,
+    val pagoMinimo: BigDecimal? = null,
+    val pagoTotal: BigDecimal? = null,
+    val montoVencido: BigDecimal? = null,
+    val limiteCredito: BigDecimal? = null,
+    val tipoRed: String? = null,
+    val tasaInteresAnual: Double? = null,
+    val diaCorte: Int? = null,
+    val diaPago: Int? = null,
+    val balancePromedioDiario: BigDecimal? = null,
+    val interesPorFinanciamiento: BigDecimal? = null,
+    val cashbackGanado: BigDecimal? = null,
+    // Cuenta
+    val numeroCuentaCompleto: String? = null,
+    val metadata: Map<String, String> = emptyMap(),
+)
+
+/** Reporte de estadísticas del proceso de parseo. */
+data class ParseReport(
+    val parserId: String,
+    val totalDetectado: Int,
+    val totalImportado: Int,
+    val totalIgnorado: Int,
+    val warnings: List<String>,
+    val errors: List<String>,
+)
+
+/** Resultado del parseo con la interfaz BankStatementParser. */
+sealed interface ParseResult {
+    data class Success(
+        val estado: EstadoCuentaNormalizado,
+        val report: ParseReport,
+    ) : ParseResult
+
+    data class Error(
+        val message: String,
+        val cause: Throwable? = null,
+    ) : ParseResult
 }

@@ -9,8 +9,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,19 +21,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.flowtrack.core.extensions.formatDateRelative
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Spacing
-
 import com.example.flowtrack.presentation.components.categoriaRegistry
+import com.example.flowtrack.presentation.components.EmptyState
+import com.example.flowtrack.presentation.components.TransactionShimmerItem
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
+    LaunchedEffect(Unit) { viewModel.cargarTransacciones() }
     val grouped = viewModel.getTransaccionesAgrupadasPorDia()
 
     var showDeleteDialogFor by remember { mutableStateOf<Transaccion?>(null) }
@@ -76,18 +83,21 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
                         label = { Text("Gastos") }
                     )
                 }
-                Divider()
+                HorizontalDivider()
             }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (state.isLoading && state.transacciones.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(Spacing.md)) {
+                    items(10) { TransactionShimmerItem() }
+                }
             } else if (grouped.isEmpty()) {
-                Text(
-                    "No se encontraron transacciones.",
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                EmptyState(
+                    icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                    title = "Sin transacciones",
+                    description = "Aún no tienes transacciones o ninguna coincide con tu búsqueda.",
+                    modifier = Modifier.align(Alignment.Center)
                 )
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -108,12 +118,14 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
                             }
                         }
                         items(txs, key = { it.id }) { tx ->
+                            val derivadas = viewModel.getDerivadasParaPadre(tx.id)
                             TransaccionItem(
                                 tx = tx,
+                                derivadas = derivadas,
                                 onDeleteClick = { showDeleteDialogFor = tx },
                                 onChangeCategoryClick = { showCategorySheetFor = tx }
                             )
-                            Divider(modifier = Modifier.padding(start = 72.dp))
+                            HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
                         }
                     }
                 }
@@ -152,7 +164,7 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
                     Checkbox(checked = aplicarATodas, onCheckedChange = { aplicarATodas = it })
                     Text("Aplicar regla a todas las compras de '${showCategorySheetFor!!.descripcionOriginal}'", style = MaterialTheme.typography.bodyMedium)
                 }
-                Divider(modifier = Modifier.padding(vertical = Spacing.sm))
+                HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
                 
                 LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
                     items(categoriaRegistry.values.toList()) { cat ->
@@ -180,68 +192,104 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
 }
 
 @Composable
-fun TransaccionItem(tx: Transaccion, onDeleteClick: () -> Unit, onChangeCategoryClick: () -> Unit) {
+fun TransaccionItem(
+    tx: Transaccion,
+    derivadas: List<Transaccion> = emptyList(),
+    onDeleteClick: () -> Unit,
+    onChangeCategoryClick: () -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = { expanded = !expanded }
-    ) {
-        Column(modifier = Modifier.padding(Spacing.md)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(40.dp)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { expanded = !expanded }
+        ) {
+            Column(modifier = Modifier.padding(Spacing.md)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            Icons.Outlined.Category,
+                            contentDescription = null,
+                            modifier = Modifier.padding(8.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(Modifier.width(Spacing.md))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = tx.descripcionOriginal,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = tx.categoriaId?.let { categoriaRegistry[it]?.nombre } ?: "Sin categorizar",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(Modifier.width(Spacing.sm))
+                    val sign = if (tx.tipo == TipoTransaccion.CREDITO) "+" else "-"
+                    val color = if (tx.tipo == TipoTransaccion.CREDITO) Income else Expense
+                    Text(
+                        text = "$sign ${formatMoney(tx.monto)}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = color
+                    )
+                }
+
+                AnimatedVisibility(visible = expanded) {
+                    Column(modifier = Modifier.padding(top = Spacing.md, start = 56.dp)) {
+                        Text("Banco: ${tx.bancoCodigo}", style = MaterialTheme.typography.bodySmall)
+                        Text("Referencia: ${tx.referencia ?: "N/A"}", style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            OutlinedButton(onClick = onChangeCategoryClick, shape = RoundedCornerShape(8.dp)) {
+                                Text("Cambiar categoría")
+                            }
+                            IconButton(onClick = onDeleteClick) {
+                                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Retenciones DGII — siempre visibles, indentadas bajo el padre
+        if (derivadas.isNotEmpty()) {
+            derivadas.forEach { derivada ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 56.dp, end = Spacing.md, top = 2.dp, bottom = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Icon(
-                        Icons.Outlined.Category,
+                        Icons.Outlined.AccountBalance,
                         contentDescription = null,
-                        modifier = Modifier.padding(8.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(Modifier.width(Spacing.md))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = tx.descripcionOriginal,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
+                        tint = Color(0xFF94A3B8),
+                        modifier = Modifier.size(14.dp),
                     )
                     Text(
-                        text = tx.categoriaId?.let { categoriaRegistry[it]?.nombre } ?: "Sin categorizar",
+                        text = derivada.descripcionCorta.ifBlank { "Retención DGII" },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF94A3B8),
+                        modifier = Modifier.weight(1f),
                     )
-                }
-                Spacer(Modifier.width(Spacing.sm))
-                val sign = if (tx.tipo == TipoTransaccion.CREDITO) "+" else "-"
-                val color = if (tx.tipo == TipoTransaccion.CREDITO) Color(0xFF00C853) else MaterialTheme.colorScheme.onSurface
-                Text(
-                    text = "$sign ${formatMoney(tx.monto)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
-            }
-
-            AnimatedVisibility(visible = expanded) {
-                Column(modifier = Modifier.padding(top = Spacing.md, start = 56.dp)) {
-                    Text("Banco: ${tx.bancoCodigo}", style = MaterialTheme.typography.bodySmall)
-                    Text("Referencia: ${tx.referencia ?: "N/A"}", style = MaterialTheme.typography.bodySmall)
-                    if (tx.esDerivada) {
-                        Text("⚠️ Es una retención (DGII)", color = Color(0xFFE91E63), style = MaterialTheme.typography.bodySmall)
-                    }
-                    Spacer(modifier = Modifier.height(Spacing.sm))
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        OutlinedButton(onClick = onChangeCategoryClick, shape = RoundedCornerShape(8.dp)) {
-                            Text("Cambiar categoría")
-                        }
-                        IconButton(onClick = onDeleteClick) {
-                            Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
-                        }
-                    }
+                    Text(
+                        text = "- ${formatMoney(derivada.monto)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        color = Expense,
+                    )
                 }
             }
         }

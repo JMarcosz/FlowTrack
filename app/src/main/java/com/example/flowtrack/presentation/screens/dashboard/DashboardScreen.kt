@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,10 @@ import com.example.flowtrack.presentation.components.DonutChart
 import com.example.flowtrack.presentation.components.DonutSlice
 import com.example.flowtrack.presentation.components.StatCard
 import com.example.flowtrack.presentation.navigation.Screen
+import com.example.flowtrack.presentation.components.DashboardStatShimmerCard
+import com.example.flowtrack.presentation.components.EmptyState
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,6 +41,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val estado by viewModel.estado.collectAsState()
+    LaunchedEffect(Unit) { viewModel.cargarDatos() }
 
     Scaffold(
         floatingActionButton = {
@@ -47,12 +53,21 @@ fun DashboardScreen(
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (val st = estado) {
                 is DashboardEstado.Cargando -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(Spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.lg)
+                    ) {
+                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            DashboardStatShimmerCard()
+                            DashboardStatShimmerCard()
+                        }
+                    }
                 }
                 is DashboardEstado.Error -> {
-                    Text(
-                        text = st.mensaje,
-                        color = MaterialTheme.colorScheme.error,
+                    com.example.flowtrack.presentation.components.ErrorState(
+                        mensaje = st.mensaje,
+                        onRetry = { viewModel.cargarDatos() },
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -87,7 +102,7 @@ private fun DashboardContent(
                 
                 val perc = estado.comparativa.porcentaje?.let { "%.1f%%".format(it) } ?: "N/A"
                 val percStr = if (estado.comparativa.esIncremento) "+$perc" else "-$perc"
-                val percColor = if (estado.comparativa.esIncremento) Color.Red else Color(0xFF00C853)
+                val percColor = if (estado.comparativa.esIncremento) Expense else Income
                 
                 StatCard(
                     label = "vs Mes Anterior",
@@ -142,10 +157,10 @@ private fun DashboardContent(
 
         if (estado.cuentas.isEmpty()) {
             item {
-                Text(
-                    "No hay cuentas configuradas o sincronizadas.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                EmptyState(
+                    icon = Icons.Outlined.AccountBalanceWallet,
+                    title = "Sin Cuentas",
+                    description = "Aún no tienes cuentas sincronizadas. Usa el botón '+' para importar."
                 )
             }
         } else {

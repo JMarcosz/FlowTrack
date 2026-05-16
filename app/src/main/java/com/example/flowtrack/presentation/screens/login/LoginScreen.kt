@@ -2,7 +2,6 @@ package com.example.flowtrack.presentation.screens.login
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,7 +35,7 @@ fun LoginScreen(
     Box(
         modifier         = Modifier
             .fillMaxSize()
-            .background(BgDeep),
+            .background(BgDark),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -47,13 +46,13 @@ fun LoginScreen(
             Text(
                 text      = "FlowTrack",
                 style     = MaterialTheme.typography.displayLarge,
-                color     = TextPrimary,
+                color     = Color.White,
                 textAlign = TextAlign.Center,
             )
             Text(
                 text      = "Controla tus finanzas en un solo lugar",
                 style     = MaterialTheme.typography.bodyMedium,
-                color     = TextSecondary,
+                color     = Muted,
                 textAlign = TextAlign.Center,
             )
 
@@ -69,13 +68,13 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                shape    = RoundedCornerShape(Radii.lg),
-                colors   = ButtonDefaults.buttonColors(containerColor = Brand500),
+                shape    = Radii.lg,
+                colors   = ButtonDefaults.buttonColors(containerColor = Primary),
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color    = TextPrimary,
+                        color    = Color.White,
                         strokeWidth = 2.dp,
                     )
                 } else {
@@ -86,7 +85,7 @@ fun LoginScreen(
             if (uiState is LoginUiState.Error) {
                 Text(
                     text  = (uiState as LoginUiState.Error).message,
-                    color = SemanticExpense,
+                    color = Expense,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

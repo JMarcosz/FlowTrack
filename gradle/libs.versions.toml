@@ -51,6 +51,8 @@ workManager         = "2.9.1"
 junit               = "4.13.2"
 junitVersion        = "1.1.5"
 espressoCore        = "3.5.1"
+mockito             = "5.12.0"
+mockitoKotlin       = "5.4.0"
 
 
 [libraries]
@@ -126,6 +128,8 @@ junit                               = { group = "junit",                name = "
 androidx-junit                      = { group = "androidx.test.ext",    name = "junit",          version.ref = "junitVersion" }
 androidx-espresso-core              = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 coroutines-test                     = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+mockito-core                        = { group = "org.mockito",           name = "mockito-core",   version.ref = "mockito" }
+mockito-kotlin                      = { group = "org.mockito.kotlin",    name = "mockito-kotlin", version.ref = "mockitoKotlin" }
 
 
 [plugins]

@@ -16,6 +16,51 @@ import javax.inject.Singleton
 class ReglaCategoriaRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
+    suspend fun obtenerReglasPersonales(uidUsuario: String): AppResult<List<ReglaCategoria>> {
+        return try {
+            val snapshot = firestore
+                .collection("usuarios").document(uidUsuario)
+                .collection("reglasCategorias")
+                .whereEqualTo("activa", true)
+                .orderBy("prioridad", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            val reglas = snapshot.documents.mapNotNull { doc ->
+                try {
+                    ReglaCategoria(
+                        id = doc.getString("id") ?: doc.id,
+                        uidUsuario = doc.getString("uidUsuario"),
+                        patron = doc.getString("patron") ?: "",
+                        tipoMatch = TipoMatch.valueOf(doc.getString("tipoMatch") ?: "CONTIENE"),
+                        categoriaId = doc.getString("categoriaId") ?: "",
+                        prioridad = (doc.getLong("prioridad") ?: 10).toInt(),
+                        confianza = (doc.getLong("confianza") ?: 0).toInt(),
+                        activa = doc.getBoolean("activa") ?: true,
+                        creadoPor = doc.getString("creadoPor") ?: uidUsuario,
+                        creadoEn = doc.getTimestamp("creadoEn")?.toDate()?.toInstant() ?: Instant.now(),
+                    )
+                } catch (_: Exception) { null }
+            }
+            AppResult.Success(reglas)
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error al cargar reglas: ${e.message}", e))
+        }
+    }
+
+    suspend fun eliminarRegla(uidUsuario: String, reglaId: String): AppResult<Unit> {
+        return try {
+            firestore
+                .collection("usuarios").document(uidUsuario)
+                .collection("reglasCategorias").document(reglaId)
+                .delete()
+                .await()
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error al eliminar regla: ${e.message}", e))
+        }
+    }
+
     suspend fun crearReglaPersonal(
         uidUsuario: String,
         patron: String,

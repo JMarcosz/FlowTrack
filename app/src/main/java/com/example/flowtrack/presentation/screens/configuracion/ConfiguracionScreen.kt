@@ -10,6 +10,10 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Money
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.Moneda
+import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,8 +70,41 @@ fun ConfiguracionScreen(
                 }
             }
 
+            // Accesos rápidos a sub-pantallas
+            Text("Cuenta", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(Spacing.md), color = MaterialTheme.colorScheme.primary)
+
+            ConfigActionRow(
+                icon = Icons.Outlined.Person,
+                title = "Perfil",
+                subtitle = "Ver y editar tu perfil",
+                onClick = { navController.navigate(Screen.Perfil.route) }
+            )
+            HorizontalDivider()
+            ConfigActionRow(
+                icon = Icons.Outlined.Notifications,
+                title = "Notificaciones",
+                subtitle = "Configurar alertas y recordatorios",
+                onClick = { navController.navigate(Screen.Notificaciones.route) }
+            )
+            HorizontalDivider()
+            ConfigActionRow(
+                icon = Icons.Outlined.AccountBalance,
+                title = "Bancos y Cuentas",
+                subtitle = "Ver cuentas vinculadas",
+                onClick = { navController.navigate(Screen.BancosYCuentas.route) }
+            )
+            HorizontalDivider()
+            ConfigActionRow(
+                icon = Icons.Outlined.Settings,
+                title = "Ajustes avanzados",
+                subtitle = "Todas las opciones",
+                onClick = { navController.navigate(Screen.Ajustes.route) }
+            )
+
+            HorizontalDivider()
+
             Text("Preferencias", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(Spacing.md), color = MaterialTheme.colorScheme.primary)
-            
+
             // Tema Oscuro
             ConfigSwitchRow(
                 icon = Icons.Default.DarkMode,
@@ -76,7 +114,7 @@ fun ConfiguracionScreen(
                 onCheckedChange = { viewModel.toggleTema(it) }
             )
             
-            Divider()
+            HorizontalDivider()
             
             // Moneda Predeterminada
             var showCurrencyMenu by remember { mutableStateOf(false) }
@@ -116,7 +154,7 @@ fun ConfiguracionScreen(
                 )
             }
 
-            Divider()
+            HorizontalDivider()
 
             // Exportación
             Text("Gestión de Datos", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(Spacing.md), color = MaterialTheme.colorScheme.primary)
@@ -132,7 +170,7 @@ fun ConfiguracionScreen(
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
-            Divider()
+            HorizontalDivider()
             
             // Gestión de categorías
             ConfigActionRow(

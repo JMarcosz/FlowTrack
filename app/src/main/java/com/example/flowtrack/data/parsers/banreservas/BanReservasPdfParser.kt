@@ -2,19 +2,17 @@ package com.example.flowtrack.data.parsers.banreservas
 
 import com.example.flowtrack.core.extensions.normalizarDescripcion
 import com.example.flowtrack.core.extensions.toBigDecimalSafe
-import com.example.flowtrack.data.parsers.core.ArchivoEntrada
-import com.example.flowtrack.data.parsers.core.BankParser
-import com.example.flowtrack.data.parsers.core.ConfianzaDeteccion
-import com.example.flowtrack.data.parsers.core.ContextoParseo
-import com.example.flowtrack.data.parsers.core.CuentaDetectada
-import com.example.flowtrack.data.parsers.core.ResumenPeriodoDetectado
-import com.example.flowtrack.data.parsers.core.ResultadoParseo
-import com.example.flowtrack.data.parsers.core.TransaccionNormalizada
+import com.example.flowtrack.data.parsers.core.EstadoCuentaNormalizado
+import com.example.flowtrack.data.parsers.core.ImportRequest
+import com.example.flowtrack.data.parsers.core.MovimientoNormalizado
+import com.example.flowtrack.data.parsers.core.ParseReport
+import com.example.flowtrack.data.parsers.core.ParseResult
+import com.example.flowtrack.data.parsers.core.ParserKey
+import com.example.flowtrack.data.parsers.core.BankStatementParser
+import com.example.flowtrack.data.parsers.core.TipoMovimiento
+import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.Moneda
-import com.example.flowtrack.domain.model.TipoCuenta
-import com.example.flowtrack.domain.model.TipoDocumento
-import com.example.flowtrack.domain.model.TipoTransaccion
-import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import com.example.flowtrack.domain.model.ProductoTipo
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.math.BigDecimal
@@ -26,281 +24,195 @@ import javax.inject.Inject
  * Parser para estados de cuenta de BanReservas (cuenta corriente, formato PDF tabular).
  *
  * Columnas: Fecha | Referencia | Concepto | Cheques y cargos | Depósitos y abonos | Balance
- *
- * Señales de detección:
- *  - 0.4: contiene "BANRESERVAS" o "banreservas.com.do"
- *  - 0.4: contiene IBAN con regex ^DO\d{2}BRRD
- *  - 0.2: encabezados "Cheques y cargos" y "Depósitos y abonos" presentes
- *  Total posible: 1.0
  */
-class BanReservasPdfParser @Inject constructor() : BankParser {
+class BanReservasPdfParser @Inject constructor() : BankStatementParser {
 
-    override val codigoBanco: String = "BANRESERVAS"
-    override val tipoDocumento: TipoDocumento = TipoDocumento.CUENTA_CORRIENTE
+    override val key: ParserKey = ParserKey("BANRESERVAS", ProductoTipo.CUENTA, FileFormat.PDF)
     override val version: Int = 1
-    override val formatosArchivo: Set<String> = setOf("pdf")
 
     private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     private val ibanRegex = Regex("""DO\d{2}BRRD\d+""")
 
-    // ─── Detección ────────────────────────────────────────────────────────────
-
-    override suspend fun puedeManejar(archivo: ArchivoEntrada): ConfianzaDeteccion {
-        if (archivo.extension != "pdf") return ConfianzaDeteccion(0f, "No es PDF")
-
+    override suspend fun parse(request: ImportRequest): ParseResult {
         return try {
-            val texto = extraerTexto(archivo.bytes)
-            val textoUpper = texto.uppercase()
-
-            var confianza = 0f
-            val pistas = mutableMapOf<String, String>()
-            val razones = mutableListOf<String>()
-
-            // Señal 1: texto de marca (0.4)
-            if (textoUpper.contains("BANRESERVAS") || textoUpper.contains("BANRESERVAS.COM.DO")) {
-                confianza += 0.4f
-                razones.add("texto BANRESERVAS")
-                pistas["marca"] = "BANRESERVAS"
-            }
-
-            // Señal 2: IBAN BanReservas (0.4)
-            val ibanMatch = ibanRegex.find(texto)
-            if (ibanMatch != null) {
-                confianza += 0.4f
-                razones.add("IBAN ${ibanMatch.value.take(12)}...")
-                pistas["iban"] = ibanMatch.value
-            }
-
-            // Señal 3: encabezados de columnas (0.2)
-            if (textoUpper.contains("CHEQUES Y CARGOS") || textoUpper.contains("CHEQUES Y CARGO")) {
-                confianza += 0.1f
-                razones.add("columna 'Cheques y cargos'")
-            }
-            if (textoUpper.contains("DEPÓSITOS Y ABONOS") || textoUpper.contains("DEPOSITOS Y ABONOS")) {
-                confianza += 0.1f
-                razones.add("columna 'Depósitos y abonos'")
-            }
-
-            ConfianzaDeteccion(
-                confianza = confianza.coerceAtMost(1f),
-                razon = razones.joinToString(", "),
-                pistas = pistas,
-            )
-        } catch (e: Exception) {
-            ConfianzaDeteccion(0f, "Error al leer PDF: ${e.message}")
-        }
-    }
-
-    // ─── Parseo principal ─────────────────────────────────────────────────────
-
-    override suspend fun parsear(archivo: ArchivoEntrada, contexto: ContextoParseo): ResultadoParseo {
-        return try {
-            val texto = extraerTexto(archivo.bytes)
+            val texto = extraerTexto(request.archivo.bytes)
             val lineas = texto.lines()
 
-            val cuenta = extraerCuenta(texto) ?: return ResultadoParseo.Error(
-                mensaje = "No se pudo extraer información de la cuenta del PDF.",
-                recuperable = false,
+            val (numeroCuenta, titular, iban) = extraerInfoCuenta(texto)
+            val (movimientos, advertencias, ignorados) = extraerMovimientos(lineas)
+
+            val estado = EstadoCuentaNormalizado(
+                bancoCodigo = "BANRESERVAS",
+                productoTipo = ProductoTipo.CUENTA,
+                productoId = numeroCuenta,
+                titular = titular,
+                moneda = Moneda.DOP,
+                fechaInicio = movimientos.minOfOrNull { it.fechaTransaccion },
+                fechaFin = movimientos.maxOfOrNull { it.fechaTransaccion },
+                balanceInicial = null,
+                balanceFinal = movimientos.lastOrNull()?.balancePosterior,
+                movimientos = movimientos,
+                numeroCuentaCompleto = iban,
             )
 
-            val (transacciones, advertencias) = extraerTransacciones(lineas, contexto)
-            val resumen = extraerResumen(lineas, transacciones)
-
-            ResultadoParseo.ExitoCuenta(
-                cuenta = cuenta,
-                transacciones = transacciones,
-                resumenPeriodo = resumen,
-                advertencias = advertencias,
+            val report = ParseReport(
+                parserId = "BANRESERVAS_PDF_v$version",
+                totalDetectado = movimientos.size + ignorados,
+                totalImportado = movimientos.size,
+                totalIgnorado = ignorados,
+                warnings = advertencias,
+                errors = emptyList(),
             )
+
+            ParseResult.Success(estado, report)
         } catch (e: Exception) {
-            ResultadoParseo.Error(
-                mensaje = "Error al parsear PDF de BanReservas: ${e.message}",
-                excepcion = e,
-                recuperable = false,
-            )
+            ParseResult.Error("Error al parsear PDF de BanReservas: ${e.message}", e)
         }
     }
 
     // ─── Extracción de texto PDF ──────────────────────────────────────────────
 
-    private fun extraerTexto(bytes: ByteArray): String {
-        return PDDocument.load(bytes).use { doc ->
-            val stripper = PDFTextStripper()
-            stripper.sortByPosition = true
-            stripper.getText(doc)
+    private fun extraerTexto(bytes: ByteArray): String =
+        PDDocument.load(bytes).use { doc ->
+            PDFTextStripper().apply { sortByPosition = true }.getText(doc)
         }
-    }
 
-    // ─── Extracción de cuenta ─────────────────────────────────────────────────
+    // ─── Info de cuenta ───────────────────────────────────────────────────────
 
-    private fun extraerCuenta(texto: String): CuentaDetectada? {
+    private fun extraerInfoCuenta(texto: String): Triple<String, String, String?> {
         val iban = ibanRegex.find(texto)?.value
-
-        // Buscar número de cuenta en patrones comunes del estado
-        val numeroCuentaRegex = Regex("""(?:Cuenta|No\.?\s*Cuenta|Número de cuenta)[:\s]+(\d[\d\s\-]+)""", RegexOption.IGNORE_CASE)
-        val numeroCuenta = numeroCuentaRegex.find(texto)?.groupValues?.getOrNull(1)?.trim()
+        val numeroCuenta = Regex("""(?:Cuenta|No\.?\s*Cuenta|Número de cuenta)[:\s]+(\d[\d\s\-]+)""", RegexOption.IGNORE_CASE)
+            .find(texto)?.groupValues?.getOrNull(1)?.trim()
             ?: iban?.takeLast(10)
             ?: "DESCONOCIDA"
-
-        // Buscar titular
-        val titularRegex = Regex("""(?:Titular|Nombre)[:\s]+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]+)""", RegexOption.IGNORE_CASE)
-        val titular = titularRegex.find(texto)?.groupValues?.getOrNull(1)?.trim()?.take(60) ?: "TITULAR"
-
-        return CuentaDetectada(
-            numeroCuenta = numeroCuenta.replace(Regex("[\\s\\-]"), "").takeLast(10),
-            numeroCuentaCompleto = iban,
-            titular = titular,
-            tipoCuenta = TipoCuenta.CORRIENTE,
-            moneda = Moneda.DOP, // BanReservas siempre DOP en este formato
-            balanceAlCorte = null,
-            balanceAnterior = null,
-        )
+        val titular = Regex("""(?:Titular|Nombre)[:\s]+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]+)""", RegexOption.IGNORE_CASE)
+            .find(texto)?.groupValues?.getOrNull(1)?.trim()?.take(60) ?: "TITULAR"
+        return Triple(numeroCuenta.replace(Regex("[\\s\\-]"), "").takeLast(10), titular, iban)
     }
 
-    // ─── Extracción de transacciones ──────────────────────────────────────────
+    // ─── Extracción de movimientos ────────────────────────────────────────────
 
-    private fun extraerTransacciones(
-        lineas: List<String>,
-        contexto: ContextoParseo,
-    ): Pair<List<TransaccionNormalizada>, List<String>> {
-        val transacciones = mutableListOf<TransaccionNormalizada>()
+    private fun extraerMovimientos(lineas: List<String>): Triple<List<MovimientoNormalizado>, List<String>, Int> {
+        val movimientos = mutableListOf<MovimientoNormalizado>()
         val advertencias = mutableListOf<String>()
+        var ignorados = 0
 
-        // Encontrar el índice del header de la tabla
-        val headerIdx = lineas.indexOfFirst { linea ->
-            val u = linea.uppercase()
+        val headerIdx = lineas.indexOfFirst { l ->
+            val u = l.uppercase()
             u.contains("FECHA") && (u.contains("REFERENCIA") || u.contains("CONCEPTO"))
         }
-
         if (headerIdx == -1) {
             advertencias.add("No se encontró el encabezado de la tabla de transacciones.")
-            return Pair(emptyList(), advertencias)
+            return Triple(emptyList(), advertencias, 0)
         }
 
-        // Detectar anchos de columna leyendo la línea de header
-        // BanReservas usa formato de tabla de texto fijo con alineación por espacios
-        val lineasTransaccion = lineas.subList(headerIdx + 1, lineas.size)
-
-        // Mapa de referencia → índice de transacción (para vincular DGII)
-        val referenciasIdx = mutableMapOf<String, Int>()
-
-        for (linea in lineasTransaccion) {
-            // Detener al llegar al resumen final
+        for (linea in lineas.subList(headerIdx + 1, lineas.size)) {
             val lineaUpper = linea.uppercase()
             if (lineaUpper.contains("CHEQUES PAGADOS:") ||
                 lineaUpper.contains("TOTAL DÉBITOS") ||
-                lineaUpper.contains("BALANCE ANTERIOR") && transacciones.isNotEmpty()
+                (lineaUpper.contains("BALANCE ANTERIOR") && movimientos.isNotEmpty())
             ) break
 
-            val tx = parsearLineaTransaccion(linea) ?: continue
-            referenciasIdx[tx.referencia ?: ""] = transacciones.size
-            transacciones.add(tx)
+            val mov = parsearLinea(linea)
+            if (mov != null) movimientos.add(mov) else ignorados++
         }
 
-        // Segunda pasada: vincular DGII con su padre
-        val txConPadre = transacciones.mapIndexed { idx, tx ->
-            if (tx.esDerivada && tx.referenciaPadre != null) {
-                val padreIdx = referenciasIdx[tx.referenciaPadre]
-                if (padreIdx != null && padreIdx < idx) tx else tx
-            } else tx
-        }
-
-        return Pair(txConPadre, advertencias)
+        return Triple(movimientos, advertencias, ignorados)
     }
 
-    /**
-     * Parsea una línea de la tabla de BanReservas.
-     * Formato esperado (separado por espacios variables):
-     *   dd/MM/yyyy  REFERENCIA  CONCEPTO...  MONTO_CHEQUE  MONTO_DEPOSITO  BALANCE
-     *
-     * Estrategia: buscar la fecha al inicio, luego los montos al final (BigDecimal),
-     * y el texto del medio es el concepto.
-     */
-    private fun parsearLineaTransaccion(linea: String): TransaccionNormalizada? {
+    // Regex que captura un número con formato bancario: opcionalmente negativo,
+    // separador de miles en coma, 2 decimales. Ej: "1,234.56" ó "-50.00"
+    private val numericPattern = Regex("""-?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?""")
+
+    private fun parsearLinea(linea: String): MovimientoNormalizado? {
         val trimmed = linea.trim()
         if (trimmed.length < 20) return null
 
-        // Intentar extraer fecha al inicio de la línea
-        val fechaRegex = Regex("""^(\d{2}/\d{2}/\d{4})""")
-        val fechaMatch = fechaRegex.find(trimmed) ?: return null
-        val fecha = try {
-            LocalDate.parse(fechaMatch.value, dateFormatter)
-        } catch (e: Exception) {
-            return null
-        }
+        val fechaMatch = Regex("""^(\d{2}/\d{2}/\d{4})""").find(trimmed) ?: return null
+        val fecha = try { LocalDate.parse(fechaMatch.value, dateFormatter) } catch (_: Exception) { return null }
 
-        // Tokens restantes después de la fecha
         val restante = trimmed.substring(fechaMatch.value.length).trim()
-        val tokens = restante.split(Regex("\\s{2,}")) // separador de columnas: 2+ espacios
 
-        if (tokens.size < 3) return null
+        // Extraer los números que aparecen al final de la línea (balance, depósito, cargo).
+        // Se buscan en posición: al final de la cadena los últimos 3 tokens numéricos.
+        // Esto evita que tokens numéricos embebidos en el concepto (refs, horas) desplacen columnas.
+        val allNums = numericPattern.findAll(restante).toList()
+        if (allNums.size < 2) return null
 
-        // Referencia: primer token (numérico largo)
-        val referencia = tokens[0].trim().takeIf { it.isNotBlank() }
-
-        // Balance: último token (siempre presente en BanReservas)
-        val balanceStr = tokens.last().trim()
+        val balanceStr = allNums.last().value
         val balance = balanceStr.toBigDecimalSafe()
 
-        // Montos: penúltimo (depósitos) y antepenúltimo (cheques/cargos)
-        // La columna que tiene valor define el tipo
-        val montoChequesStr = if (tokens.size >= 3) tokens[tokens.size - 3].trim() else ""
-        val montoDepositosStr = if (tokens.size >= 2) tokens[tokens.size - 2].trim() else ""
-
+        // Las dos columnas de monto son los dos penúltimos números al final de la línea.
+        // Si hay 3+ números, los penúltimos 2 son cargo y depósito; el anterior y todo lo que
+        // queda es el concepto + referencia.
+        val montoChequesStr = if (allNums.size >= 3) allNums[allNums.size - 3].value else ""
+        val montoDepositosStr = if (allNums.size >= 2) allNums[allNums.size - 2].value else ""
         val montoCheques = montoChequesStr.toBigDecimalSafe()
         val montoDepositos = montoDepositosStr.toBigDecimalSafe()
 
-        // Concepto: tokens del medio (todo lo que no es fecha, ref ni montos)
-        val conceptoTokens = when {
-            tokens.size >= 4 -> tokens.subList(1, tokens.size - 3)
-            tokens.size == 3 -> tokens.subList(1, 1)
-            else -> emptyList()
-        }
-        val concepto = conceptoTokens.joinToString(" ").trim()
-            .ifBlank { tokens.getOrElse(1) { "" }.trim() }
-
+        // Concepto: todo lo que está antes del primer número de la columna de montos.
+        // Cortar desde la posición del tercer número desde el final (o segundo si no hay tres).
+        val primerMontoIdx = if (allNums.size >= 3) allNums[allNums.size - 3].range.first
+                             else allNums[allNums.size - 2].range.first
+        val parteConcepto = restante.substring(0, primerMontoIdx).trim()
+        val conceptoTokens = parteConcepto.split(Regex("\\s{2,}"))
+        val referencia = conceptoTokens.getOrNull(0)?.trim()?.takeIf { it.isNotBlank() &&
+            !it.matches(Regex("""\d{2}:\d{2}""")) } // descartar timestamps HH:MM como referencia
+        val concepto = if (conceptoTokens.size >= 2) conceptoTokens.drop(1).joinToString(" ").trim()
+                       else conceptoTokens.getOrNull(0)?.trim() ?: ""
         if (concepto.isBlank()) return null
 
-        // Determinar tipo y monto
-        val (monto, tipo) = when {
+        val (monto, tipoMovimiento) = when {
+            // Cuando ambas columnas tienen valor, usar el concepto como desempate.
+            // Palabras clave de crédito tienen prioridad sobre la posición de columna.
+            montoCheques != null && montoCheques > BigDecimal.ZERO &&
+            montoDepositos != null && montoDepositos > BigDecimal.ZERO -> {
+                val upper = concepto.uppercase()
+                val esIngreso = upper.contains("DEP ") || upper.contains("DEPOSITO") ||
+                    upper.contains("NOMINA") || upper.contains("NÓMINA") ||
+                    upper.contains("TRANSF RECIB") || upper.contains("TRANS RECIB") ||
+                    upper.contains("TRANSFERENCIA RECIB") || upper.contains("ABONO") ||
+                    upper.contains("CREDITO RECIBIDO")
+                if (esIngreso) Pair(montoDepositos, TipoMovimiento.INGRESO)
+                else Pair(montoCheques, clasificarGasto(concepto))
+            }
             montoCheques != null && montoCheques > BigDecimal.ZERO ->
-                Pair(montoCheques, TipoTransaccion.DEBITO)
+                Pair(montoCheques, clasificarGasto(concepto))
             montoDepositos != null && montoDepositos > BigDecimal.ZERO ->
-                Pair(montoDepositos, TipoTransaccion.CREDITO)
-            else -> return null // línea sin monto válido
+                Pair(montoDepositos, TipoMovimiento.INGRESO)
+            else -> return null
         }
 
-        // Detectar DGII (transacción derivada)
-        val conceptoUpper = concepto.uppercase()
-        val esDGII = conceptoUpper.contains("COBRO IMP") &&
-            (conceptoUpper.contains("0.15") || conceptoUpper.contains("DGII"))
-
-        // Normalizar descripción corta
         val descripcionCorta = normalizarConcepto(concepto)
+        val descNorm = concepto.uppercase().normalizarDescripcion()
 
-        return TransaccionNormalizada(
-            fecha = fecha,
-            fechaPosteo = null, // BanReservas no tiene fecha de posteo separada
-            descripcionCorta = descripcionCorta,
+        return MovimientoNormalizado(
+            fechaTransaccion = fecha,
+            fechaPosteo = null,
             descripcionOriginal = concepto,
+            descripcionNormalizada = descNorm,
+            descripcionCorta = descripcionCorta,
             monto = monto,
-            tipo = tipo,
+            tipo = tipoMovimiento,
             moneda = Moneda.DOP,
-            balanceDespues = balance,
+            balancePosterior = balance,
             referencia = referencia,
-            serial = null,
-            esDerivada = esDGII,
-            referenciaPadre = if (esDGII) referencia else null,
-            metadataBanco = mapOf("lineaOriginal" to linea.trim()),
+            metadata = mapOf("lineaOriginal" to linea.trim()),
         )
     }
 
-    // ─── Normalización de concepto ────────────────────────────────────────────
+    private fun clasificarGasto(concepto: String): TipoMovimiento {
+        val upper = concepto.uppercase().normalizarDescripcion()
+        return when {
+            upper.contains("COBRO IMP") || upper.contains("DGII") -> TipoMovimiento.IMPUESTO
+            upper.contains("COMISION") -> TipoMovimiento.COMISION
+            upper.contains("RETIRO ATM") || upper.contains("RETIRO SAB") -> TipoMovimiento.RETIRO_ATM
+            upper.contains("TRANS CREDITO") || upper.contains("TRANS. CREDITO") ||
+                upper.contains("LBTR") -> TipoMovimiento.TRANSFERENCIA
+            else -> TipoMovimiento.GASTO
+        }
+    }
 
-    /**
-     * Mapea los conceptos crudos del banco a descripciones cortas normalizadas.
-     * Tabla definida en el documento de modelado de datos §3.1.
-     */
     private fun normalizarConcepto(concepto: String): String {
         val upper = concepto.uppercase().normalizarDescripcion()
         return when {
@@ -319,33 +231,7 @@ class BanReservasPdfParser @Inject constructor() : BankParser {
             upper.contains("COMISION") -> "COMISION"
             upper.contains("LBTR") -> "TRANSFERENCIA LBTR"
             upper.contains("COBRO DE PENDIENTES") -> "CARGO PENDIENTE"
-            else -> upper.take(40) // fallback: primeras 40 chars normalizadas
+            else -> upper.take(40)
         }
-    }
-
-    // ─── Extracción de resumen ────────────────────────────────────────────────
-
-    private fun extraerResumen(
-        lineas: List<String>,
-        transacciones: List<TransaccionNormalizada>,
-    ): ResumenPeriodoDetectado? {
-        if (transacciones.isEmpty()) return null
-
-        val fechas = transacciones.map { it.fecha }
-        val debitos = transacciones.filter { it.tipo == TipoTransaccion.DEBITO }
-        val creditos = transacciones.filter { it.tipo == TipoTransaccion.CREDITO }
-        val totalDebitos = debitos.fold(BigDecimal.ZERO) { acc, tx -> acc + tx.monto }
-        val totalCreditos = creditos.fold(BigDecimal.ZERO) { acc, tx -> acc + tx.monto }
-        val balanceFinal = transacciones.lastOrNull()?.balanceDespues ?: BigDecimal.ZERO
-
-        return ResumenPeriodoDetectado(
-            periodoInicio = fechas.min(),
-            periodoFin = fechas.max(),
-            cantidadDebitos = debitos.size,
-            cantidadCreditos = creditos.size,
-            totalDebitos = totalDebitos,
-            totalCreditos = totalCreditos,
-            balanceFinal = balanceFinal,
-        )
     }
 }

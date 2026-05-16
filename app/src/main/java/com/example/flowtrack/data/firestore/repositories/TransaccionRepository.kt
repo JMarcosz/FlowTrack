@@ -21,6 +21,9 @@ class TransaccionRepository @Inject constructor(
      * Obtiene transacciones del usuario, opcionalmente filtradas por rango de fechas
      * y ordenadas por fecha descendente.
      */
+    /**
+     * limite = 0 significa sin límite (recupera todos los documentos del rango).
+     */
     suspend fun obtenerTransacciones(
         uid: String,
         inicio: Instant? = null,
@@ -34,13 +37,12 @@ class TransaccionRepository @Inject constructor(
                 .orderBy("fecha", Query.Direction.DESCENDING)
 
             if (inicio != null && fin != null) {
-                // Firebase timestamp format is handled automatically by the SDK if passing Date or Timestamp
-                // We'll map Instant to java.util.Date for Firestore queries
                 query = query.whereGreaterThanOrEqualTo("fecha", java.util.Date.from(inicio))
                              .whereLessThanOrEqualTo("fecha", java.util.Date.from(fin))
             }
 
-            val snapshot = query.limit(limite.toLong()).get().await()
+            val snapshot = if (limite > 0) query.limit(limite.toLong()).get().await()
+                           else query.get().await()
 
             val transacciones = snapshot.documents.mapNotNull { doc ->
                 doc.toObject(TransaccionDto::class.java)?.toDomain()
@@ -80,6 +82,30 @@ class TransaccionRepository @Inject constructor(
             AppResult.Success(Unit)
         } catch (e: Exception) {
             AppResult.Error(ErrorApp.FirestoreError("Error al eliminar transacción: ${e.message}", e))
+        }
+    }
+
+    /**
+     * Guarda transacciones en lote (Batching chunks).
+     * Firestore permite hasta 500 escrituras por batch.
+     */
+    suspend fun guardarTransaccionesEnLote(uid: String, transacciones: List<Transaccion>): AppResult<Unit> {
+        return try {
+            val collRef = firestore.collection("usuarios").document(uid).collection("transacciones")
+            // Dividir en bloques de 450 (margen bajo el límite de 500 de Firestore)
+            val chunks = transacciones.chunked(450)
+            
+            for (chunk in chunks) {
+                val batch = firestore.batch()
+                for (tx in chunk) {
+                    val docRef = collRef.document(tx.id)
+                    batch.set(docRef, tx.toDto())
+                }
+                batch.commit().await()
+            }
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error guardando transacciones en lote: ${e.message}", e))
         }
     }
 }

@@ -31,10 +31,6 @@ class DashboardViewModel @Inject constructor(
     private val _estado = MutableStateFlow<DashboardEstado>(DashboardEstado.Cargando)
     val estado: StateFlow<DashboardEstado> = _estado
 
-    init {
-        cargarDatos()
-    }
-
     fun cargarDatos() {
         val uid = auth.currentUser?.uid ?: run {
             _estado.value = DashboardEstado.Error("No hay sesión activa")
@@ -51,7 +47,7 @@ class DashboardViewModel @Inject constructor(
             val zona = ZoneId.of("America/Santo_Domingo")
             val ahora = LocalDate.now(zona)
             val inicioMes = ahora.withDayOfMonth(1).atStartOfDay(zona).toInstant()
-            val transaccionesDef = async { transaccionRepository.obtenerTransacciones(uid, inicioMes, limite = 1000) }
+            val transaccionesDef = async { transaccionRepository.obtenerTransacciones(uid, inicioMes, limite = 0) }
 
             val resComparativa = comparativaDef.await()
             val resCuentas = cuentasDef.await()

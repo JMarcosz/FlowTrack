@@ -40,10 +40,6 @@ class TransaccionesViewModel @Inject constructor(
 
     private var allTransacciones: List<Transaccion> = emptyList()
 
-    init {
-        cargarTransacciones()
-    }
-
     fun cargarTransacciones() {
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
@@ -108,12 +104,18 @@ class TransaccionesViewModel @Inject constructor(
         }
     }
 
+    /** Agrupa por día excluyendo derivadas DGII (se muestran bajo su padre). */
     fun getTransaccionesAgrupadasPorDia(): Map<LocalDate, List<Transaccion>> {
         val zona = ZoneId.of("America/Santo_Domingo")
-        return _state.value.transacciones.groupBy {
-            it.fecha.atZone(zona).toLocalDate()
-        }.toSortedMap(compareByDescending { it })
+        return _state.value.transacciones
+            .filter { !it.esDerivada }
+            .groupBy { it.fecha.atZone(zona).toLocalDate() }
+            .toSortedMap(compareByDescending { it })
     }
+
+    /** Retorna las transacciones derivadas de un padre dado. */
+    fun getDerivadasParaPadre(padreId: String): List<Transaccion> =
+        _state.value.transacciones.filter { it.esDerivada && it.transaccionPadreId == padreId }
 
     fun recategorizar(tx: Transaccion, nuevaCategoria: String, aplicarATodas: Boolean) {
         val uid = auth.currentUser?.uid ?: return

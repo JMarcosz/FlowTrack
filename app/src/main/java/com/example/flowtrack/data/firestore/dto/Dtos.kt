@@ -42,10 +42,75 @@ data class CuentaDto(
     val moneda: String = "",               // Moneda.name
     val balanceActual: Double? = null,
     val balanceAlCorte: Double? = null,
+    val fechaUltimoCorte: Timestamp? = null,
     val titular: String = "",
     val activa: Boolean = true,
     val mostrarEnDashboard: Boolean = true,
     val ultimaSincronizacion: Timestamp? = null,
+    val creadoEn: Timestamp? = null,
+)
+
+/** DTO de Tarjeta para Firestore. */
+data class TarjetaDto(
+    val id: String = "",
+    val uidUsuario: String = "",
+    val bancoCodigo: String = "",
+    val ultimos4: String = "",
+    val alias: String = "",
+    val tipoRed: String? = null,
+    val limiteCredito: Double = 0.0,
+    val moneda: String = "DOP",
+    val diaCorte: Int = 1,
+    val diaPago: Int = 1,
+    val tasaInteresAnual: Double = 0.0,
+    val tasaInteresOrigen: String = "AUTO_EXTRAIDA",
+    val estado: String = "ACTIVO",
+    val titular: String = "",
+    val activa: Boolean = true,
+    val ultimaSincronizacion: Timestamp? = null,
+    val creadoEn: Timestamp? = null,
+)
+
+/** DTO de MovimientoTarjeta para Firestore. */
+data class MovimientoTarjetaDto(
+    val id: String = "",
+    val uidUsuario: String = "",
+    val tarjetaId: String = "",
+    val bancoCodigo: String = "",
+    val fechaTransaccion: Timestamp? = null,
+    val fechaPosteo: Timestamp? = null,
+    val descripcionOriginal: String = "",
+    val descripcionNormalizada: String = "",
+    val monto: Double = 0.0,
+    val tipoMovimiento: String = "",
+    val moneda: String = "DOP",
+    val numeroAutorizacion: String? = null,
+    val categoriaId: String? = null,
+    val categoriaAutomatica: Boolean = false,
+    val cargaId: String = "",
+    val metadataBanco: Map<String, String> = emptyMap(),
+    val creadoEn: Timestamp? = null,
+)
+
+/** DTO de EstadoTarjetaSnap para Firestore. */
+data class EstadoTarjetaSnapDto(
+    val id: String = "",
+    val uidUsuario: String = "",
+    val tarjetaId: String = "",
+    val fechaCorte: Timestamp? = null,
+    val fechaLimitePago: Timestamp? = null,
+    val periodoInicio: Timestamp? = null,
+    val periodoFin: Timestamp? = null,
+    val balanceAlCorte: Double = 0.0,
+    val balanceAnterior: Double? = null,
+    val pagoMinimo: Double = 0.0,
+    val pagoTotal: Double = 0.0,
+    val montoVencido: Double = 0.0,
+    val balancePromedioDiario: Double? = null,
+    val interesFinanciamiento: Double? = null,
+    val cashbackGanado: Double? = null,
+    val moneda: String = "DOP",
+    val cargaId: String = "",
     val creadoEn: Timestamp? = null,
 )
 
@@ -57,8 +122,6 @@ data class CargaDto(
     val tamanioBytes: Long = 0L,
     val mimeType: String? = null,
     val bancoCodigo: String = "",
-    val bancoDetectadoAutomaticamente: Boolean = false,
-    val confianzaDeteccion: Float = 0f,
     val parserVersion: Int = 0,
     val tipoDocumento: String = "",        // TipoDocumento.name
     val cuentaId: String? = null,
@@ -70,4 +133,5 @@ data class CargaDto(
     val advertencias: List<String> = emptyList(),
     val estado: String = "",               // EstadoCarga.name
     val procesadoEn: Timestamp? = null,
+    val eliminadoEn: Timestamp? = null,
 )

@@ -3,7 +3,6 @@ package com.example.flowtrack.presentation.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,7 +20,7 @@ fun Pill(
 ) {
     Box(
         modifier = modifier
-            .background(color.copy(alpha = 0.15f), RoundedCornerShape(Radii.full))
+            .background(color.copy(alpha = 0.15f), Radii.pill)
             .padding(horizontal = Spacing.sm, vertical = 2.dp)
     ) {
         Text(

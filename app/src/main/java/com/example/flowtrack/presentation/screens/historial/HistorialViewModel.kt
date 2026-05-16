@@ -21,8 +21,6 @@ class HistorialViewModel @Inject constructor(
     private val _estado = MutableStateFlow<HistorialEstado>(HistorialEstado.Cargando)
     val estado: StateFlow<HistorialEstado> = _estado
 
-    init { cargar() }
-
     fun cargar() {
         val uid = auth.currentUser?.uid ?: run {
             _estado.value = HistorialEstado.Error("No hay sesión activa.")
@@ -47,8 +45,25 @@ class HistorialViewModel @Inject constructor(
     fun eliminar(cargaId: String) {
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
-            historialRepository.eliminarCarga(uid, cargaId)
-            cargar() // recargar lista tras eliminar
+            val result = historialRepository.eliminarTransaccionesDeCarga(uid, cargaId)
+            if (result is AppResult.Error) {
+                _estado.value = HistorialEstado.Error(result.error.toMensajeUsuario())
+            } else {
+                cargar()
+            }
+        }
+    }
+
+    fun eliminarTodo() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _estado.value = HistorialEstado.Cargando
+            val result = historialRepository.eliminarTodo(uid)
+            if (result is AppResult.Error) {
+                _estado.value = HistorialEstado.Error(result.error.toMensajeUsuario())
+            } else {
+                cargar()
+            }
         }
     }
 }

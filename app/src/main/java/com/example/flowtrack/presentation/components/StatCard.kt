@@ -1,7 +1,6 @@
 package com.example.flowtrack.presentation.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +20,7 @@ fun StatCard(
 ) {
     Card(
         modifier = modifier,
-        shape    = RoundedCornerShape(Radii.lg),
+        shape    = Radii.lg,
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(Spacing.md)) {

@@ -36,6 +36,7 @@ sealed class ErrorApp {
     data class ParseError(val mensaje: String, val causa: Throwable? = null) : ErrorApp()
     data class FormatoIncompatible(val mensaje: String) : ErrorApp()
     data class ArchivoMuyGrande(val tamanioBytes: Long, val limiteBytes: Long) : ErrorApp()
+    data class ParserNoDisponible(val bancoCodigo: String, val proximamente: Boolean = false) : ErrorApp()
 
     // Network / Firestore errors
     data class FirestoreError(val mensaje: String, val causa: Throwable? = null) : ErrorApp()
@@ -51,6 +52,7 @@ sealed class ErrorApp {
         is ParseError -> "Error al procesar el archivo: $mensaje"
         is FormatoIncompatible -> "Formato de archivo no compatible: $mensaje"
         is ArchivoMuyGrande -> "El archivo es demasiado grande (${tamanioBytes / 1_048_576} MB). Límite: ${limiteBytes / 1_048_576} MB"
+        is ParserNoDisponible -> if (proximamente) "$bancoCodigo estará disponible próximamente." else "No hay parser disponible para $bancoCodigo."
         is FirestoreError -> "Error de sincronización: $mensaje"
         is SinConexion -> mensaje
         is NoAutenticado -> mensaje

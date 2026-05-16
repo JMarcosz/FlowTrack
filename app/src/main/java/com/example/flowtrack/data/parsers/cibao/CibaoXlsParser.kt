@@ -2,22 +2,23 @@ package com.example.flowtrack.data.parsers.cibao
 
 import com.example.flowtrack.core.extensions.normalizarDescripcion
 import com.example.flowtrack.core.extensions.toBigDecimalSafe
-import com.example.flowtrack.data.parsers.core.ArchivoEntrada
-import com.example.flowtrack.data.parsers.core.BankParser
-import com.example.flowtrack.data.parsers.core.ConfianzaDeteccion
-import com.example.flowtrack.data.parsers.core.ContextoParseo
-import com.example.flowtrack.data.parsers.core.EstadoTarjetaDetectado
-import com.example.flowtrack.data.parsers.core.MovimientoTarjetaNormalizado
-import com.example.flowtrack.data.parsers.core.ResultadoParseo
-import com.example.flowtrack.data.parsers.core.TarjetaDetectada
+import com.example.flowtrack.data.parsers.core.EstadoCuentaNormalizado
+import com.example.flowtrack.data.parsers.core.ImportRequest
+import com.example.flowtrack.data.parsers.core.MovimientoNormalizado
+import com.example.flowtrack.data.parsers.core.ParseReport
+import com.example.flowtrack.data.parsers.core.ParseResult
+import com.example.flowtrack.data.parsers.core.ParserKey
+import com.example.flowtrack.data.parsers.core.BankStatementParser
+import com.example.flowtrack.data.parsers.core.TipoMovimiento
+import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.Moneda
-import com.example.flowtrack.domain.model.TipoDocumento
-import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
+import com.example.flowtrack.domain.model.ProductoTipo
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
+import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.Sheet
-import org.apache.poi.ss.usermodel.Workbook
+import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
@@ -27,73 +28,71 @@ import javax.inject.Inject
 /**
  * Parser XLS de Asociación Cibao (tarjeta de crédito).
  *
- * Nota: Solo soporta formato .xls (HSSF/Biff8) que es el que genera Cibao.
- * Si en el futuro cambian a .xlsx se deberá agregar poi-ooxml al build.
- *
- * Señales de detección:
- *   0.6 → hoja Excel contiene "CIBAO" o "ASOCIACION CIBAO"
- *   0.3 → columnas Fecha/Descripción
- *   0.1 → extensión .xls
+ * Formato: hoja 'CreditCardDetail' con sección de resumen y tabla de movimientos.
+ * Columnas: Tarjeta | Fecha | Descripción | Débito | Crédito
  */
-class CibaoXlsParser @Inject constructor() : BankParser {
+class CibaoXlsParser @Inject constructor() : BankStatementParser {
 
-    override val codigoBanco: String = "CIBAO"
-    override val tipoDocumento: TipoDocumento = TipoDocumento.TARJETA_CREDITO
+    override val key: ParserKey = ParserKey("CIBAO", ProductoTipo.TARJETA, FileFormat.XLS)
     override val version: Int = 1
-    override val formatosArchivo: Set<String> = setOf("xls")   // solo HSSF en MVP
 
     private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     private val ZONA = ZoneId.of("America/Santo_Domingo")
 
-    override suspend fun puedeManejar(archivo: ArchivoEntrada): ConfianzaDeteccion {
-        if (archivo.extension != "xls") return ConfianzaDeteccion(0f, "No es XLS")
+    override suspend fun parse(request: ImportRequest): ParseResult {
         return try {
-            val wb = abrirWorkbook(archivo) ?: return ConfianzaDeteccion(0f, "No se pudo leer el XLS")
-            var confianza = 0f
-            val razones = mutableListOf<String>()
-            val pistas = mutableMapOf<String, String>()
-
-            val hoja = wb.getSheetAt(0)
-            val textoHoja = textoDeHoja(hoja, 20)
-
-            if (textoHoja.contains("CIBAO") || textoHoja.contains("ASOCIACION CIBAO")) {
-                confianza += 0.6f; razones.add("texto 'CIBAO'"); pistas["marca"] = "CIBAO"
-            }
-            if (textoHoja.contains("FECHA") && textoHoja.contains("DESCRIPCION")) {
-                confianza += 0.3f; razones.add("columnas Fecha/Descripción")
-            }
-            confianza += 0.1f; razones.add("formato XLS")
-
-            wb.close()
-            ConfianzaDeteccion(confianza.coerceAtMost(1f), razones.joinToString(", "), pistas)
-        } catch (e: Exception) { ConfianzaDeteccion(0f, "Error: ${e.message}") }
-    }
-
-    override suspend fun parsear(archivo: ArchivoEntrada, contexto: ContextoParseo): ResultadoParseo {
-        return try {
-            val wb = abrirWorkbook(archivo)
-                ?: return ResultadoParseo.Error("No se pudo abrir el XLS de Cibao.")
+            // WorkbookFactory detecta automáticamente XLS (HSSF) o XLSX (XSSF)
+            val wb = try { WorkbookFactory.create(request.archivo.bytes.inputStream()) }
+                catch (e: Exception) { return ParseResult.Error("No se pudo abrir el archivo de Cibao (XLS/XLSX).", e) }
             val hoja = wb.getSheetAt(0)
 
-            val tarjeta = extraerTarjeta(hoja)
-                ?: return ResultadoParseo.Error("No se pudo extraer información de tarjeta Cibao.")
-            val estadoTarjeta = extraerEstadoTarjeta(hoja)
-                ?: return ResultadoParseo.Error("No se pudo extraer estado de corte Cibao.")
+            val ultimos4 = extraerUltimos4(hoja) ?: run { wb.close(); return ParseResult.Error("No se pudo extraer número de tarjeta Cibao.") }
+            val titular = extraerTitular(hoja)
+            val limite = extraerMontoDeHoja(hoja, "(?:Límite|Limite|L[ií]mite de cr[eé]dito)[:\\s]+(?:RD\\$?\\s*)?([\\d,]+\\.?\\d*)")
+            val corte = extraerFechaDeHoja(hoja, "Fecha de corte") ?: LocalDate.now()
+            val fechaPago = extraerFechaDeHoja(hoja, "Fecha.*pago") ?: corte.plusDays(25)
+            val balanceCorte = extraerMontoDeHoja(hoja, "Balance al corte|Saldo")
+            val balanceAnterior = extraerMontoDeHoja(hoja, "Balance anterior").takeIf { it > BigDecimal.ZERO }
+            val pagoMinimo = extraerMontoDeHoja(hoja, "Pago m[ií]nimo")
+            val pagoTotal = extraerMontoDeHoja(hoja, "Pago total")
 
-            val headerIdx = encontrarHeader(hoja)
-                ?: return ResultadoParseo.Error("No se encontró el encabezado de movimientos.")
-
-            val (movimientos, advertencias) = extraerMovimientos(hoja, headerIdx)
+            val headerIdx = encontrarHeader(hoja) ?: run { wb.close(); return ParseResult.Error("No se encontró el encabezado de movimientos.") }
+            val (movimientos, advertencias, ignorados) = extraerMovimientos(hoja, headerIdx)
             wb.close()
-            ResultadoParseo.ExitoTarjeta(tarjeta, estadoTarjeta, movimientos, advertencias)
+
+            val estado = EstadoCuentaNormalizado(
+                bancoCodigo = "CIBAO",
+                productoTipo = ProductoTipo.TARJETA,
+                productoId = ultimos4,
+                titular = titular,
+                moneda = Moneda.DOP,
+                fechaInicio = movimientos.minOfOrNull { it.fechaTransaccion },
+                fechaFin = movimientos.maxOfOrNull { it.fechaTransaccion } ?: corte,
+                balanceInicial = balanceAnterior,
+                balanceFinal = balanceCorte,
+                movimientos = movimientos,
+                fechaCorte = corte,
+                fechaLimitePago = fechaPago,
+                pagoMinimo = pagoMinimo,
+                pagoTotal = pagoTotal,
+                montoVencido = BigDecimal.ZERO,
+                limiteCredito = limite,
+            )
+
+            val report = ParseReport(
+                parserId = "CIBAO_XLS_v$version",
+                totalDetectado = movimientos.size + ignorados,
+                totalImportado = movimientos.size,
+                totalIgnorado = ignorados,
+                warnings = advertencias,
+                errors = emptyList(),
+            )
+
+            ParseResult.Success(estado, report)
         } catch (e: Exception) {
-            ResultadoParseo.Error("Error al parsear XLS de Cibao: ${e.message}", e)
+            ParseResult.Error("Error al parsear XLS de Cibao: ${e.message}", e)
         }
     }
-
-    private fun abrirWorkbook(archivo: ArchivoEntrada): Workbook? = try {
-        HSSFWorkbook(archivo.bytes.inputStream())
-    } catch (_: Exception) { null }
 
     private fun textoDeHoja(hoja: Sheet, maxFilas: Int): String =
         (0 until minOf(maxFilas, hoja.lastRowNum + 1))
@@ -101,121 +100,118 @@ class CibaoXlsParser @Inject constructor() : BankParser {
             .flatMap { row -> (0 until row.lastCellNum).map { row.getCell(it)?.toString() ?: "" } }
             .joinToString(" ").uppercase()
 
-    private fun extraerTarjeta(hoja: Sheet): TarjetaDetectada? {
+    private fun extraerUltimos4(hoja: Sheet): String? {
         val texto = textoDeHoja(hoja, 15)
-        val ultimos4 = Regex("""(?:\*{4}|\d{4}[\s-]\d{4}[\s-]\d{4}[\s-])(\d{4})""")
-            .find(texto)?.groupValues?.getOrNull(1) ?: return null
-        val titular = Regex("""(?:Titular|Nombre)[:\s]+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]+)""")
-            .find(texto)?.groupValues?.getOrNull(1)?.trim() ?: "TITULAR"
-        val limite = Regex("""(?:Límite|Limite)[:\s]+(?:RD\$?\s*)?([\d,]+\.?\d*)""", RegexOption.IGNORE_CASE)
-            .find(texto)?.groupValues?.getOrNull(1)?.toBigDecimalSafe() ?: BigDecimal.ZERO
-        return TarjetaDetectada(ultimos4, titular.take(60), null, limite, Moneda.DOP, null, null, 60.0)
+        return listOf(
+            Regex("""(?:[\*Xx]{4}[\s\-]?){3}(\d{4})(?!\d)"""),
+            Regex("""[\*Xx]{4}[\s\-](\d{4})(?!\d)"""),
+            Regex("""[\*Xx]{4}(\d{4})(?!\d)"""),
+            Regex("""\d{4}[\s\-]\d{4}[\s\-]\d{4}[\s\-](\d{4})"""),
+        ).firstNotNullOfOrNull { it.find(texto)?.groupValues?.getOrNull(1) }
     }
 
-    private fun extraerEstadoTarjeta(hoja: Sheet): EstadoTarjetaDetectado? {
+    private fun extraerTitular(hoja: Sheet): String {
+        val texto = textoDeHoja(hoja, 15)
+        return Regex("""(?:Titular|Nombre|Cuentahabiente)[:\s]+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]+)""", RegexOption.IGNORE_CASE)
+            .find(texto)?.groupValues?.getOrNull(1)?.trim() ?: "TITULAR"
+    }
+
+    private fun extraerMontoDeHoja(hoja: Sheet, patron: String): BigDecimal {
         val texto = textoDeHoja(hoja, 20)
-        fun monto(pat: String) = Regex("""$pat[:\s]+(?:RD\$?\s*)?([\d,]+\.?\d*)""", RegexOption.IGNORE_CASE)
+        return Regex("""$patron[:\s]+(?:RD\$?\s*)?([\d,]+\.?\d*)""", RegexOption.IGNORE_CASE)
             .find(texto)?.groupValues?.getOrNull(1)?.toBigDecimalSafe() ?: BigDecimal.ZERO
-        fun fecha(pat: String) = Regex("""$pat[:\s]+(\d{2}/\d{2}/\d{4})""", RegexOption.IGNORE_CASE)
+    }
+
+    private fun extraerFechaDeHoja(hoja: Sheet, patron: String): LocalDate? {
+        val texto = textoDeHoja(hoja, 20)
+        return Regex("""$patron[:\s]+(\d{2}/\d{2}/\d{4})""", RegexOption.IGNORE_CASE)
             .find(texto)?.groupValues?.getOrNull(1)
             ?.let { runCatching { LocalDate.parse(it, dateFormatter) }.getOrNull() }
-
-        val corte = fecha("Fecha de corte") ?: LocalDate.now()
-        return EstadoTarjetaDetectado(
-            fechaCorte = corte, fechaLimitePago = fecha("Fecha.*pago") ?: corte.plusDays(25),
-            balanceAlCorte = monto("Balance al corte|Saldo"),
-            balanceAnterior = monto("Balance anterior").takeIf { it > BigDecimal.ZERO },
-            pagoMinimo = monto("Pago m[ií]nimo"),
-            pagoTotal = monto("Pago total"),
-            montoVencido = BigDecimal.ZERO, balancePromedioDiario = null,
-            interesPorFinanciamiento = null, cashbackGanado = null,
-        )
     }
 
     private fun encontrarHeader(hoja: Sheet): Int? =
-        (0..minOf(15, hoja.lastRowNum)).firstOrNull { idx ->
+        (0..minOf(25, hoja.lastRowNum)).firstOrNull { idx ->
             val row = hoja.getRow(idx) ?: return@firstOrNull false
-            val texto = (0 until row.lastCellNum).joinToString(" ") { row.getCell(it)?.toString() ?: "" }.uppercase()
-            texto.contains("FECHA") && texto.contains("DESCRIPCION")
+            val texto = (0 until row.lastCellNum)
+                .joinToString(" ") { row.getCell(it)?.toString() ?: "" }.uppercase()
+            texto.contains("FECHA") && (texto.contains("DESCRIPCION") || texto.contains("DESCRIPCIÓN"))
         }
 
-    private fun extraerMovimientos(hoja: Sheet, headerIdx: Int): Pair<List<MovimientoTarjetaNormalizado>, List<String>> {
-        val movimientos = mutableListOf<MovimientoTarjetaNormalizado>()
+    private fun extraerMovimientos(hoja: Sheet, headerIdx: Int): Triple<List<MovimientoNormalizado>, List<String>, Int> {
+        val headerRow = hoja.getRow(headerIdx)
+        val colMap = (0 until headerRow.lastCellNum).associate { idx ->
+            idx to (headerRow.getCell(idx)?.toString()?.uppercase() ?: "")
+        }
+        val iColFecha = colMap.entries.firstOrNull { it.value.contains("FECHA") }?.key ?: 1
+        val iColDesc = colMap.entries.firstOrNull { e ->
+            e.value.contains("DESCRIPCION") || e.value.contains("DESCRIPCIÓN")
+        }?.key ?: 2
+        val iColDebito = colMap.entries.firstOrNull { e ->
+            e.value.contains("CARGO") || e.value.contains("DEBITO") || e.value.contains("DÉBITO")
+        }?.key ?: (iColDesc + 1)
+        val iColCredito = colMap.entries.firstOrNull { e ->
+            e.value.contains("ABONO") || e.value.contains("CREDITO") || e.value.contains("CRÉDITO")
+        }?.key ?: (iColDebito + 1)
+        val iColAuth = colMap.entries.firstOrNull { e ->
+            e.value.contains("AUTORIZACION") || e.value.contains("AUTORIZACIÓN") || e.value.contains("REF")
+        }?.key
+
+        val movimientos = mutableListOf<MovimientoNormalizado>()
         val advertencias = mutableListOf<String>()
-        var fallidas = 0
+        var ignorados = 0
 
         for (rowIdx in (headerIdx + 1)..hoja.lastRowNum) {
             val row = hoja.getRow(rowIdx) ?: continue
             val celdas = (0 until row.lastCellNum).map { row.getCell(it) }
             if (celdas.all { it == null || it.toString().isBlank() }) continue
 
-            val celdaFecha = celdas.getOrNull(0)
-            val desc = celdas.getOrNull(1)?.toString()?.trim() ?: continue
+            val desc = celdas.getOrNull(iColDesc)?.toString()?.trim() ?: continue
             if (desc.isBlank()) continue
             if (desc.uppercase().contains("TOTAL") || desc.uppercase().contains("BALANCE")) break
 
-            val debitoStr = celdas.getOrNull(2)?.toString()?.trim() ?: ""
-            val creditoStr = celdas.getOrNull(3)?.toString()?.trim() ?: ""
+            val celdaFecha = celdas.getOrNull(iColFecha)
+            val debitoStr = celdas.getOrNull(iColDebito)?.toString()?.trim() ?: ""
+            val creditoStr = celdas.getOrNull(iColCredito)?.toString()?.trim() ?: ""
 
-            var fechaParseada: LocalDate? = null
-            when {
-                celdaFecha?.cellType == CellType.NUMERIC -> {
-                    try {
-                        fechaParseada = DateUtil.getJavaDate(celdaFecha.numericCellValue)
-                            .toInstant().atZone(ZONA).toLocalDate()
-                    } catch (_: Exception) {}
-                }
-                else -> {
-                    val fechaStr = celdaFecha?.toString()?.trim() ?: ""
-                    fechaParseada = runCatching {
-                        LocalDate.parse(fechaStr, dateFormatter)
-                    }.getOrNull()
-                }
+            val fecha: LocalDate? = when {
+                celdaFecha?.cellType == CellType.NUMERIC ->
+                    runCatching { DateUtil.getJavaDate(celdaFecha.numericCellValue).toInstant().atZone(ZONA).toLocalDate() }.getOrNull()
+                else ->
+                    celdaFecha?.toString()?.trim()?.let { runCatching { LocalDate.parse(it, dateFormatter) }.getOrNull() }
             }
-
-            if (fechaParseada == null) {
-                fallidas++
-                continue
-            }
-            val fecha: LocalDate = fechaParseada
+            if (fecha == null) { ignorados++; continue }
 
             val debito = debitoStr.toBigDecimalSafe()
             val credito = creditoStr.toBigDecimalSafe()
-            var montoRaw: BigDecimal? = null
-            var tipoBaseRaw: TipoMovimientoTarjeta? = null
-            if (debito != null && debito > BigDecimal.ZERO) {
-                montoRaw = debito
-                tipoBaseRaw = TipoMovimientoTarjeta.COMPRA
-            } else if (credito != null && credito > BigDecimal.ZERO) {
-                montoRaw = credito
-                tipoBaseRaw = TipoMovimientoTarjeta.PAGO
+            val (monto, tipoBase) = when {
+                debito != null && debito > BigDecimal.ZERO -> debito to TipoMovimiento.GASTO
+                credito != null && credito > BigDecimal.ZERO -> credito to TipoMovimiento.PAGO_TARJETA
+                else -> { ignorados++; continue }
             }
-            
-            if (montoRaw == null || tipoBaseRaw == null) {
-                fallidas++
-                continue
-            }
-            
-            val monto: BigDecimal = montoRaw
-            val tipoBase: TipoMovimientoTarjeta = tipoBaseRaw
 
             val descNorm = desc.uppercase().normalizarDescripcion()
             val tipo = when {
-                descNorm.contains("PAGO") -> TipoMovimientoTarjeta.PAGO
-                descNorm.contains("INTERES") -> TipoMovimientoTarjeta.INTERES
-                descNorm.contains("COMISION") -> TipoMovimientoTarjeta.COMISION
+                descNorm.contains("PAGO") -> TipoMovimiento.PAGO_TARJETA
+                descNorm.contains("INTERES") -> TipoMovimiento.INTERES
+                descNorm.contains("COMISION") -> TipoMovimiento.COMISION
                 else -> tipoBase
             }
 
-            movimientos.add(MovimientoTarjetaNormalizado(
-                fechaTransaccion = fecha, fechaPosteo = null,
-                descripcionOriginal = desc, monto = monto,
-                tipoMovimiento = tipo, moneda = Moneda.DOP,
-                numeroAutorizacion = celdas.getOrNull(4)?.toString()?.trim(),
-                metadataBanco = mapOf("fila" to rowIdx.toString()),
+            movimientos.add(MovimientoNormalizado(
+                fechaTransaccion = fecha,
+                fechaPosteo = null,
+                descripcionOriginal = desc,
+                descripcionNormalizada = descNorm,
+                descripcionCorta = descNorm.take(40),
+                monto = monto,
+                tipo = tipo,
+                moneda = Moneda.DOP,
+                balancePosterior = null,
+                referencia = iColAuth?.let { celdas.getOrNull(it)?.toString()?.trim() },
+                metadata = mapOf("fila" to rowIdx.toString()),
             ))
         }
-        if (fallidas > 0) advertencias.add("$fallidas movimiento(s) ignorados.")
-        return Pair(movimientos, advertencias)
+        if (ignorados > 0) advertencias.add("$ignorados movimiento(s) ignorados.")
+        return Triple(movimientos, advertencias, ignorados)
     }
 }

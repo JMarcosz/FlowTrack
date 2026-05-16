@@ -12,6 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,7 +30,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.Carga
 import com.example.flowtrack.domain.model.EstadoCarga
+import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.navigation.Screen
+import com.example.flowtrack.ui.theme.BgScreen
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Expense50
+import com.example.flowtrack.ui.theme.Income
+import com.example.flowtrack.ui.theme.Income50
+import com.example.flowtrack.ui.theme.Ink
+import com.example.flowtrack.ui.theme.Line
+import com.example.flowtrack.ui.theme.Muted
+import com.example.flowtrack.ui.theme.Muted2
+import com.example.flowtrack.ui.theme.Primary
+import com.example.flowtrack.ui.theme.TextBody
+import com.example.flowtrack.ui.theme.Warning
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -41,9 +57,36 @@ fun HistorialScreen(
     viewModel: HistorialViewModel = hiltViewModel(),
 ) {
     val estado by viewModel.estado.collectAsState()
+    LaunchedEffect(Unit) { viewModel.cargar() }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var confirmarEliminarTodo by remember { mutableStateOf(false) }
+
+    if (confirmarEliminarTodo) {
+        AlertDialog(
+            onDismissRequest = { confirmarEliminarTodo = false },
+            title = { Text("Eliminar todo") },
+            text = { Text("Se eliminarán todas las transacciones, movimientos y estados de tarjeta de todas las importaciones. Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.eliminarTodo(); confirmarEliminarTodo = false }) {
+                    Text("Eliminar todo", color = Expense)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmarEliminarTodo = false }) { Text("Cancelar") } },
+        )
+    }
+
+    // Mostrar error como Snackbar si el estado es Error (sin perder la lista anterior)
+    LaunchedEffect(estado) {
+        if (estado is HistorialEstado.Error) {
+            snackbarHostState.showSnackbar((estado as HistorialEstado.Error).mensaje)
+        }
+    }
 
     Scaffold(
-        containerColor = Color(0xFFF4F6FA),
+        containerColor = BgScreen,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Historial de importaciones", fontWeight = FontWeight.SemiBold) },
@@ -52,13 +95,20 @@ fun HistorialScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF4F6FA)),
+                actions = {
+                    if (estado is HistorialEstado.ConDatos) {
+                        IconButton(onClick = { confirmarEliminarTodo = true }) {
+                            Icon(Icons.Outlined.DeleteSweep, "Eliminar todo", tint = Expense)
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navController.navigate(Screen.Upload.route) },
-                containerColor = Color(0xFF2F6FED),
+                containerColor = Primary,
                 contentColor = Color.White,
             ) { Icon(Icons.Outlined.Add, "Importar nuevo") }
         }
@@ -79,7 +129,7 @@ fun HistorialScreen(
 @Composable
 private fun LoadingHistorial(modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Color(0xFF2F6FED))
+        CircularProgressIndicator(color = Primary)
     }
 }
 
@@ -87,12 +137,12 @@ private fun LoadingHistorial(modifier: Modifier) {
 private fun EmptyHistorial(navController: NavController, modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Icons.Outlined.Inbox, null, tint = Color(0xFF94A3B8), modifier = Modifier.size(56.dp))
-            Text("Sin importaciones aún", fontWeight = FontWeight.SemiBold, color = Color(0xFF334155))
-            Text("Importa tu primer estado de cuenta para empezar", style = MaterialTheme.typography.bodySmall, color = Color(0xFF94A3B8), textAlign = TextAlign.Center)
+            Icon(Icons.Outlined.Inbox, null, tint = Muted2, modifier = Modifier.size(56.dp))
+            Text("Sin importaciones aún", fontWeight = FontWeight.SemiBold, color = TextBody)
+            Text("Importa tu primer estado de cuenta para empezar", style = MaterialTheme.typography.bodySmall, color = Muted2, textAlign = TextAlign.Center)
             Button(
                 onClick = { navController.navigate(Screen.Upload.route) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2F6FED)),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 shape = RoundedCornerShape(12.dp),
             ) { Text("Importar ahora") }
         }
@@ -102,7 +152,7 @@ private fun EmptyHistorial(navController: NavController, modifier: Modifier) {
 @Composable
 private fun ErrorHistorial(mensaje: String, modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(mensaje, color = Color(0xFFDC2626), textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
+        Text(mensaje, color = Expense, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
     }
 }
 
@@ -121,7 +171,7 @@ private fun HistorialContent(
             Text(
                 "${cargas.size} importación(es)",
                 style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF94A3B8),
+                color = Muted2,
                 modifier = Modifier.padding(bottom = 4.dp),
             )
         }
@@ -144,7 +194,7 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
             text = { Text("Se eliminarán ${carga.transaccionesInsertadas} transacción(es) importadas con '${carga.nombreArchivo}'.") },
             confirmButton = {
                 TextButton(onClick = { onEliminar(); confirmarEliminar = false }) {
-                    Text("Eliminar", color = Color(0xFFDC2626))
+                    Text("Eliminar", color = Expense)
                 }
             },
             dismissButton = { TextButton(onClick = { confirmarEliminar = false }) { Text("Cancelar") } },
@@ -163,25 +213,14 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // Icono banco
-                Box(
-                    Modifier.size(40.dp).background(bancoCcolor(carga.bancoCodigo).copy(alpha = 0.12f), RoundedCornerShape(10.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        carga.bancoCodigo.take(2),
-                        color = bancoCcolor(carga.bancoCodigo),
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 11.sp,
-                    )
-                }
+                BankLogo(bancoCodigo = carga.bancoCodigo)
 
                 Column(Modifier.weight(1f)) {
-                    Text(carga.nombreArchivo, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(carga.nombreArchivo, fontWeight = FontWeight.SemiBold, color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
                         carga.procesadoEn.atZone(ZONA).format(FMT_FECHA),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8),
+                        color = Muted2,
                     )
                 }
 
@@ -189,7 +228,7 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                 Icon(
                     if (expandido) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                     null,
-                    tint = Color(0xFF94A3B8),
+                    tint = Muted2,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -197,13 +236,12 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
             // Detalle expandible
             AnimatedVisibility(visible = expandido, enter = expandVertically(), exit = shrinkVertically()) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    HorizontalDivider(color = Color(0xFFE2E8F0))
+                    HorizontalDivider(color = Line)
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         InfoMini("Insertadas", "${carga.transaccionesInsertadas}")
                         InfoMini("Duplicadas", "${carga.transaccionesDuplicadas}")
                         InfoMini("Parser v${carga.parserVersion}", carga.tipoDocumento.name)
-                        InfoMini("Confianza", "${(carga.confianzaDeteccion * 100).toInt()}%")
                     }
 
                     if (carga.advertencias.isNotEmpty()) {
@@ -216,18 +254,20 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                         }
                     }
 
-                    OutlinedButton(
-                        onClick = { confirmarEliminar = true },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFDC2626).copy(alpha = 0.4f))
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.align(Alignment.End),
-                    ) {
-                        Icon(Icons.Outlined.DeleteOutline, null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Eliminar carga", fontSize = 12.sp)
+                    if (carga.estado != com.example.flowtrack.domain.model.EstadoCarga.ELIMINADO) {
+                        OutlinedButton(
+                            onClick = { confirmarEliminar = true },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Expense),
+                            border = ButtonDefaults.outlinedButtonBorder.copy(
+                                brush = androidx.compose.ui.graphics.SolidColor(Expense.copy(alpha = 0.4f))
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.align(Alignment.End),
+                        ) {
+                            Icon(Icons.Outlined.DeleteOutline, null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Eliminar carga", fontSize = 12.sp)
+                        }
                     }
                 }
             }
@@ -238,9 +278,10 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
 @Composable
 private fun EstadoBadge(estado: EstadoCarga) {
     val (bgColor, textColor, texto) = when (estado) {
-        EstadoCarga.EXITOSO -> Triple(Color(0xFFE7F7EC), Color(0xFF16A34A), "Exitoso")
-        EstadoCarga.PARCIAL -> Triple(Color(0xFFFFF7ED), Color(0xFFF59E0B), "Parcial")
-        EstadoCarga.FALLIDO -> Triple(Color(0xFFFDECEC), Color(0xFFDC2626), "Fallido")
+        EstadoCarga.EXITOSO  -> Triple(Income50, Income, "Exitoso")
+        EstadoCarga.PARCIAL  -> Triple(Color(0xFFFFF7ED), Warning, "Parcial")
+        EstadoCarga.FALLIDO  -> Triple(Expense50, Expense, "Fallido")
+        EstadoCarga.ELIMINADO -> Triple(Color(0xFFE5E7EB), Muted2, "Eliminado")
     }
     Box(
         Modifier.clip(RoundedCornerShape(20.dp)).background(bgColor).padding(horizontal = 8.dp, vertical = 3.dp),
@@ -250,15 +291,8 @@ private fun EstadoBadge(estado: EstadoCarga) {
 @Composable
 private fun InfoMini(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF334155))
-        Text(label, fontSize = 9.sp, color = Color(0xFF94A3B8))
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextBody)
+        Text(label, fontSize = 9.sp, color = Muted2)
     }
 }
 
-private fun bancoCcolor(codigo: String) = when (codigo) {
-    "BANRESERVAS" -> Color(0xFF0F5DAB)
-    "POPULAR"     -> Color(0xFF005DA4)
-    "QIK"         -> Color(0xFFE6A800)
-    "CIBAO"       -> Color(0xFFE30613)
-    else          -> Color(0xFF64748B)
-}

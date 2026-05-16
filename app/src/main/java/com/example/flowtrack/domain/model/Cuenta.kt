@@ -14,6 +14,7 @@ data class Cuenta(
     val moneda: Moneda,
     val balanceActual: BigDecimal?,         // último balance conocido
     val balanceAlCorte: BigDecimal?,
+    val fechaUltimoCorte: Instant? = null,  // fecha de fin del estado más reciente importado
     val titular: String,
     val activa: Boolean = true,
     val mostrarEnDashboard: Boolean = true, // v2: opcional ocultar en dashboard

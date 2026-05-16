@@ -30,11 +30,11 @@ class CalcularComparativaMensualUseCase @Inject constructor(
         val finMesAnterior = ahora.withDayOfMonth(1).minusDays(1).atTime(23, 59, 59).atZone(zona).toInstant()
 
         // Obtener transacciones del mes actual
-        val resActual = transaccionRepository.obtenerTransacciones(uid, inicioMesActual, finMesActual, limite = 5000)
+        val resActual = transaccionRepository.obtenerTransacciones(uid, inicioMesActual, finMesActual, limite = 0)
         if (resActual is AppResult.Error) return AppResult.Error(resActual.error)
 
         // Obtener transacciones del mes anterior
-        val resAnterior = transaccionRepository.obtenerTransacciones(uid, inicioMesAnterior, finMesAnterior, limite = 5000)
+        val resAnterior = transaccionRepository.obtenerTransacciones(uid, inicioMesAnterior, finMesAnterior, limite = 0)
         if (resAnterior is AppResult.Error) return AppResult.Error(resAnterior.error)
 
         val gastosActuales = (resActual as AppResult.Success).data

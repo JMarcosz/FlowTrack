@@ -76,20 +76,40 @@ fun formatDateRelative(date: LocalDate): String {
 
 /**
  * Convierte un String con formato bancario a BigDecimal.
- * Maneja: comas como separador de miles, punto decimal, espacios y símbolo de moneda.
- * Ejemplo: "1,234.56" → BigDecimal("1234.56")
- * Ejemplo: "RD$ 42,850.00" → BigDecimal("42850.00")
+ * Soporta formato US (1,234.56) y europeo (1.234,56), prefijos RD$/US$,
+ * paréntesis contables (1,234.56) → negativo, y signos negativos explícitos.
+ *
+ * Ejemplos:
+ *   "1,234.56"      → 1234.56
+ *   "1.234,56"      → 1234.56
+ *   "(1,234.56)"    → -1234.56
+ *   "RD$ 42,850.00" → 42850.00
  */
 fun String.toBigDecimalSafe(): BigDecimal? {
-    // Quitar prefijos de moneda (RD$, US$), comas y espacios
-    // Nota: en Kotlin, $ dentro de strings debe escaparse como \$
-    val cleaned = this
+    var s = this
         .replace("RD\$", "").replace("US\$", "")
-        .replace(Regex("[,\\s]"), "")
+        .replace("RD$", "").replace("US$", "")
         .trim()
+
+    val negativo = s.startsWith("(") && s.endsWith(")")
+    if (negativo) s = s.removePrefix("(").removeSuffix(")")
+    val negSign = s.startsWith("-")
+    if (negSign) s = s.removePrefix("-").trim()
+
+    // Detectar formato europeo: termina en ",XX" (coma + exactamente 2 dígitos)
+    val cleaned = if (Regex(""",\d{2}$""").containsMatchIn(s)) {
+        s.replace(".", "").replace(",", ".")
+    } else {
+        s.replace(Regex("[,\\s]"), "")
+    }
+
     return try {
-        if (cleaned.isEmpty()) null else BigDecimal(cleaned)
-    } catch (e: NumberFormatException) {
+        if (cleaned.isEmpty()) null
+        else {
+            val valor = BigDecimal(cleaned)
+            if (negativo || negSign) valor.negate() else valor
+        }
+    } catch (_: NumberFormatException) {
         null
     }
 }
