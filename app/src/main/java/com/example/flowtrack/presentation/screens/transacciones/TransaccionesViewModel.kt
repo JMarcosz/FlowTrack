@@ -51,7 +51,9 @@ class TransaccionesViewModel @Inject constructor(
                         .map { it.bancoCodigo }
                         .distinct()
                         .sorted()
-                    _state.value = _state.value.copy(bancosDisponibles = bancos)
+                    // Si el filtro activo ya no existe en los bancos cargados, reiniciarlo
+                    val filtroValido = _state.value.bancoFiltro?.takeIf { it in bancos }
+                    _state.value = _state.value.copy(bancosDisponibles = bancos, bancoFiltro = filtroValido)
                     aplicarFiltros()
                 }
                 is AppResult.Error -> {

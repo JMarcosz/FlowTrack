@@ -53,6 +53,7 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
     val allBancos = remember(state.bancosDisponibles) { listOf<String?>(null) + state.bancosDisponibles }
     val selectedBancoIdx = remember(state.bancoFiltro, allBancos) {
         allBancos.indexOf(state.bancoFiltro).coerceAtLeast(0)
+            .coerceAtMost((allBancos.size - 1).coerceAtLeast(0))
     }
 
     var showDeleteDialogFor by remember { mutableStateOf<Transaccion?>(null) }
@@ -71,7 +72,7 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
                 // ── Pestañas de banco ──────────────────────────────────────────
                 if (state.bancosDisponibles.isNotEmpty()) {
                     ScrollableTabRow(
-                        selectedTabIndex = selectedBancoIdx,
+                        selectedTabIndex = selectedBancoIdx.coerceAtMost(state.bancosDisponibles.size),
                         containerColor = MaterialTheme.colorScheme.surface,
                         edgePadding = Spacing.md,
                         divider = {},
