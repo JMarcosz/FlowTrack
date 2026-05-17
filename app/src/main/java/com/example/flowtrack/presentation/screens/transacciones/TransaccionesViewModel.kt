@@ -14,8 +14,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 
 data class TransaccionesState(
@@ -23,16 +21,18 @@ data class TransaccionesState(
     val transacciones: List<Transaccion> = emptyList(),
     val searchQuery: String = "",
     val filtroTipo: TipoTransaccionFiltro = TipoTransaccionFiltro.TODAS,
-    val error: String? = null
+    val bancosDisponibles: List<String> = emptyList(),
+    val bancoFiltro: String? = null,
+    val error: String? = null,
 )
 
-enum class TipoTransaccionFiltro { TODAS, INGRESOS, GASTOS }
+enum class TipoTransaccionFiltro { TODAS, DEBITO, CREDITO }
 
 @HiltViewModel
 class TransaccionesViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val repository: TransaccionRepository,
-    private val reglaRepository: ReglaCategoriaRepository
+    private val reglaRepository: ReglaCategoriaRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TransaccionesState())
@@ -44,16 +44,20 @@ class TransaccionesViewModel @Inject constructor(
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            val result = repository.obtenerTransacciones(uid, limite = 2000)
-            when (result) {
+            when (val result = repository.obtenerTransacciones(uid, limite = 2000)) {
                 is AppResult.Success -> {
                     allTransacciones = result.data
+                    val bancos = allTransacciones
+                        .map { it.bancoCodigo }
+                        .distinct()
+                        .sorted()
+                    _state.value = _state.value.copy(bancosDisponibles = bancos)
                     aplicarFiltros()
                 }
                 is AppResult.Error -> {
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        error = result.error.toMensajeUsuario()
+                        error = result.error.toMensajeUsuario(),
                     )
                 }
             }
@@ -62,6 +66,11 @@ class TransaccionesViewModel @Inject constructor(
 
     fun setFiltroTipo(filtro: TipoTransaccionFiltro) {
         _state.value = _state.value.copy(filtroTipo = filtro)
+        aplicarFiltros()
+    }
+
+    fun setBancoFiltro(banco: String?) {
+        _state.value = _state.value.copy(bancoFiltro = banco)
         aplicarFiltros()
     }
 
@@ -75,16 +84,25 @@ class TransaccionesViewModel @Inject constructor(
         val queryNorm = currState.searchQuery.normalizarDescripcion()
 
         val filtradas = allTransacciones.filter { tx ->
+            // Derivadas siempre acompañan a su transacción padre — no se filtran individualmente
+            if (tx.esDerivada) return@filter true
+
+            val matchBanco = currState.bancoFiltro == null || tx.bancoCodigo == currState.bancoFiltro
+
             val matchTipo = when (currState.filtroTipo) {
-                TipoTransaccionFiltro.TODAS -> true
-                TipoTransaccionFiltro.INGRESOS -> tx.tipo == TipoTransaccion.CREDITO
-                TipoTransaccionFiltro.GASTOS -> tx.tipo == TipoTransaccion.DEBITO
+                TipoTransaccionFiltro.TODAS  -> true
+                TipoTransaccionFiltro.DEBITO -> tx.tipo == TipoTransaccion.DEBITO
+                TipoTransaccionFiltro.CREDITO -> tx.tipo == TipoTransaccion.CREDITO
             }
+
             val matchQuery = if (queryNorm.isBlank()) true else {
-                tx.descripcionNormalizada.contains(queryNorm) ||
-                tx.monto.toPlainString().contains(currState.searchQuery)
+                tx.descripcionNormalizada.normalizarDescripcion().contains(queryNorm) ||
+                    tx.descripcionOriginal.normalizarDescripcion().contains(queryNorm) ||
+                    tx.bancoCodigo.normalizarDescripcion().contains(queryNorm) ||
+                    tx.monto.toPlainString().contains(currState.searchQuery.trim())
             }
-            matchTipo && matchQuery
+
+            matchBanco && matchTipo && matchQuery
         }
 
         _state.value = currState.copy(isLoading = false, transacciones = filtradas)
@@ -104,16 +122,7 @@ class TransaccionesViewModel @Inject constructor(
         }
     }
 
-    /** Agrupa por día excluyendo derivadas DGII (se muestran bajo su padre). */
-    fun getTransaccionesAgrupadasPorDia(): Map<LocalDate, List<Transaccion>> {
-        val zona = ZoneId.of("America/Santo_Domingo")
-        return _state.value.transacciones
-            .filter { !it.esDerivada }
-            .groupBy { it.fecha.atZone(zona).toLocalDate() }
-            .toSortedMap(compareByDescending { it })
-    }
-
-    /** Retorna las transacciones derivadas de un padre dado. */
+    /** Retorna las transacciones derivadas de un padre dado (siempre desde la lista completa filtrada). */
     fun getDerivadasParaPadre(padreId: String): List<Transaccion> =
         _state.value.transacciones.filter { it.esDerivada && it.transaccionPadreId == padreId }
 
@@ -121,37 +130,30 @@ class TransaccionesViewModel @Inject constructor(
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
-            
-            // Actualizar la transacción individual
+
             val txActualizada = tx.copy(categoriaId = nuevaCategoria, categoriaAutomatica = false)
             val res = repository.actualizarTransaccion(txActualizada)
-            
+
             if (res is AppResult.Success) {
-                // Actualizar en memoria local
                 allTransacciones = allTransacciones.map { if (it.id == tx.id) txActualizada else it }
-                
-                // Si el usuario marcó 'Aplicar a todas similares'
+
                 if (aplicarATodas) {
                     val patron = tx.descripcionNormalizada
-                    // Guardar la regla
                     reglaRepository.crearReglaPersonal(
                         uidUsuario = uid,
                         patron = patron,
                         categoriaId = nuevaCategoria,
-                        tipoMatch = TipoMatch.EXACTO
+                        tipoMatch = TipoMatch.EXACTO,
                     )
-                    
-                    // Aplicar retroactivamente local e idealmente a BD
                     allTransacciones = allTransacciones.map {
                         if (it.descripcionNormalizada == patron && it.id != tx.id) {
-                            val similarTx = it.copy(categoriaId = nuevaCategoria, categoriaAutomatica = true)
-                            // Fire and forget al repositorio para no bloquear
-                            launch { repository.actualizarTransaccion(similarTx) }
-                            similarTx
+                            val similar = it.copy(categoriaId = nuevaCategoria, categoriaAutomatica = true)
+                            launch { repository.actualizarTransaccion(similar) }
+                            similar
                         } else it
                     }
                 }
-                
+
                 aplicarFiltros()
             } else if (res is AppResult.Error) {
                 _state.value = _state.value.copy(isLoading = false, error = res.error.toMensajeUsuario())

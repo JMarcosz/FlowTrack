@@ -11,79 +11,49 @@ import com.example.flowtrack.domain.model.Transaccion
 /**
  * Motor de categorización automática de transacciones.
  *
- * Responsabilidad única: dado un listado de [ReglaCategoria] y una [Transaccion],
- * determinar qué categoría se debe asignar, si existe alguna regla que aplique.
- *
  * Orden de precedencia:
  *   1. Reglas del usuario (uidUsuario != null), ordenadas por prioridad DESC
  *   2. Reglas del sistema (uidUsuario == null), ordenadas por prioridad DESC
- *   3. Categoría por defecto inferida de [descripcionCorta] (tabla de la sección §3.1 del plan)
- *   4. null si ninguna regla y ningún default aplica
- *
- * No produce efectos secundarios: es una función pura que devuelve el [categoriaId] calculado.
- * La persistencia del resultado queda en manos del caller.
+ *   3. Keywords específicos de comercio contra descripcionNormalizada
+ *   4. Tipo genérico de transacción contra descripcionCorta
+ *   5. null si ninguna regla aplica
  */
 object MotorCategorizacion {
 
-    /**
-     * Evalúa las reglas contra la descripción normalizada de la transacción.
-     *
-     * @param transaccion  Transacción a categorizar
-     * @param reglas       Reglas cargadas desde Firestore (personales + globales)
-     * @return Par (categoriaId, esAutomatica). Si no hay match: (null, false)
-     */
     fun categorizar(
         transaccion: Transaccion,
         reglas: List<ReglaCategoria>,
     ): Pair<String?, Boolean> {
         val descripcion = transaccion.descripcionNormalizada
 
-        // 1. Evaluar reglas del usuario, luego del sistema — ordenadas por prioridad DESC
         val reglaOrdenada = reglas
             .filter { it.activa }
             .sortedWith(
-                compareByDescending<ReglaCategoria> { it.uidUsuario != null }  // usuario > sistema
+                compareByDescending<ReglaCategoria> { it.uidUsuario != null }
                     .thenByDescending { it.prioridad }
             )
 
         for (regla in reglaOrdenada) {
-            if (matchea(descripcion, regla)) {
-                return Pair(regla.categoriaId, true)
-            }
+            if (matchea(descripcion, regla)) return Pair(regla.categoriaId, true)
         }
 
-        // 2. Inferencia por descripcionCorta (fallback hardcoded cuando no hay reglas)
-        val categoriaInferida = inferirPorDescripcionCorta(
+        val categoriaInferida = inferirPorDescripcion(
+            descripcionNormalizada = transaccion.descripcionNormalizada,
             descripcionCorta = transaccion.descripcionCorta,
             tipo = transaccion.tipo,
         )
-        if (categoriaInferida != null) {
-            return Pair(categoriaInferida, true)
-        }
-
-        return Pair(null, false)
+        return Pair(categoriaInferida, categoriaInferida != null)
     }
 
-    /**
-     * Versión por lote: categoriza una lista de transacciones con las mismas reglas.
-     * Retorna la lista actualizada (con [Transaccion.categoriaId] asignado cuando aplique).
-     */
     fun categorizarLote(
         transacciones: List<Transaccion>,
         reglas: List<ReglaCategoria>,
     ): List<Transaccion> = transacciones.map { tx ->
         val (catId, esAuto) = categorizar(tx, reglas)
-        if (catId != null && tx.categoriaId == null) {
-            tx.copy(categoriaId = catId, categoriaAutomatica = esAuto)
-        } else {
-            tx
-        }
+        if (catId != null && tx.categoriaId == null) tx.copy(categoriaId = catId, categoriaAutomatica = esAuto)
+        else tx
     }
 
-    /**
-     * Categoriza un [MovimientoTarjeta] usando las mismas reglas que para transacciones.
-     * Retorna par (categoriaId, esAutomatica).
-     */
     fun categorizarMovimiento(
         movimiento: MovimientoTarjeta,
         reglas: List<ReglaCategoria>,
@@ -102,74 +72,149 @@ object MotorCategorizacion {
             TipoMovimientoTarjeta.PAGO, TipoMovimientoTarjeta.CASHBACK -> TipoTransaccion.CREDITO
             else -> TipoTransaccion.DEBITO
         }
-        val categoriaInferida = inferirPorDescripcionCorta(
-            descripcionCorta = descripcion.take(40),
+        val categoriaInferida = inferirPorDescripcion(
+            descripcionNormalizada = movimiento.descripcionNormalizada,
+            descripcionCorta = movimiento.descripcionNormalizada.take(40),
             tipo = tipoTx,
         )
         return Pair(categoriaInferida, categoriaInferida != null)
     }
 
-    /** Versión por lote para [MovimientoTarjeta]. */
     fun categorizarLoteMovimientos(
         movimientos: List<MovimientoTarjeta>,
         reglas: List<ReglaCategoria>,
     ): List<MovimientoTarjeta> = movimientos.map { mov ->
         val (catId, esAuto) = categorizarMovimiento(mov, reglas)
-        if (catId != null && mov.categoriaId == null) {
-            mov.copy(categoriaId = catId, categoriaAutomatica = esAuto)
-        } else {
-            mov
-        }
+        if (catId != null && mov.categoriaId == null) mov.copy(categoriaId = catId, categoriaAutomatica = esAuto)
+        else mov
     }
 
-    // ─── Evaluación de una regla individual ──────────────────────────────────
+    // ─── Evaluación de regla ──────────────────────────────────────────────────
 
     internal fun matchea(descripcionNormalizada: String, regla: ReglaCategoria): Boolean {
         val desc = descripcionNormalizada.normalizarDescripcion()
         return when (regla.tipoMatch) {
-            TipoMatch.EXACTO       -> desc == regla.patron.normalizarDescripcion()
-            TipoMatch.CONTIENE     -> desc.contains(regla.patron.normalizarDescripcion())
-            TipoMatch.EMPIEZA_CON  -> desc.startsWith(regla.patron.normalizarDescripcion())
-            // REGEX: el patrón NO se normaliza (normalizarDescripcion destruiría metacaracteres como \s, \b, \d)
-            TipoMatch.REGEX        -> runCatching { Regex(regla.patron).containsMatchIn(desc) }.getOrDefault(false)
+            TipoMatch.EXACTO      -> desc == regla.patron.normalizarDescripcion()
+            TipoMatch.CONTIENE    -> desc.contains(regla.patron.normalizarDescripcion())
+            TipoMatch.EMPIEZA_CON -> desc.startsWith(regla.patron.normalizarDescripcion())
+            TipoMatch.REGEX       -> runCatching { Regex(regla.patron).containsMatchIn(desc) }.getOrDefault(false)
         }
     }
 
-    // ─── Tabla de inferencia por descripción corta (§3.1 plan maestro) ───────
+    // ─── Inferencia por keywords ──────────────────────────────────────────────
 
     /**
-     * Mapea [descripcionCorta] a un [categoriaId] del [categoriaRegistry].
-     * Solo se invoca si no hay ninguna regla que haga match.
+     * Categoriza por keywords contra la descripción completa normalizada y,
+     * como fallback, contra el tipo genérico de la descripcionCorta.
+     *
+     * Orden crítico: validar keywords compuestos antes del prefijo corto
+     * (ej. "UBER EATS" antes de "UBER" para no clasificar delivery como transporte).
      */
-    internal fun inferirPorDescripcionCorta(
+    internal fun inferirPorDescripcion(
+        descripcionNormalizada: String,
         descripcionCorta: String,
         tipo: TipoTransaccion,
     ): String? {
-        val upper = descripcionCorta.normalizarDescripcion()
+        val desc  = descripcionNormalizada.normalizarDescripcion()
+        val corta = descripcionCorta.normalizarDescripcion()
+
+        // ── Comida y delivery — UBER EATS antes que el prefijo genérico UBER ─
+        if (desc.contains("UBER EATS"))          return "alimentacion"
+        if (desc.contains("HELADOS BON") ||
+            desc.contains("PEDIDOSYA")  ||
+            desc.contains("RICO HOTDOG") ||
+            desc.contains("KFC")         ||
+            desc.contains("TACO BELL")   ||
+            desc.contains("CHICKEN ROOMING")) return "alimentacion"
+
+        // ── Transporte ────────────────────────────────────────────────────────
+        if (desc.contains("UBER RIDES") ||
+            desc.contains("UBER")       ||
+            desc.contains("DIDI")       ||
+            desc.contains("OPRET")      ||
+            desc.contains("INDRIVE"))    return "transporte"
+
+        // ── Supermercado → compras ────────────────────────────────────────────
+        if (desc.contains("BRAVO")      ||
+            desc.contains("JUMBO")      ||
+            desc.contains("SIRENA")     ||
+            desc.contains("CARREFOUR")  ||
+            desc.contains("MINIMARKET")) return "compras"
+
+        // ── Salud ─────────────────────────────────────────────────────────────
+        if (desc.contains("FARMA EXTRA") ||
+            desc.contains("MEDICAR GBC") ||
+            desc.contains("FCIA"))        return "salud"
+
+        // ── Servicios ─────────────────────────────────────────────────────────
+        // CLAROREC contiene "CLARO" — basta con una sola condición
+        if (desc.contains("ALTICE") ||
+            desc.contains("CLARO"))       return "servicios"
+
+        // ── Suscripciones ─────────────────────────────────────────────────────
+        if (desc.contains("AMAZON PRIME") ||
+            desc.contains("LARAVEL CLOUD")) return "suscripciones"
+
+        // ── Entretenimiento / Ocio ────────────────────────────────────────────
+        if (desc.contains("CHUCK E CHEESE") ||
+            desc.contains("MEGAPLEX")       ||
+            desc.contains("BATH"))           return "entretenimiento"
+
+        // ── Impuestos y comisiones ────────────────────────────────────────────
+        if (desc.contains("PAGO IMPUESTO") ||
+            desc.contains("DGII"))           return "impuestos"
+        if (desc.contains("COMISIONES") ||
+            desc.contains("CARGO MENSUAL") ||
+            desc.contains("CARGO RETIRO"))   return "intereses_comisiones"
+
+        // ── Egresos / transferencias salientes ────────────────────────────────
+        if (desc.contains("MB A ") ||
+            desc.contains("COD CASH") ||
+            desc.contains("PAGO ACH") ||
+            desc.contains("AUT PAGO"))       return "transferencia_enviada"
+        if (desc.contains("RET DE CHK"))     return "atm"
+
+        // ── Ingresos / transferencias entrantes ───────────────────────────────
+        if (desc.contains("MB DESDE"))       return "transferencia_recibida"
+        if (desc.contains("DEPOSITO") && tipo == TipoTransaccion.CREDITO) return "deposito"
+
+        // LBTR: dirección determinada por tipo
+        if (desc.contains("LBTR")) return if (tipo == TipoTransaccion.CREDITO) "transferencia_recibida" else "transferencia_enviada"
+
+        // ── Fallback: tipo genérico desde descripcionCorta ────────────────────
         return when {
-            // Ingresos
-            upper.contains("NOMINA") || upper.contains("SALARIO") -> "salario"
-            tipo == TipoTransaccion.CREDITO && upper.contains("TRANSFERENCIA ENTRANTE") -> "transferencia_recibida"
-            tipo == TipoTransaccion.CREDITO && upper.contains("TRANSFERENCIA PROPIA")  -> "transferencia_recibida"
-            tipo == TipoTransaccion.CREDITO && upper.contains("DEPOSITO")              -> "deposito"
-            tipo == TipoTransaccion.CREDITO && upper.contains("CASHBACK")              -> "cashback"
-
-            // Gastos
-            upper.contains("CONSUMO POS")           -> "compras"
-            upper.contains("RETIRO ATM")            -> "atm"
-            upper.contains("RETIRO SUCURSAL")       -> "atm"
-            upper.contains("TRANSFERENCIA SALIENTE") -> "transferencia_enviada"
-            upper.contains("TRANSFERENCIA LBTR")    -> "transferencia_enviada"
-            upper.contains("TRANSFERENCIA ACH")     -> "transferencia_enviada"
-            upper.contains("IMPUESTO DGII")         -> "impuestos"
-            upper.contains("COMISION ATM")          -> "intereses_comisiones"
-            upper.contains("COMISION")              -> "intereses_comisiones"
-            upper.contains("PAGO SERVICIO")         -> "servicios"
-            upper.contains("PAGO DEBITADO")         -> "servicios"
-            upper.contains("CARGO PENDIENTE")       -> "servicios"
-            upper.contains("PAGO CHEQUE")           -> "servicios"
-
+            corta.contains("NOMINA") || corta.contains("SALARIO")               -> "salario"
+            tipo == TipoTransaccion.CREDITO && (
+                corta.contains("TRANSFERENCIA RECIBIDA") ||
+                corta.contains("TRANSFERENCIA ENTRANTE") ||
+                corta.contains("TRANSFERENCIA PROPIA"))                          -> "transferencia_recibida"
+            tipo == TipoTransaccion.CREDITO && corta.contains("CASHBACK")        -> "cashback"
+            tipo == TipoTransaccion.CREDITO && corta.contains("DEPOSITO")        -> "deposito"
+            corta.contains("CONSUMO POS")                                        -> "compras"
+            corta.contains("RETIRO ATM") || corta.contains("RETIRO SUCURSAL")   -> "atm"
+            corta.contains("RETIRO")                                             -> "atm"
+            corta.contains("TRANSFERENCIA ENVIADA") ||
+                corta.contains("TRANSFERENCIA SALIENTE") ||
+                corta.contains("TRANSFERENCIA LBTR")    ||
+                corta.contains("TRANSFERENCIA ACH")                              -> "transferencia_enviada"
+            corta.contains("IMPUESTO DGII") || corta.contains("IMPUESTO")       -> "impuestos"
+            corta.contains("COMISION ATM") ||
+                corta.contains("COMISION")  ||
+                corta.contains("CARGO MENSUAL") ||
+                corta.contains("CARGO")                                          -> "intereses_comisiones"
+            corta.contains("PAGO SERVICIO") || corta.contains("PAGO DEBITADO") ||
+                corta.contains("CARGO PENDIENTE") || corta.contains("PAGO CHEQUE") -> "servicios"
             else -> null
         }
     }
+
+    // Alias de compatibilidad — delega al nuevo método
+    internal fun inferirPorDescripcionCorta(
+        descripcionCorta: String,
+        tipo: TipoTransaccion,
+    ): String? = inferirPorDescripcion(
+        descripcionNormalizada = descripcionCorta,
+        descripcionCorta = descripcionCorta,
+        tipo = tipo,
+    )
 }

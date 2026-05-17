@@ -4,9 +4,12 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -28,12 +32,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +53,6 @@ fun UploadScreen(
     val estado by viewModel.estado.collectAsState()
     val bancoSeleccionado by viewModel.bancoSeleccionado.collectAsState()
 
-    val mimeTypes = arrayOf("application/pdf", "text/csv", "application/vnd.ms-excel", "*/*")
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -88,9 +96,9 @@ fun UploadScreen(
                             bancoSeleccionado = bancoSeleccionado,
                             errorMensaje = (estadoActual as? UploadEstado.Error)?.mensaje,
                             onSeleccionarBanco = { viewModel.seleccionarBanco(it) },
-                            onSeleccionarArchivo = {
-                                filePicker.launch("*/*")
-                            },
+                            onFechaCorteChange = { viewModel.setFechaCorte(it) },
+                            onFechaLimitePagoChange = { viewModel.setFechaLimitePago(it) },
+                            onSeleccionarArchivo = { filePicker.launch("*/*") },
                         )
                     }
                     is UploadEstado.Procesando -> UploadProcesandoContent(estadoActual.mensaje)
@@ -108,13 +116,24 @@ fun UploadScreen(
 
 // ─── Formulario de selección ──────────────────────────────────────────────────
 
+private val DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
+private fun parseFecha(texto: String): LocalDate? = try {
+    LocalDate.parse(texto.trim(), DATE_FORMATTER)
+} catch (_: DateTimeParseException) { null }
+
 @Composable
 private fun UploadFormContent(
     bancoSeleccionado: BancoOpcion?,
     errorMensaje: String?,
     onSeleccionarBanco: (BancoOpcion) -> Unit,
+    onFechaCorteChange: (LocalDate?) -> Unit,
+    onFechaLimitePagoChange: (LocalDate?) -> Unit,
     onSeleccionarArchivo: () -> Unit,
 ) {
+    val esTarjeta = bancoSeleccionado?.productoTipo == ProductoTipo.TARJETA
+    val pasoArchivo = if (esTarjeta) "3" else "2"
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -135,10 +154,22 @@ private fun UploadFormContent(
             )
         }
 
-        Spacer(Modifier.height(Spacing.md))
+        // Sección de fechas — solo visible cuando el banco es de tarjeta de crédito
+        AnimatedVisibility(
+            visible = esTarjeta,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut(),
+        ) {
+            TarjetaFechasSection(
+                onFechaCorteChange = onFechaCorteChange,
+                onFechaLimitePagoChange = onFechaLimitePagoChange,
+            )
+        }
+
+        Spacer(Modifier.height(Spacing.sm))
 
         Text(
-            "2. Selecciona el archivo",
+            "$pasoArchivo. Selecciona el archivo",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = Ink,
@@ -202,6 +233,71 @@ private fun UploadFormContent(
         }
 
         Spacer(Modifier.height(Spacing.xl))
+    }
+}
+
+@Composable
+private fun TarjetaFechasSection(
+    onFechaCorteChange: (LocalDate?) -> Unit,
+    onFechaLimitePagoChange: (LocalDate?) -> Unit,
+) {
+    var fechaCorteText by remember { mutableStateOf("") }
+    var fechaLimitePagoText by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Spacer(Modifier.height(Spacing.sm))
+        Text(
+            "2. Información de la tarjeta (opcional)",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = Ink,
+        )
+        Text(
+            "Si el estado de cuenta no incluye estas fechas, ingrésalas manualmente.",
+            style = MaterialTheme.typography.bodySmall,
+            color = Muted,
+        )
+
+        OutlinedTextField(
+            value = fechaCorteText,
+            onValueChange = { v ->
+                fechaCorteText = v
+                onFechaCorteChange(parseFecha(v))
+            },
+            label = { Text("Fecha de corte") },
+            placeholder = { Text("dd/mm/aaaa", color = Muted) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = fechaCorteText.isNotBlank() && parseFecha(fechaCorteText) == null,
+            supportingText = {
+                if (fechaCorteText.isNotBlank() && parseFecha(fechaCorteText) == null)
+                    Text("Formato inválido. Usa dd/mm/aaaa", color = Expense)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        )
+
+        OutlinedTextField(
+            value = fechaLimitePagoText,
+            onValueChange = { v ->
+                fechaLimitePagoText = v
+                onFechaLimitePagoChange(parseFecha(v))
+            },
+            label = { Text("Fecha límite de pago") },
+            placeholder = { Text("dd/mm/aaaa", color = Muted) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = fechaLimitePagoText.isNotBlank() && parseFecha(fechaLimitePagoText) == null,
+            supportingText = {
+                if (fechaLimitePagoText.isNotBlank() && parseFecha(fechaLimitePagoText) == null)
+                    Text("Formato inválido. Usa dd/mm/aaaa", color = Expense)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        )
     }
 }
 

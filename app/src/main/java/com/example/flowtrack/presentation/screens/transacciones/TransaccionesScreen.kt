@@ -27,19 +27,33 @@ import com.example.flowtrack.core.extensions.formatDateRelative
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.TransactionShimmerItem
+import com.example.flowtrack.ui.theme.*
+import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { viewModel.cargarTransacciones() }
-    val grouped = viewModel.getTransaccionesAgrupadasPorDia()
+
+    // Agrupar derivadas de state.transacciones para que el cambio de filtro recomponga el mapa
+    val zona = remember { ZoneId.of("America/Santo_Domingo") }
+    val grouped: Map<LocalDate, List<Transaccion>> = remember(state.transacciones) {
+        state.transacciones
+            .filter { !it.esDerivada }
+            .groupBy { it.fecha.atZone(zona).toLocalDate() }
+            .toSortedMap(compareByDescending { it })
+    }
+
+    // Índice de la pestaña de banco activa (0 = Todos)
+    val allBancos = remember(state.bancosDisponibles) { listOf<String?>(null) + state.bancosDisponibles }
+    val selectedBancoIdx = remember(state.bancoFiltro, allBancos) {
+        allBancos.indexOf(state.bancoFiltro).coerceAtLeast(0)
+    }
 
     var showDeleteDialogFor by remember { mutableStateOf<Transaccion?>(null) }
     var showCategorySheetFor by remember { mutableStateOf<Transaccion?>(null) }
@@ -51,38 +65,74 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
                 TopAppBar(
                     title = { Text("Transacciones", fontWeight = FontWeight.Bold) },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                 )
+
+                // ── Pestañas de banco ──────────────────────────────────────────
+                if (state.bancosDisponibles.isNotEmpty()) {
+                    ScrollableTabRow(
+                        selectedTabIndex = selectedBancoIdx,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        edgePadding = Spacing.md,
+                        divider = {},
+                    ) {
+                        Tab(
+                            selected = selectedBancoIdx == 0,
+                            onClick = { viewModel.setBancoFiltro(null) },
+                            text = { Text("Todos", style = MaterialTheme.typography.labelLarge) },
+                        )
+                        state.bancosDisponibles.forEachIndexed { idx, banco ->
+                            Tab(
+                                selected = selectedBancoIdx == idx + 1,
+                                onClick = { viewModel.setBancoFiltro(banco) },
+                                text = {
+                                    Text(
+                                        banco.lowercase().replaceFirstChar { it.uppercaseChar() },
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+
+                // ── Campo de búsqueda ──────────────────────────────────────────
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = { viewModel.setSearchQuery(it) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md),
-                    placeholder = { Text("Buscar...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                    placeholder = { Text("Buscar por descripción, banco…") },
                     leadingIcon = { Icon(Icons.Default.Search, null) },
                     shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    singleLine = true,
                 )
-                Spacer(Modifier.height(Spacing.sm))
+
+                // ── Sub-filtro de tipo ─────────────────────────────────────────
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     FilterChip(
                         selected = state.filtroTipo == TipoTransaccionFiltro.TODAS,
                         onClick = { viewModel.setFiltroTipo(TipoTransaccionFiltro.TODAS) },
-                        label = { Text("Todas") }
+                        label = { Text("Todas") },
                     )
                     FilterChip(
-                        selected = state.filtroTipo == TipoTransaccionFiltro.INGRESOS,
-                        onClick = { viewModel.setFiltroTipo(TipoTransaccionFiltro.INGRESOS) },
-                        label = { Text("Ingresos") }
+                        selected = state.filtroTipo == TipoTransaccionFiltro.DEBITO,
+                        onClick = { viewModel.setFiltroTipo(TipoTransaccionFiltro.DEBITO) },
+                        label = { Text("Débito") },
                     )
                     FilterChip(
-                        selected = state.filtroTipo == TipoTransaccionFiltro.GASTOS,
-                        onClick = { viewModel.setFiltroTipo(TipoTransaccionFiltro.GASTOS) },
-                        label = { Text("Gastos") }
+                        selected = state.filtroTipo == TipoTransaccionFiltro.CREDITO,
+                        onClick = { viewModel.setFiltroTipo(TipoTransaccionFiltro.CREDITO) },
+                        label = { Text("Crédito") },
                     )
                 }
+
                 HorizontalDivider()
             }
         }
@@ -97,23 +147,23 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
                     icon = Icons.AutoMirrored.Outlined.ReceiptLong,
                     title = "Sin transacciones",
                     description = "Aún no tienes transacciones o ninguna coincide con tu búsqueda.",
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.align(Alignment.Center),
                 )
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     grouped.forEach { (fecha, txs) ->
-                        stickyHeader {
+                        stickyHeader(key = fecha) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .padding(horizontal = Spacing.md, vertical = Spacing.xs)
+                                    .padding(horizontal = Spacing.md, vertical = Spacing.xs),
                             ) {
                                 Text(
                                     formatDateRelative(fecha),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -123,7 +173,7 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
                                 tx = tx,
                                 derivadas = derivadas,
                                 onDeleteClick = { showDeleteDialogFor = tx },
-                                onChangeCategoryClick = { showCategorySheetFor = tx }
+                                onChangeCategoryClick = { showCategorySheetFor = tx },
                             )
                             HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
                         }
@@ -133,39 +183,41 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
         }
     }
 
+    // ── Diálogo de eliminación ─────────────────────────────────────────────────
     if (showDeleteDialogFor != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialogFor = null },
             title = { Text("Eliminar transacción") },
             text = { Text("¿Estás seguro de eliminar esta transacción? Esta acción no se puede deshacer.") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.eliminarTransaccion(showDeleteDialogFor!!)
-                        showDeleteDialogFor = null
-                    }
-                ) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = {
+                    viewModel.eliminarTransaccion(showDeleteDialogFor!!)
+                    showDeleteDialogFor = null
+                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialogFor = null }) { Text("Cancelar") }
-            }
+            },
         )
     }
 
+    // ── Bottom sheet de recategorización ──────────────────────────────────────
     if (showCategorySheetFor != null) {
         ModalBottomSheet(
             onDismissRequest = { showCategorySheetFor = null },
-            sheetState = sheetState
+            sheetState = sheetState,
         ) {
             Column(modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
                 Text("Cambiar Categoría", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(Spacing.sm))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = aplicarATodas, onCheckedChange = { aplicarATodas = it })
-                    Text("Aplicar regla a todas las compras de '${showCategorySheetFor!!.descripcionOriginal}'", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Aplicar regla a todas las compras de '${showCategorySheetFor!!.descripcionOriginal}'",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
-                
                 LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
                     items(categoriaRegistry.values.toList()) { cat ->
                         Surface(
@@ -173,11 +225,11 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
                                 viewModel.recategorizar(showCategorySheetFor!!, cat.id, aplicarATodas)
                                 showCategorySheetFor = null
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = Spacing.sm),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Box(modifier = Modifier.size(16.dp).background(cat.color, CircleShape))
                                 Spacer(Modifier.width(Spacing.md))
@@ -191,6 +243,8 @@ fun TransaccionesScreen(viewModel: TransaccionesViewModel = hiltViewModel()) {
     }
 }
 
+// ─── Card de transacción ──────────────────────────────────────────────────────
+
 @Composable
 fun TransaccionItem(
     tx: Transaccion,
@@ -199,51 +253,106 @@ fun TransaccionItem(
     onChangeCategoryClick: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val cat = categoriaRegistry[tx.categoriaId]
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            onClick = { expanded = !expanded }
+            onClick = { expanded = !expanded },
         ) {
             Column(modifier = Modifier.padding(Spacing.md)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Icono de categoría
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(40.dp)
+                        color = cat?.color?.copy(alpha = 0.12f) ?: MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(40.dp),
                     ) {
                         Icon(
                             Icons.Outlined.Category,
                             contentDescription = null,
                             modifier = Modifier.padding(8.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = cat?.color ?: MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Spacer(Modifier.width(Spacing.md))
+
                     Column(modifier = Modifier.weight(1f)) {
+                        // Descripción
                         Text(
                             text = tx.descripcionOriginal,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
-                            maxLines = 1
+                            maxLines = 1,
                         )
-                        Text(
-                            text = tx.categoriaId?.let { categoriaRegistry[it]?.nombre } ?: "Sin categorizar",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Spacer(Modifier.height(4.dp))
+
+                        // Badges: banco + categoría
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // Badge banco
+                            Surface(
+                                color = bancoBadgeColor(tx.bancoCodigo),
+                                shape = RoundedCornerShape(4.dp),
+                            ) {
+                                Text(
+                                    text = tx.bancoCodigo.take(8),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = bancoTextColor(tx.bancoCodigo),
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+
+                            // Badge categoría
+                            if (cat != null) {
+                                Surface(
+                                    color = cat.color.copy(alpha = 0.13f),
+                                    shape = RoundedCornerShape(4.dp),
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .background(cat.color, CircleShape),
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            text = cat.nombre,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = cat.color,
+                                        )
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = "Sin categorizar",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
+
                     Spacer(Modifier.width(Spacing.sm))
+
+                    // Monto
                     val sign = if (tx.tipo == TipoTransaccion.CREDITO) "+" else "-"
                     val color = if (tx.tipo == TipoTransaccion.CREDITO) Income else Expense
                     Text(
                         text = "$sign ${formatMoney(tx.monto)}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = color
+                        color = color,
                     )
                 }
 
+                // Sección expandida
                 AnimatedVisibility(visible = expanded) {
                     Column(modifier = Modifier.padding(top = Spacing.md, start = 56.dp)) {
                         Text("Banco: ${tx.bancoCodigo}", style = MaterialTheme.typography.bodySmall)
@@ -254,7 +363,11 @@ fun TransaccionItem(
                                 Text("Cambiar categoría")
                             }
                             IconButton(onClick = onDeleteClick) {
-                                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Eliminar",
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
                             }
                         }
                     }
@@ -262,7 +375,7 @@ fun TransaccionItem(
             }
         }
 
-        // Retenciones DGII — siempre visibles, indentadas bajo el padre
+        // Retenciones DGII
         if (derivadas.isNotEmpty()) {
             derivadas.forEach { derivada ->
                 Row(
@@ -294,4 +407,19 @@ fun TransaccionItem(
             }
         }
     }
+}
+
+// ─── Colores de badges de banco ───────────────────────────────────────────────
+
+private fun bancoBadgeColor(codigo: String): Color = when (codigo.uppercase()) {
+    "BANRESERVAS" -> BancoBanReservas
+    "POPULAR"     -> BancoPopular
+    "QIK"         -> BancoQik
+    "CIBAO"       -> BancoCibao
+    else          -> Color(0xFF64748B)
+}
+
+private fun bancoTextColor(codigo: String): Color = when (codigo.uppercase()) {
+    "QIK" -> Color(0xFF0B1220)
+    else  -> Color.White
 }

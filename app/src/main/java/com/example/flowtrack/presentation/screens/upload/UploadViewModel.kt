@@ -13,6 +13,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 /** Catálogo estático de bancos. [disponible] = false indica "próximamente". */
@@ -45,14 +46,25 @@ class UploadViewModel @Inject constructor(
     private val _bancoSeleccionado = MutableStateFlow<BancoOpcion?>(null)
     val bancoSeleccionado: StateFlow<BancoOpcion?> = _bancoSeleccionado
 
+    private val _fechaCorteManual = MutableStateFlow<LocalDate?>(null)
+    val fechaCorteManual: StateFlow<LocalDate?> = _fechaCorteManual
+
+    private val _fechaLimitePagoManual = MutableStateFlow<LocalDate?>(null)
+    val fechaLimitePagoManual: StateFlow<LocalDate?> = _fechaLimitePagoManual
+
     fun seleccionarBanco(banco: BancoOpcion) {
         if (!banco.disponible) {
             _estado.value = UploadEstado.Error("${banco.nombre} estará disponible próximamente.")
             return
         }
         _bancoSeleccionado.value = banco
+        _fechaCorteManual.value = null
+        _fechaLimitePagoManual.value = null
         if (_estado.value is UploadEstado.Error) _estado.value = UploadEstado.Idle
     }
+
+    fun setFechaCorte(fecha: LocalDate?) { _fechaCorteManual.value = fecha }
+    fun setFechaLimitePago(fecha: LocalDate?) { _fechaLimitePagoManual.value = fecha }
 
     fun procesarArchivo(uri: Uri) {
         val uid = auth.currentUser?.uid ?: run {
@@ -68,11 +80,13 @@ class UploadViewModel @Inject constructor(
             _estado.value = UploadEstado.Procesando("Procesando archivo...")
 
             when (val resultado = procesarArchivoUseCase.ejecutar(
-                uri          = uri,
-                uid          = uid,
-                bancoCodigo  = banco.codigo,
-                productoTipo = banco.productoTipo,
-                formato      = banco.formato,
+                uri                   = uri,
+                uid                   = uid,
+                bancoCodigo           = banco.codigo,
+                productoTipo          = banco.productoTipo,
+                formato               = banco.formato,
+                fechaCorteManual      = _fechaCorteManual.value,
+                fechaLimitePagoManual = _fechaLimitePagoManual.value,
             )) {
                 is ResultadoImportacion.Exito -> _estado.value = UploadEstado.Exito(
                     transaccionesInsertadas = resultado.transaccionesInsertadas,
@@ -88,6 +102,8 @@ class UploadViewModel @Inject constructor(
     fun resetear() {
         _estado.value = UploadEstado.Idle
         _bancoSeleccionado.value = null
+        _fechaCorteManual.value = null
+        _fechaLimitePagoManual.value = null
     }
 }
 

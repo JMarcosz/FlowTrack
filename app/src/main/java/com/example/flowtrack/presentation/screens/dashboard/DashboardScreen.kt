@@ -22,6 +22,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.Cuenta
+import com.example.flowtrack.domain.model.MovimientoTarjeta
+import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 import com.example.flowtrack.presentation.components.DonutChart
@@ -33,6 +35,13 @@ import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Spacing
+
+private val TIPOS_GASTO_DONUT = setOf(
+    TipoMovimientoTarjeta.COMPRA,
+    TipoMovimientoTarjeta.AVANCE_EFECTIVO,
+    TipoMovimientoTarjeta.INTERES,
+    TipoMovimientoTarjeta.COMISION,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,11 +126,23 @@ private fun DashboardContent(
             Text("Categorías", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(Spacing.sm))
             
-            val gastosPorCategoria = estado.transaccionesMes
-                .filter { it.tipo == TipoTransaccion.DEBITO }
+            val gastosCuentaPorCat = estado.transaccionesMes
+                .filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
                 .groupBy { it.categoriaId ?: "Sin Categorizar" }
                 .mapValues { (_, txs) -> txs.sumOf { it.monto } }
-                .toList()
+
+            val gastosTarjetaPorCat = estado.movimientosMes
+                .filter { it.tipoMovimiento in TIPOS_GASTO_DONUT }
+                .groupBy { it.categoriaId ?: "Sin Categorizar" }
+                .mapValues { (_, movs) -> movs.sumOf { it.monto } }
+
+            val gastosPorCategoria = (gastosCuentaPorCat.keys + gastosTarjetaPorCat.keys)
+                .distinct()
+                .map { cat ->
+                    val total = (gastosCuentaPorCat[cat] ?: java.math.BigDecimal.ZERO) +
+                        (gastosTarjetaPorCat[cat] ?: java.math.BigDecimal.ZERO)
+                    cat to total
+                }
                 .sortedByDescending { it.second }
                 .take(5)
             

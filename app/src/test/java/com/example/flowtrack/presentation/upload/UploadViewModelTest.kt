@@ -31,6 +31,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -125,7 +126,7 @@ class UploadViewModelTest {
     fun `procesarArchivo - resultado Exito emite UploadEstado Exito con datos correctos`() = runTest {
         val carga = cargaDePrueba("BANRESERVAS")
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any()) } doReturn
+            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Exito(carga, transaccionesInsertadas = 5)
         }
 
@@ -145,7 +146,7 @@ class UploadViewModelTest {
     @Test
     fun `procesarArchivo - error de Firestore emite UploadEstado Error con mensaje legible`() = runTest {
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any()) } doReturn
+            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Error(
                     AppResult.Error(ErrorApp.FirestoreError("PERMISSION_DENIED: Missing permissions"))
                 )
@@ -163,7 +164,7 @@ class UploadViewModelTest {
     @Test
     fun `procesarArchivo - error de parseo emite UploadEstado Error`() = runTest {
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any()) } doReturn
+            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Error(
                     AppResult.Error(ErrorApp.ParseError("Formato de PDF no reconocido"))
                 )
@@ -181,7 +182,7 @@ class UploadViewModelTest {
     @Test
     fun `procesarArchivo - archivo muy grande emite error con tamanio`() = runTest {
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any()) } doReturn
+            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Error(
                     AppResult.Error(
                         ErrorApp.ArchivoMuyGrande(
@@ -232,7 +233,7 @@ class UploadViewModelTest {
     fun `resetear vuelve el estado a Idle y limpia banco seleccionado`() = runTest {
         val carga = cargaDePrueba()
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any()) } doReturn
+            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Exito(carga, 3)
         }
         viewModel.seleccionarBanco(bancoTest)
@@ -251,7 +252,7 @@ class UploadViewModelTest {
     fun `procesarArchivo - estado Procesando se emite antes del resultado`() = runTest {
         val carga = cargaDePrueba()
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any()) } doReturn
+            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Exito(carga, 2)
         }
 

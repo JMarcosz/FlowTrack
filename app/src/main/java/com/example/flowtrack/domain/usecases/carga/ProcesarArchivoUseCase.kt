@@ -58,6 +58,8 @@ class ProcesarArchivoUseCase @Inject constructor(
         bancoCodigo: String,
         productoTipo: ProductoTipo,
         formato: FileFormat,
+        fechaCorteManual: LocalDate? = null,
+        fechaLimitePagoManual: LocalDate? = null,
     ): ResultadoImportacion {
 
         val archivo = leerArchivo(uri) ?: return ResultadoImportacion.Error(
@@ -79,7 +81,10 @@ class ProcesarArchivoUseCase @Inject constructor(
 
         val request = ImportRequest(uid, bancoCodigo, productoTipo, formato, archivo)
         return when (val resultado = parser.parse(request)) {
-            is ParseResult.Success -> mapearYPersistir(resultado, uid, archivo, parser.version)
+            is ParseResult.Success -> mapearYPersistir(
+                resultado, uid, archivo, parser.version,
+                fechaCorteManual, fechaLimitePagoManual,
+            )
             is ParseResult.Error   -> ResultadoImportacion.Error(
                 AppResult.Error(ErrorApp.ParseError(resultado.message, resultado.cause))
             )
@@ -91,8 +96,18 @@ class ProcesarArchivoUseCase @Inject constructor(
         uid: String,
         archivo: ArchivoEntrada,
         parserVersion: Int,
+        fechaCorteManual: LocalDate? = null,
+        fechaLimitePagoManual: LocalDate? = null,
     ): ResultadoImportacion {
-        val estado = resultado.estado
+        var estado = resultado.estado
+        if (estado.productoTipo == ProductoTipo.TARJETA &&
+            (fechaCorteManual != null || fechaLimitePagoManual != null)
+        ) {
+            estado = estado.copy(
+                fechaCorte = fechaCorteManual ?: estado.fechaCorte,
+                fechaLimitePago = fechaLimitePagoManual ?: estado.fechaLimitePago,
+            )
+        }
         val report = resultado.report
         val cargaId = HashGenerator.hashCarga(uid, archivo.nombre, archivo.tamanioBytes, Instant.now())
 
