@@ -1,15 +1,15 @@
 package com.example.flowtrack.presentation.screens.resumen
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,179 +18,336 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.flowtrack.core.extensions.formatDate
 import com.example.flowtrack.core.extensions.formatMoney
-import com.example.flowtrack.presentation.components.categoriaRegistry
+import com.example.flowtrack.domain.usecase.ResumenBanco
+import com.example.flowtrack.domain.usecase.ResumenCategoria
+import com.example.flowtrack.presentation.components.DonutChart
+import com.example.flowtrack.presentation.components.DonutSlice
 import com.example.flowtrack.presentation.components.EmptyState
-import com.example.flowtrack.presentation.components.ResumenShimmerItem
-import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Spacing
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.ZoneOffset
+import com.example.flowtrack.presentation.components.bancoPorCodigo
+import com.example.flowtrack.presentation.components.categoriaRegistry
+import com.example.flowtrack.ui.theme.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BarChart
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResumenScreen(viewModel: ResumenViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
-    LaunchedEffect(Unit) { viewModel.cargarResumen() }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var periodoActivo by remember { mutableStateOf(RangoFecha.ESTE_MES) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Resumen", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Filtrar por fecha")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgScreen)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            // ── Header ──────────────────────────────────────────
+            val tabLabel = if (state.tabSeleccionado == 0) "Resumen por banco" else "Resumen por categoría"
+            Text(
+                text = tabLabel,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Ink,
+                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xl, bottom = Spacing.md),
             )
-        }
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // Header: Range Selector & Totals
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(Spacing.md),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+
+            // ── Segmented control ────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.xl)
+                    .clip(Radii.md)
+                    .background(Line2)
+                    .padding(4.dp),
             ) {
-                Column(modifier = Modifier.padding(Spacing.md)) {
-                    Text(
-                        "${formatDate(state.fechaInicio)} - ${formatDate(state.fechaFin)}",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { showDatePicker = true }
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.sm))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
-                            Text("Gastos", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                state.resumen?.gastosTotales?.let { formatMoney(it) } ?: "RD$ 0.00",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("Ingresos", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                state.resumen?.ingresosTotales?.let { formatMoney(it) } ?: "RD$ 0.00",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Income
-                            )
-                        }
-                    }
+                Row {
+                    SegmentedTab(label = "Por banco",      active = state.tabSeleccionado == 0) { viewModel.setTab(0) }
+                    SegmentedTab(label = "Por categoría",  active = state.tabSeleccionado == 1) { viewModel.setTab(1) }
                 }
             }
 
-            TabRow(
-                selectedTabIndex = state.tabSeleccionado,
-                modifier = Modifier.fillMaxWidth()
+            Spacer(Modifier.height(Spacing.md))
+
+            // ── Period pills ─────────────────────────────────────
+            Row(
+                modifier = Modifier.padding(horizontal = Spacing.xl),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                Tab(selected = state.tabSeleccionado == 0, onClick = { viewModel.setTab(0) }, text = { Text("Categorías") })
-                Tab(selected = state.tabSeleccionado == 1, onClick = { viewModel.setTab(1) }, text = { Text("Bancos") })
+                PeriodPill(label = "Este mes",    active = periodoActivo == RangoFecha.ESTE_MES) {
+                    periodoActivo = RangoFecha.ESTE_MES
+                    viewModel.setRangoPredefinido(RangoFecha.ESTE_MES)
+                }
+                PeriodPill(label = "Mes pasado",  active = periodoActivo == RangoFecha.MES_PASADO) {
+                    periodoActivo = RangoFecha.MES_PASADO
+                    viewModel.setRangoPredefinido(RangoFecha.MES_PASADO)
+                }
             }
 
+            Spacer(Modifier.height(Spacing.xl))
+
+            // ── Content ──────────────────────────────────────────
             if (state.isLoading) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    repeat(5) { ResumenShimmerItem() }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Primary)
                 }
-            } else if (state.resumen != null) {
-                if (state.resumen!!.porCategoria.isEmpty() && state.tabSeleccionado == 0 || state.resumen!!.porBanco.isEmpty() && state.tabSeleccionado == 1) {
-                    EmptyState(
-                        icon = Icons.Outlined.BarChart,
-                        title = "Sin Datos",
-                        description = "No hay datos para resumir en este rango de fechas.",
-                        modifier = Modifier.weight(1f)
+            } else if (state.resumen == null) {
+                EmptyState(
+                    icon = Icons.Outlined.BarChart,
+                    title = "Sin datos",
+                    description = "No hay transacciones en este período.",
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                if (state.tabSeleccionado == 0) {
+                    BancoTab(
+                        bancos = state.resumen!!.porBanco,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    contentPadding = PaddingValues(vertical = Spacing.md)
-                ) {
-                    if (state.tabSeleccionado == 0) {
-                        items(state.resumen!!.porCategoria) { cat ->
-                            val catInfo = categoriaRegistry[cat.categoriaId] ?: categoriaRegistry["sin_categorizar"]!!
-                            ResumenItem(catInfo.nombre, cat.total, cat.porcentaje, catInfo.color)
-                        }
-                    } else {
-                        items(state.resumen!!.porBanco) { b ->
-                            ResumenItem(b.bancoCodigo, b.total, b.porcentaje, MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
+                    CategoriaTab(
+                        categorias = state.resumen!!.porCategoria,
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
             }
         }
     }
+}
 
+// ── Segmented tab button ─────────────────────────────────────────────────────
 
-    if (showDatePicker) {
-        val dateRangePickerState = rememberDateRangePickerState(
-            initialSelectedStartDateMillis = state.fechaInicio.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-            initialSelectedEndDateMillis = state.fechaFin.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+@Composable
+private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () -> Unit) {
+    val bgColor by animateColorAsState(
+        targetValue = if (active) BgCard else Color.Transparent,
+        animationSpec = tween(160),
+        label = "tab_bg",
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (active) Ink else Muted,
+        animationSpec = tween(160),
+        label = "tab_text",
+    )
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .clip(Radii.sm)
+            .background(bgColor)
+            .clickable(onClick = onClick)
+            .padding(vertical = Spacing.sm),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = textColor)
+    }
+}
+
+// ── Period pill ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun PeriodPill(label: String, active: Boolean, onClick: () -> Unit) {
+    val bg  = if (active) Primary   else BgCard
+    val fg  = if (active) Color.White else Muted
+    val border = if (active) Primary else Line
+    Box(
+        modifier = Modifier
+            .clip(Radii.pill)
+            .background(bg)
+            .border(1.dp, border, Radii.pill)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+    ) {
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = fg)
+    }
+}
+
+// ── Por banco tab ────────────────────────────────────────────────────────────
+
+@Composable
+private fun BancoTab(bancos: List<ResumenBanco>, modifier: Modifier = Modifier) {
+    if (bancos.isEmpty()) {
+        EmptyState(
+            icon = Icons.Outlined.BarChart,
+            title = "Sin datos",
+            description = "No hay transacciones en este período.",
+            modifier = modifier,
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDatePicker = false
-                    val startMillis = dateRangePickerState.selectedStartDateMillis
-                    val endMillis = dateRangePickerState.selectedEndDateMillis ?: startMillis
-                    if (startMillis != null && endMillis != null) {
-                        val start = Instant.ofEpochMilli(startMillis).atZone(ZoneId.of("UTC")).toLocalDate()
-                        val end = Instant.ofEpochMilli(endMillis).atZone(ZoneId.of("UTC")).toLocalDate()
-                        viewModel.setFechas(start, end)
-                    }
-                }) { Text("Aplicar") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
-            }
-        ) {
-            DateRangePicker(
-                state = dateRangePickerState,
-                modifier = Modifier.weight(1f),
-                title = { Text("Selecciona Rango de Fechas", modifier = Modifier.padding(16.dp)) },
-                headline = {
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = false, onClick = { viewModel.setRangoPredefinido(RangoFecha.ESTE_MES); showDatePicker = false }, label = { Text("Este mes") })
-                        FilterChip(selected = false, onClick = { viewModel.setRangoPredefinido(RangoFecha.MES_PASADO); showDatePicker = false }, label = { Text("Mes pasado") })
-                    }
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = Spacing.xl, vertical = 0.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        items(bancos) { b -> BancoCard(b) }
+        item { Spacer(Modifier.height(Spacing.xl)) }
+    }
+}
+
+@Composable
+private fun BancoCard(b: ResumenBanco) {
+    val banco = bancoPorCodigo(b.bancoCodigo)
+    Card(
+        shape = Radii.lg,
+        colors = CardDefaults.cardColors(containerColor = BgCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Line2, Radii.lg),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.xl)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(banco.color.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        banco.nombre.first().toString(),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = banco.color,
+                    )
                 }
-            )
+                Spacer(Modifier.width(Spacing.md))
+                Text(banco.nombre, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+            }
+
+            Spacer(Modifier.height(Spacing.md))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                BancoStat(label = "Gastos",   value = formatMoney(b.gastos),   color = Expense)
+                BancoStat(label = "Ingresos", value = formatMoney(b.ingresos), color = Income)
+                BancoStat(
+                    label = "Balance",
+                    value = formatMoney(b.balance.abs()),
+                    color = if (b.balance >= java.math.BigDecimal.ZERO) Income else Expense,
+                    prefix = if (b.balance < java.math.BigDecimal.ZERO) "-" else "",
+                    align = Alignment.End,
+                )
+            }
         }
     }
 }
 
 @Composable
-fun ResumenItem(label: String, total: java.math.BigDecimal, porcentaje: Float, color: Color) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+private fun BancoStat(
+    label: String,
+    value: String,
+    color: Color,
+    prefix: String = "",
+    align: Alignment.Horizontal = Alignment.Start,
+) {
+    Column(horizontalAlignment = align) {
+        Text(label, fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = "$prefix$value",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+        )
+    }
+}
+
+// ── Por categoría tab ────────────────────────────────────────────────────────
+
+@Composable
+private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier = Modifier) {
+    if (categorias.isEmpty()) {
+        EmptyState(
+            icon = Icons.Outlined.BarChart,
+            title = "Sin datos",
+            description = "No hay transacciones en este período.",
+            modifier = modifier,
+        )
+        return
+    }
+
+    val slices = categorias.map { c ->
+        val cat = categoriaRegistry[c.categoriaId] ?: categoriaRegistry["sin_categorizar"]!!
+        DonutSlice(c.total.toFloat(), cat.color, cat.nombre)
+    }
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = Spacing.xl, vertical = 0.dp),
     ) {
-        Column(modifier = Modifier.padding(Spacing.md)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(color))
-                Spacer(Modifier.width(Spacing.sm))
-                Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                Text(formatMoney(total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        item {
+            Card(
+                shape = Radii.lg,
+                colors = CardDefaults.cardColors(containerColor = BgCard),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Line2, Radii.lg),
+            ) {
+                Column(modifier = Modifier.padding(Spacing.xl)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        DonutChart(
+                            slices = slices,
+                            modifier = Modifier.size(200.dp),
+                            centerText = "Gastos",
+                        )
+                    }
+
+                    Spacer(Modifier.height(Spacing.xl))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                        categorias.forEach { c ->
+                            val cat = categoriaRegistry[c.categoriaId] ?: categoriaRegistry["sin_categorizar"]!!
+                            CategoriaRow(
+                                nombre = cat.nombre,
+                                color  = cat.color,
+                                monto  = formatMoney(c.total),
+                                pct    = c.porcentaje,
+                            )
+                        }
+                    }
+                }
             }
-            Spacer(Modifier.height(Spacing.xs))
-            LinearProgressIndicator(
-                progress = (porcentaje / 100f).coerceIn(0f, 1f),
-                color = color,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
-            )
-            Text("${"%.1f".format(porcentaje)}%", style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.End))
         }
+        item { Spacer(Modifier.height(Spacing.xl)) }
+    }
+}
+
+@Composable
+private fun CategoriaRow(nombre: String, color: Color, monto: String, pct: Float) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color),
+        )
+        Spacer(Modifier.width(Spacing.md))
+        Text(nombre, fontSize = 14.sp, color = Ink, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        Text(monto, fontSize = 14.sp, color = Ink, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.width(Spacing.md))
+        Text(
+            "${"%.1f".format(pct)}%",
+            fontSize = 13.sp,
+            color = Muted,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.width(36.dp),
+        )
     }
 }

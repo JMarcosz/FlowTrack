@@ -12,11 +12,11 @@ import com.example.flowtrack.presentation.navigation.Screen
 private data class NavItem(val screen: Screen, val label: String, val icon: ImageVector)
 
 private val navItems = listOf(
-    NavItem(Screen.Dashboard,      "Inicio",         Icons.Outlined.Home),
-    NavItem(Screen.Transacciones,  "Movimientos",    Icons.Outlined.List),
-    NavItem(Screen.Resumen,        "Resumen",        Icons.Outlined.BarChart),
-    NavItem(Screen.Tarjetas,       "Tarjetas",       Icons.Outlined.CreditCard),
-    NavItem(Screen.Configuracion,  "Ajustes",  Icons.Outlined.Settings),
+    NavItem(Screen.Dashboard,     "Inicio",         Icons.Outlined.Home),
+    NavItem(Screen.Transacciones, "Transacciones",  Icons.Outlined.List),
+    NavItem(Screen.Resumen,       "Resumen",        Icons.Outlined.BarChart),
+    NavItem(Screen.Tarjetas,      "Tarjetas",       Icons.Outlined.CreditCard),
+    NavItem(Screen.Configuracion, "Más",            Icons.Outlined.Settings),
 )
 
 @Composable
@@ -29,10 +29,20 @@ fun FinanzasBottomNav(navController: NavController) {
             NavigationBarItem(
                 selected = current == item.screen.route,
                 onClick  = {
-                    navController.navigate(item.screen.route) {
-                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState    = true
+                    if (item.screen == Screen.Dashboard) {
+                        // Mismo patrón que el login: navegar a Dashboard
+                        // y limpiar todo lo que esté encima de él.
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Dashboard.route) { inclusive = true }
+                        }
+                    } else {
+                        // Para el resto de tabs: limpiar la pila hasta Dashboard
+                        // (sin saveState/restoreState para evitar conflictos de estado)
+                        // y navegar al destino.
+                        navController.navigate(item.screen.route) {
+                            popUpTo(Screen.Dashboard.route) { inclusive = false }
+                            launchSingleTop = true
+                        }
                     }
                 },
                 icon  = { Icon(item.icon, contentDescription = item.label) },

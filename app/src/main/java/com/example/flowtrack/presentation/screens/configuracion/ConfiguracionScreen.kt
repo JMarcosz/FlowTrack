@@ -1,222 +1,322 @@
 package com.example.flowtrack.presentation.screens.configuracion
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Money
-import androidx.compose.material.icons.outlined.AccountBalance
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.*
+import com.google.firebase.auth.FirebaseAuth
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfiguracionScreen(
     navController: NavController,
-    viewModel: ConfiguracionViewModel = hiltViewModel()
+    viewModel: ConfiguracionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val user = FirebaseAuth.getInstance().currentUser
+    val displayName = user?.displayName?.takeIf { it.isNotBlank() } ?: "Usuario"
+    val email = user?.email ?: ""
 
     LaunchedEffect(state.error, state.exito) {
         if (state.error != null || state.exito != null) {
-            // Ideally use SnackbarHostState, handled via Scaffold in a real app
             kotlinx.coroutines.delay(3000)
             viewModel.clearMensajes()
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Configuración", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
-        }
-    ) { padding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgScreen),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
         ) {
-            
-            // Mensajes (Feedback)
+            // ── Title ─────────────────────────────────────────────
+            Text(
+                "Configuración",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Ink,
+                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xl, bottom = Spacing.xl),
+            )
+
+            // ── Profile row ───────────────────────────────────────
+            Card(
+                shape = Radii.lg,
+                colors = CardDefaults.cardColors(containerColor = BgCard),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.xl)
+                    .border(1.dp, Line2, Radii.lg)
+                    .clickable { navController.navigate(Screen.Perfil.route) },
+            ) {
+                Row(
+                    modifier = Modifier.padding(Spacing.xl),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Primary50),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            displayName.first().toString().uppercase(),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Primary,
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(displayName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+                        Text(email, fontSize = 13.sp, color = Muted)
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Muted2)
+                }
+            }
+
+            // Feedback banners
             if (state.error != null) {
-                Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+                Spacer(Modifier.height(Spacing.md))
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xl),
+                    shape = Radii.md,
+                ) {
                     Text(state.error!!, modifier = Modifier.padding(Spacing.md), color = MaterialTheme.colorScheme.onErrorContainer)
                 }
             }
             if (state.exito != null) {
-                Surface(color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
+                Spacer(Modifier.height(Spacing.md))
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xl),
+                    shape = Radii.md,
+                ) {
                     Text(state.exito!!, modifier = Modifier.padding(Spacing.md), color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
 
-            // Accesos rápidos a sub-pantallas
-            Text("Cuenta", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(Spacing.md), color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(Spacing.xxl))
 
-            ConfigActionRow(
-                icon = Icons.Outlined.Person,
-                title = "Perfil",
-                subtitle = "Ver y editar tu perfil",
-                onClick = { navController.navigate(Screen.Perfil.route) }
-            )
-            HorizontalDivider()
-            ConfigActionRow(
-                icon = Icons.Outlined.Notifications,
-                title = "Notificaciones",
-                subtitle = "Configurar alertas y recordatorios",
-                onClick = { navController.navigate(Screen.Notificaciones.route) }
-            )
-            HorizontalDivider()
-            ConfigActionRow(
-                icon = Icons.Outlined.AccountBalance,
-                title = "Bancos y Cuentas",
-                subtitle = "Ver cuentas vinculadas",
-                onClick = { navController.navigate(Screen.BancosYCuentas.route) }
-            )
-            HorizontalDivider()
-            ConfigActionRow(
-                icon = Icons.Outlined.Settings,
-                title = "Ajustes avanzados",
-                subtitle = "Todas las opciones",
-                onClick = { navController.navigate(Screen.Ajustes.route) }
-            )
-
-            HorizontalDivider()
-
-            Text("Preferencias", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(Spacing.md), color = MaterialTheme.colorScheme.primary)
-
-            // Tema Oscuro
-            ConfigSwitchRow(
-                icon = Icons.Default.DarkMode,
-                title = "Modo Oscuro",
-                subtitle = "Cambiar a tema oscuro",
-                checked = state.config.temaOscuro,
-                onCheckedChange = { viewModel.toggleTema(it) }
-            )
-            
-            HorizontalDivider()
-            
-            // Moneda Predeterminada
-            var showCurrencyMenu by remember { mutableStateOf(false) }
-            ConfigActionRow(
-                icon = Icons.Default.Money,
-                title = "Moneda Base",
-                subtitle = state.config.monedaPredeterminada.name,
-                onClick = { showCurrencyMenu = true }
-            )
-            
-            if (showCurrencyMenu) {
-                AlertDialog(
-                    onDismissRequest = { showCurrencyMenu = false },
-                    title = { Text("Seleccionar Moneda") },
-                    text = {
-                        Column {
-                            Moneda.values().forEach { m ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { 
-                                            viewModel.setMonedaBase(m)
-                                            showCurrencyMenu = false
-                                        }
-                                        .padding(Spacing.md)
-                                ) {
-                                    RadioButton(selected = state.config.monedaPredeterminada == m, onClick = null)
-                                    Spacer(Modifier.width(Spacing.sm))
-                                    Text(m.name)
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { showCurrencyMenu = false }) { Text("Cancelar") }
-                    }
+            // ── Section: Cuentas y datos ──────────────────────────
+            SectionLabel("Cuentas y datos")
+            Spacer(Modifier.height(Spacing.sm))
+            SettingsCard {
+                SettingsRow(
+                    icon = Icons.Outlined.AccountBalance,
+                    label = "Bancos y cuentas",
+                    onClick = { navController.navigate(Screen.BancosYCuentas.route) },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsRow(
+                    icon = Icons.Outlined.Category,
+                    label = "Categorías",
+                    onClick = { navController.navigate(Screen.Categorias.route) },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsRow(
+                    icon = Icons.Outlined.Upload,
+                    label = "Importaciones",
+                    onClick = { navController.navigate(Screen.Historial.route) },
                 )
             }
 
-            HorizontalDivider()
+            Spacer(Modifier.height(Spacing.xxl))
 
-            // Exportación
-            Text("Gestión de Datos", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(Spacing.md), color = MaterialTheme.colorScheme.primary)
-            
-            ConfigActionRow(
-                icon = Icons.Default.Download,
-                title = "Exportar Transacciones a CSV",
-                subtitle = "Descarga tus transacciones de los últimos 6 meses",
-                onClick = { viewModel.exportarDatosCsv() }
-            )
-
-            if (state.isExporting) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            // ── Section: Preferencias ─────────────────────────────
+            SectionLabel("Preferencias")
+            Spacer(Modifier.height(Spacing.sm))
+            SettingsCard {
+                SettingsRow(
+                    icon = Icons.Outlined.Notifications,
+                    label = "Notificaciones",
+                    onClick = { navController.navigate(Screen.Notificaciones.route) },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsRow(
+                    icon = Icons.Outlined.CurrencyExchange,
+                    label = "Tasas de cambio",
+                    onClick = { navController.navigate(Screen.Conversor.route) },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsSwitchRow(
+                    icon = Icons.Default.DarkMode,
+                    label = "Modo oscuro",
+                    checked = state.config.temaOscuro,
+                    onCheckedChange = { viewModel.toggleTema(it) },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsRow(
+                    icon = Icons.Default.FileDownload,
+                    label = "Exportar a Excel",
+                    onClick = { viewModel.exportarDatosCsv() },
+                    trailing = {
+                        if (state.isExporting) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Primary)
+                        } else {
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Muted2)
+                        }
+                    },
+                )
             }
 
-            HorizontalDivider()
-            
-            // Gestión de categorías
-            ConfigActionRow(
-                icon = Icons.Default.Language, // Placeholder icon
-                title = "Administrar Categorías",
-                subtitle = "Ver y editar tus categorías personales",
-                onClick = { navController.navigate("categorias") }
+            Spacer(Modifier.height(Spacing.xxl))
+
+            // ── Section: Cuenta ───────────────────────────────────
+            SectionLabel("Cuenta")
+            Spacer(Modifier.height(Spacing.sm))
+            SettingsCard {
+                SettingsRow(
+                    icon = Icons.Outlined.Settings,
+                    label = "Ajustes avanzados",
+                    onClick = { navController.navigate(Screen.Ajustes.route) },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsRow(
+                    icon = Icons.AutoMirrored.Outlined.Logout,
+                    label = "Cerrar sesión",
+                    labelColor = Expense,
+                    iconColor = Expense,
+                    showChevron = false,
+                    onClick = {
+                        FirebaseAuth.getInstance().signOut()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.xxl))
+
+            // ── Footer ────────────────────────────────────────────
+            Text(
+                "FlowTrack v1.0.0",
+                fontSize = 12.sp,
+                color = Muted2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = Spacing.xxl),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
     }
 }
 
+// ── Section label ─────────────────────────────────────────────────────────────
+
 @Composable
-fun ConfigSwitchRow(icon: ImageVector, title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SectionLabel(label: String) {
+    Text(
+        label.uppercase(),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = Muted,
+        letterSpacing = 0.6.sp,
+        modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = 2.dp),
+    )
+}
+
+// ── Settings card wrapper ─────────────────────────────────────────────────────
+
+@Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        shape = Radii.lg,
+        colors = CardDefaults.cardColors(containerColor = BgCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xl)
+            .border(1.dp, Line2, Radii.lg),
+    ) {
+        Column(content = content)
+    }
+}
+
+// ── Settings row ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun SettingsRow(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    labelColor: Color = Ink,
+    iconColor: Color = Muted,
+    showChevron: Boolean = true,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+        Text(label, fontSize = 15.sp, color = labelColor, modifier = Modifier.weight(1f))
+        if (trailing != null) {
+            trailing()
+        } else if (showChevron) {
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Muted2)
+        }
+    }
+}
+
+// ── Settings switch row ───────────────────────────────────────────────────────
+
+@Composable
+private fun SettingsSwitchRow(
+    icon: ImageVector,
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = Spacing.xl, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(Spacing.md))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
-@Composable
-fun ConfigActionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(Spacing.md))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(icon, contentDescription = null, tint = Muted, modifier = Modifier.size(20.dp))
+        Text(label, fontSize = 15.sp, color = Ink, modifier = Modifier.weight(1f))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(checkedThumbColor = BgCard, checkedTrackColor = Primary),
+        )
     }
 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.TarjetaRepository
+import com.example.flowtrack.data.store.AppDataStore
 import com.example.flowtrack.domain.model.EstadoTarjeta
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
 import com.example.flowtrack.domain.model.Moneda
@@ -12,7 +13,10 @@ import com.example.flowtrack.domain.model.Tarjeta
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.time.Instant
@@ -29,33 +33,40 @@ data class TarjetasState(
 @HiltViewModel
 class TarjetasViewModel @Inject constructor(
     private val auth: FirebaseAuth,
+    private val store: AppDataStore,
     private val repository: TarjetaRepository,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(TarjetasState())
-    val state: StateFlow<TarjetasState> = _state
+    private val _estadosPorTarjeta = MutableStateFlow<Map<String, List<EstadoTarjetaSnap>>>(emptyMap())
+    private val _error = MutableStateFlow<String?>(null)
 
-    fun cargarDatos() {
-        val uid = auth.currentUser?.uid ?: return
+    // Tarjetas reactivas desde el store; estados cargados bajo demanda
+    val state: StateFlow<TarjetasState> = combine(
+        store.tarjetas,
+        _estadosPorTarjeta,
+        _error,
+    ) { tarjetas, estados, error ->
+        TarjetasState(
+            isLoading = false,
+            tarjetas = tarjetas.filter { it.activa },
+            estadosPorTarjeta = estados,
+            error = error,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TarjetasState(isLoading = true))
+
+    init {
+        // Cargar estados cuando la lista de tarjetas cambia
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
-            val resTarjetas = repository.obtenerTarjetas(uid)
-
-            if (resTarjetas is AppResult.Error) {
-                _state.value = _state.value.copy(isLoading = false, error = resTarjetas.error.toMensajeUsuario())
-                return@launch
+            store.tarjetas.collect { tarjetas ->
+                val uid = auth.currentUser?.uid ?: return@collect
+                val activas = tarjetas.filter { it.activa }
+                val mapEstados = mutableMapOf<String, List<EstadoTarjetaSnap>>()
+                for (t in activas) {
+                    val res = repository.obtenerEstadosTarjeta(uid, t.id)
+                    if (res is AppResult.Success) mapEstados[t.id] = res.data
+                }
+                _estadosPorTarjeta.value = mapEstados
             }
-
-            val tarjetas = (resTarjetas as AppResult.Success).data.filter { it.activa }
-            _state.value = _state.value.copy(tarjetas = tarjetas)
-
-            val mapEstados = mutableMapOf<String, List<EstadoTarjetaSnap>>()
-            for (t in tarjetas) {
-                val resEst = repository.obtenerEstadosTarjeta(uid, t.id)
-                if (resEst is AppResult.Success) mapEstados[t.id] = resEst.data
-            }
-
-            _state.value = _state.value.copy(isLoading = false, estadosPorTarjeta = mapEstados)
         }
     }
 
@@ -88,7 +99,7 @@ class TarjetasViewModel @Inject constructor(
                 creadoEn = Instant.now(),
             )
             repository.guardarTarjeta(tarjeta)
-            cargarDatos()
+            // El snapshot listener del store actualiza tarjetas automáticamente
         }
     }
 
@@ -96,7 +107,7 @@ class TarjetasViewModel @Inject constructor(
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             repository.eliminarTarjeta(uid, tarjetaId)
-            cargarDatos()
+            // El snapshot listener del store actualiza tarjetas automáticamente
         }
     }
 }

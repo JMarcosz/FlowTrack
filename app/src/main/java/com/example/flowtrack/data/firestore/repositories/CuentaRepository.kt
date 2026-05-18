@@ -1,5 +1,6 @@
 package com.example.flowtrack.data.firestore.repositories
 
+import com.example.flowtrack.core.firestore.asListFlow
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
 import com.example.flowtrack.data.firestore.dto.CuentaDto
@@ -10,6 +11,8 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import java.time.Instant
 import javax.inject.Inject
@@ -19,14 +22,19 @@ import javax.inject.Singleton
 class CuentaRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
 ) {
-    /**
-     * Obtiene todas las cuentas del usuario, activas o inactivas.
-     */
+    private fun colRef(uid: String) = firestore
+        .collection("usuarios").document(uid).collection("cuentas")
+
+    /** Flow reactivo: emite desde cache local inmediatamente, luego actualiza si hay cambios. */
+    fun observarCuentas(uid: String): Flow<List<Cuenta>> =
+        colRef(uid)
+            .orderBy("creadoEn", Query.Direction.ASCENDING)
+            .asListFlow(CuentaDto::class.java)
+            .map { dtos -> dtos.mapNotNull { it.toDomain() } }
+
     suspend fun obtenerCuentas(uid: String): AppResult<List<Cuenta>> {
         return try {
-            val snapshot = firestore
-                .collection("usuarios").document(uid)
-                .collection("cuentas")
+            val snapshot = colRef(uid)
                 .orderBy("creadoEn", Query.Direction.ASCENDING)
                 .get()
                 .await()

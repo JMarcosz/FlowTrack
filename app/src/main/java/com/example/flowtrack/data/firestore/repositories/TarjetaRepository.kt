@@ -1,5 +1,6 @@
 package com.example.flowtrack.data.firestore.repositories
 
+import com.example.flowtrack.core.firestore.asMappedListFlow
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
 import com.example.flowtrack.data.firestore.mappers.toDto
@@ -9,9 +10,11 @@ import com.example.flowtrack.domain.model.OrigenTasa
 import com.example.flowtrack.domain.model.Tarjeta
 import com.example.flowtrack.domain.model.EstadoTarjeta
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
 import java.math.BigDecimal
 import java.time.Instant
@@ -22,6 +25,37 @@ import javax.inject.Singleton
 class TarjetaRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
+    /** Flow reactivo: emite desde cache local inmediatamente, luego actualiza si hay cambios. */
+    fun observarTarjetas(uid: String): Flow<List<Tarjeta>> =
+        firestore.collection("usuarios").document(uid).collection("tarjetas")
+            .orderBy("creadoEn", Query.Direction.ASCENDING)
+            .asMappedListFlow { doc -> mapDocToTarjeta(doc, uid) }
+
+    private fun mapDocToTarjeta(doc: DocumentSnapshot, uid: String): Tarjeta? = runCatching {
+        val monedaStr = doc.getString("moneda") ?: "DOP"
+        val origenStr = doc.getString("tasaInteresOrigen") ?: "AUTO_EXTRAIDA"
+        val estadoStr = doc.getString("estado") ?: "ACTIVO"
+        Tarjeta(
+            id = doc.id,
+            uidUsuario = doc.getString("uidUsuario") ?: uid,
+            bancoCodigo = doc.getString("bancoCodigo") ?: "",
+            ultimos4 = doc.getString("ultimos4") ?: "",
+            alias = doc.getString("alias") ?: "",
+            tipoRed = doc.getString("tipoRed"),
+            limiteCredito = BigDecimal.valueOf(doc.getDouble("limiteCredito") ?: 0.0),
+            moneda = Moneda.valueOf(monedaStr),
+            diaCorte = doc.getLong("diaCorte")?.toInt() ?: 1,
+            diaPago = doc.getLong("diaPago")?.toInt() ?: 1,
+            tasaInteresAnual = doc.getDouble("tasaInteresAnual") ?: 0.0,
+            tasaInteresOrigen = OrigenTasa.valueOf(origenStr),
+            estado = EstadoTarjeta.valueOf(estadoStr),
+            titular = doc.getString("titular") ?: "",
+            activa = doc.getBoolean("activa") ?: true,
+            ultimaSincronizacion = doc.getTimestamp("ultimaSincronizacion")?.toDate()?.toInstant(),
+            creadoEn = doc.getTimestamp("creadoEn")?.toDate()?.toInstant() ?: Instant.now()
+        )
+    }.getOrNull()
+
     suspend fun obtenerTarjetas(uid: String): AppResult<List<Tarjeta>> {
         return try {
             val snapshot = firestore

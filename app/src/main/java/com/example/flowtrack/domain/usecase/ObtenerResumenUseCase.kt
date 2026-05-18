@@ -5,12 +5,21 @@ import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaReposi
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.time.Instant
 import javax.inject.Inject
 
 data class ResumenCategoria(val categoriaId: String, val total: BigDecimal, val porcentaje: Float)
-data class ResumenBanco(val bancoCodigo: String, val total: BigDecimal, val porcentaje: Float)
+data class ResumenBanco(
+    val bancoCodigo: String,
+    val gastos: BigDecimal,
+    val ingresos: BigDecimal,
+    val porcentaje: Float,
+) {
+    val balance: BigDecimal get() = ingresos - gastos
+}
 
 data class ResumenGeneral(
     val ingresosTotales: BigDecimal,
@@ -48,6 +57,13 @@ class ObtenerResumenUseCase @Inject constructor(
         val transacciones = (resTx as AppResult.Success).data
         val movimientos = (resMov as AppResult.Success).data
 
+        return withContext(Dispatchers.Default) { calcular(transacciones, movimientos) }
+    }
+
+    private fun calcular(
+        transacciones: List<com.example.flowtrack.domain.model.Transaccion>,
+        movimientos: List<com.example.flowtrack.domain.model.MovimientoTarjeta>,
+    ): AppResult<ResumenGeneral> {
         // Ingresos: créditos de cuenta + pagos/devoluciones/cashback de tarjeta
         val ingresosCuenta = transacciones
             .filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }
@@ -91,9 +107,21 @@ class ObtenerResumenUseCase @Inject constructor(
         gastosTarjeta.forEach { mov ->
             gastosPorBanco[mov.bancoCodigo] = (gastosPorBanco[mov.bancoCodigo] ?: BigDecimal.ZERO) + mov.monto
         }
-        val porBanco = gastosPorBanco.map { (banco, total) ->
-            ResumenBanco(banco, total, (total.toFloat() / totalFloat) * 100f)
-        }.sortedByDescending { it.total }
+
+        val ingresosPorBanco = mutableMapOf<String, BigDecimal>()
+        transacciones.filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }.forEach { tx ->
+            ingresosPorBanco[tx.bancoCodigo] = (ingresosPorBanco[tx.bancoCodigo] ?: BigDecimal.ZERO) + tx.monto
+        }
+        movimientos.filter { it.tipoMovimiento in TIPOS_CREDITO_TARJETA }.forEach { mov ->
+            ingresosPorBanco[mov.bancoCodigo] = (ingresosPorBanco[mov.bancoCodigo] ?: BigDecimal.ZERO) + mov.monto
+        }
+
+        val todosBancos = (gastosPorBanco.keys + ingresosPorBanco.keys).toSet()
+        val porBanco = todosBancos.map { banco ->
+            val g = gastosPorBanco[banco] ?: BigDecimal.ZERO
+            val i = ingresosPorBanco[banco] ?: BigDecimal.ZERO
+            ResumenBanco(banco, g, i, (g.toFloat() / totalFloat) * 100f)
+        }.sortedByDescending { it.gastos }
 
         return AppResult.Success(
             ResumenGeneral(
@@ -105,3 +133,4 @@ class ObtenerResumenUseCase @Inject constructor(
         )
     }
 }
+

@@ -1,5 +1,6 @@
 package com.example.flowtrack.data.firestore.repositories
 
+import com.example.flowtrack.core.firestore.asListFlow
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
 import com.example.flowtrack.data.firestore.dto.CargaDto
@@ -9,19 +10,27 @@ import com.example.flowtrack.domain.model.EstadoCarga
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Repositorio de solo lectura para el historial de cargas. */
 @Singleton
 class HistorialRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
 ) {
-    /**
-     * Obtiene las últimas N cargas del usuario, ordenadas por procesadoEn desc.
-     * Límite razonable para historial visible: 50.
-     */
+    private fun colRef(uid: String) = firestore
+        .collection("usuarios").document(uid).collection("cargas")
+
+    /** Flow reactivo: actualiza automáticamente cuando se importa o elimina una carga. */
+    fun observarCargas(uid: String, limite: Int = 20): Flow<List<Carga>> =
+        colRef(uid)
+            .orderBy("procesadoEn", Query.Direction.DESCENDING)
+            .limit(limite.toLong())
+            .asListFlow(CargaDto::class.java)
+            .map { dtos -> dtos.mapNotNull { it.toDomain() } }
+
     suspend fun obtenerCargas(uid: String, limite: Int = 50): AppResult<List<Carga>> {
         return try {
             val snapshot = firestore

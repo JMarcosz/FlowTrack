@@ -2,15 +2,17 @@ package com.example.flowtrack.presentation.screens.bancos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.CuentaRepository
+import com.example.flowtrack.data.store.AppDataStore
 import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.TipoCuenta
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
@@ -26,29 +28,17 @@ sealed class BancosEstado {
 @HiltViewModel
 class BancosYCuentasViewModel @Inject constructor(
     private val auth: FirebaseAuth,
+    private val store: AppDataStore,
     private val cuentaRepository: CuentaRepository,
 ) : ViewModel() {
 
-    private val _estado = MutableStateFlow<BancosEstado>(BancosEstado.Cargando)
-    val estado: StateFlow<BancosEstado> = _estado
-
-    init {
-        cargar()
-    }
-
-    fun cargar() {
-        val uid = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
-            _estado.value = BancosEstado.Cargando
-            when (val result = cuentaRepository.obtenerCuentas(uid)) {
-                is AppResult.Success -> {
-                    val cuentas = result.data.filter { it.activa }
-                    _estado.value = if (cuentas.isEmpty()) BancosEstado.Vacio else BancosEstado.ConDatos(cuentas)
-                }
-                is AppResult.Error -> _estado.value = BancosEstado.Error(result.error.toMensajeUsuario())
-            }
+    // Reactivo: se actualiza automáticamente cuando Firestore cambia
+    val estado: StateFlow<BancosEstado> = store.cuentas
+        .map { cuentas ->
+            val activas = cuentas.filter { it.activa }
+            if (activas.isEmpty()) BancosEstado.Vacio else BancosEstado.ConDatos(activas)
         }
-    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BancosEstado.Cargando)
 
     fun guardarCuenta(
         alias: String,
@@ -78,7 +68,7 @@ class BancosYCuentasViewModel @Inject constructor(
                 creadoEn = Instant.now(),
             )
             cuentaRepository.guardarCuenta(cuenta)
-            cargar()
+            // No se necesita cargar() — el snapshot listener actualiza el estado automáticamente
         }
     }
 
@@ -86,7 +76,7 @@ class BancosYCuentasViewModel @Inject constructor(
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             cuentaRepository.eliminarCuenta(uid, cuentaId)
-            cargar()
+            // No se necesita cargar() — el snapshot listener actualiza el estado automáticamente
         }
     }
 }

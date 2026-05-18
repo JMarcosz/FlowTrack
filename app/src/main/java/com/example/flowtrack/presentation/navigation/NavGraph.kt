@@ -84,7 +84,7 @@ fun AppNavGraph(
         ) {
             composable(Screen.Login.route)         { LoginScreen(navController) }
             composable(Screen.Dashboard.route)     { DashboardScreen(navController) }
-            composable(Screen.Transacciones.route) { TransaccionesScreen() }
+            composable(Screen.Transacciones.route) { TransaccionesScreen(navController) }
             composable(Screen.Resumen.route)       { ResumenScreen() }
             composable(Screen.Tarjetas.route)      { TarjetasScreen() }
             composable(Screen.Configuracion.route) { ConfiguracionScreen(navController) }
