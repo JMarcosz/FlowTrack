@@ -25,7 +25,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -55,6 +56,13 @@ android {
             excludes += "/META-INF/LICENSE.txt"
             excludes += "/META-INF/DEPENDENCIES"
             excludes += "mozilla/public-suffix-list.txt"
+
+            // BouncyCastle post-quantum crypto (SIKE, Picnic) — arrastrado por poi-ooxml
+            // para verificar firmas OOXML. CibaoXlsParser solo lee celdas financieras,
+            // nunca verifica firmas digitales. Estos .properties suman ~8 MB sin uso.
+            excludes += "org/bouncycastle/pqc/**"
+            excludes += "org/bouncycastle/crypto/test/**"
+            excludes += "font_metrics.properties"
         }
     }
 }
@@ -98,14 +106,13 @@ dependencies {
     implementation(libs.poi)                     // XLS legacy HSSF: Cibao (.xls)
     implementation(libs.poi.ooxml)               // XLSX XSSF: Cibao (.xlsx)
     implementation(libs.opencsv)                 // CSV: Popular
-    implementation(libs.fastexcel)               // Exportar XLSX (escritura)
+    // fastexcel eliminado — exportación usa FileWriter CSV nativo
 
     // ── Charts ────────────────────────────────────────────────────────────────
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
 
-    // ── Images ────────────────────────────────────────────────────────────────
-    implementation(libs.coil.compose)
+    // coil eliminado — app solo usa drawables locales, sin AsyncImage
 
     // ── Local storage ─────────────────────────────────────────────────────────
     implementation(libs.datastore.preferences)
@@ -121,7 +128,7 @@ dependencies {
     implementation(libs.firebase.auth)
     // Crashlytics requiere su Gradle plugin — se agrega en Sprint 9 (release)
     // implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.analytics)
+    // firebase-analytics eliminado — no se llama logEvent en ningún lugar
 
     // ── Testing ───────────────────────────────────────────────────────────────
     testImplementation(libs.junit)
