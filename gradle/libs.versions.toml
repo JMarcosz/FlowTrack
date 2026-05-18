@@ -35,8 +35,7 @@ poi                 = "5.3.0"
 fastexcel           = "0.18.4"
 opencsv             = "5.9"
 
-# Charts
-vico                = "2.0.0-beta.1"
+# Charts — Vico eliminado, DonutChart usa Canvas nativo de Compose
 
 # Images
 coil                = "2.7.0"
@@ -109,10 +108,6 @@ poi                                 = { group = "org.apache.poi",  name = "poi",
 poi-ooxml                           = { group = "org.apache.poi",  name = "poi-ooxml",      version.ref = "poi" }
 fastexcel                           = { group = "org.dhatim",      name = "fastexcel",      version.ref = "fastexcel" }
 opencsv                             = { group = "com.opencsv",     name = "opencsv",        version.ref = "opencsv" }
-
-# ── Charts ────────────────────────────────────────────────────────────────────
-vico-compose                        = { group = "com.patrykandpatrick.vico", name = "compose",    version.ref = "vico" }
-vico-compose-m3                     = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 
 # ── Images ────────────────────────────────────────────────────────────────────
 coil-compose                        = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }

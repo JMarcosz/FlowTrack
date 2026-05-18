@@ -24,9 +24,24 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Solo arm64-v8a en debug — el dispositivo de desarrollo es uno solo.
+            // Ahorra 10–20 MB de .so (PdfBox-Android, Firestore native) sin afectar release.
+            ndk { abiFilters += listOf("arm64-v8a") }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        create("minifiedDebug") {
+            initWith(getByName("debug"))
+            isMinifyEnabled = true
+            isShrinkResources = true
+            matchingFallbacks += "release"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -63,6 +78,15 @@ android {
             excludes += "org/bouncycastle/pqc/**"
             excludes += "org/bouncycastle/crypto/test/**"
             excludes += "font_metrics.properties"
+
+            // POI office subsystems no usados — CibaoXlsParser solo lee celdas XLS/XLSX,
+            // nunca abre presentaciones PowerPoint (HSLF), documentos Word (HWPF),
+            // ni correos Outlook (HSMF). Los XML de shapes/tables suman ~1.2 MB sin uso.
+            excludes += "org/apache/poi/hslf/**"
+            excludes += "org/apache/poi/hwpf/**"
+            excludes += "org/apache/poi/hsmf/**"
+            excludes += "org/apache/poi/sl/draw/binding/presetShapeDefinitions.xml"
+            excludes += "org/apache/poi/xwpf/usermodel/presetTableStyles.xml"
         }
     }
 }
@@ -108,9 +132,7 @@ dependencies {
     implementation(libs.opencsv)                 // CSV: Popular
     // fastexcel eliminado — exportación usa FileWriter CSV nativo
 
-    // ── Charts ────────────────────────────────────────────────────────────────
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
+    // Vico eliminado — DonutChart usa Canvas nativo de Compose, Vico nunca se importó
 
     // coil eliminado — app solo usa drawables locales, sin AsyncImage
 

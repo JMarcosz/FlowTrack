@@ -4,8 +4,18 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# ── Apache POI (usa reflection para leer celdas y formulas) ──────────────────
--keep class org.apache.poi.** { *; }
+# ── Apache POI — solo subsistemas usados por CibaoXlsParser ─────────────────
+# CibaoXlsParser usa: WorkbookFactory.create(InputStream), HSSFWorkbook,
+# Sheet, Row, CellType, DateUtil. No usa charts, macros, shapes, encryption,
+# HSLF (PowerPoint), HWPF (Word), HSMF (Outlook) ni formula functions.
+# Mantener solo los paquetes necesarios para abrir y leer celdas XLS/XLSX.
+-keep class org.apache.poi.ss.usermodel.** { *; }
+-keep class org.apache.poi.hssf.usermodel.** { *; }
+-keep class org.apache.poi.hssf.record.** { *; }
+-keep class org.apache.poi.xssf.usermodel.** { *; }
+-keep class org.apache.poi.openxml4j.** { *; }
+-keep class org.apache.poi.poifs.filesystem.** { *; }
+-keep class org.apache.poi.util.** { *; }
 -keep class org.apache.xmlbeans.** { *; }
 -dontwarn org.apache.poi.**
 -dontwarn org.apache.xmlbeans.**
