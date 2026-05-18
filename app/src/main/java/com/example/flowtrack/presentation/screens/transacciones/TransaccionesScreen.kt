@@ -3,6 +3,8 @@ package com.example.flowtrack.presentation.screens.transacciones
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,10 +12,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
@@ -28,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -46,6 +51,7 @@ import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.presentation.components.TransactionShimmerItem
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.*
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -84,10 +90,13 @@ fun TransaccionesScreen(
                     grouped = grouped,
                     derivadasPorPadre = derivadasPorPadre,
                     onImport = { navController.navigate(Screen.Upload.route) },
-                    onBancoSelect = { viewModel.setBancoFiltro(it) },
                     onFiltroTipoChange = { viewModel.setFiltroTipo(it) },
                     onSearchChange = { viewModel.setSearchQuery(it) },
                     onPeriodo = { viewModel.seleccionarPeriodo(it) },
+                    onAplicarFiltros = { banco, montoMin, montoMax, cats, soloSinCat ->
+                        viewModel.aplicarFiltros(banco, montoMin, montoMax, cats, soloSinCat)
+                    },
+                    onLimpiarFiltros = { viewModel.limpiarFiltrosAvanzados() },
                     onTxClick = { selectedTx = it },
                 )
             } else {
@@ -203,14 +212,15 @@ private fun TransaccionesLista(
     grouped: Map<LocalDate, List<Transaccion>>,
     derivadasPorPadre: Map<String, List<Transaccion>>,
     onImport: () -> Unit,
-    onBancoSelect: (String?) -> Unit,
     onFiltroTipoChange: (TipoTransaccionFiltro) -> Unit,
     onSearchChange: (String) -> Unit,
     onPeriodo: (String) -> Unit,
+    onAplicarFiltros: (String?, BigDecimal?, BigDecimal?, Set<String>, Boolean) -> Unit,
+    onLimpiarFiltros: () -> Unit,
     onTxClick: (Transaccion) -> Unit,
 ) {
     var showFiltrosSheet by remember { mutableStateOf(false) }
-    val filtrosSheetState = rememberModalBottomSheetState()
+    val filtrosSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Column(modifier = Modifier.fillMaxSize()) {
 
@@ -316,22 +326,17 @@ private fun TransaccionesLista(
             DesignPill("Ingresos", state.filtroTipo == TipoTransaccionFiltro.CREDITO) { onFiltroTipoChange(TipoTransaccionFiltro.CREDITO) }
             DesignPill("Gastos", state.filtroTipo == TipoTransaccionFiltro.DEBITO) { onFiltroTipoChange(TipoTransaccionFiltro.DEBITO) }
             Spacer(Modifier.weight(1f))
-            // Pill de Filtros — activo (Primary) si hay banco seleccionado
-            val bancoActivo = state.bancoFiltro != null
-            val filtroLabel = if (bancoActivo) bancoPorCodigo(state.bancoFiltro!!).nombre else "Filtros"
+            val filtrosActivos = state.filtrosActivos
+            val filtroLabel = if (filtrosActivos > 0) "$filtrosActivos filtro${if (filtrosActivos == 1) "" else "s"}" else "Filtros"
             DesignPill(
                 label = filtroLabel,
-                active = bancoActivo,
-                trailingIcon = !bancoActivo,
-                closeIcon = bancoActivo,
-                onClick = {
-                    if (bancoActivo) onBancoSelect(null)   // limpiar filtro directo
-                    else showFiltrosSheet = true
-                },
+                active = filtrosActivos > 0,
+                trailingIcon = true,
+                onClick = { showFiltrosSheet = true },
             )
         }
 
-        // ── Bottom sheet de filtros (banco) ───────────────────────────────────
+        // ── Bottom sheet de filtros avanzados ─────────────────────────────────
         if (showFiltrosSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showFiltrosSheet = false },
@@ -339,31 +344,18 @@ private fun TransaccionesLista(
                 containerColor = BgCard,
                 shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             ) {
-                Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                    Text(
-                        "Filtrar por banco",
-                        modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Ink,
-                    )
-                    HorizontalDivider(color = Line2)
-                    // Opción "Todos"
-                    BancoFiltroRow(
-                        nombre = "Todos los bancos",
-                        seleccionado = state.bancoFiltro == null,
-                        onClick = { onBancoSelect(null); showFiltrosSheet = false },
-                    )
-                    state.bancosDisponibles.forEach { banco ->
-                        HorizontalDivider(color = Line2, modifier = Modifier.padding(start = Spacing.xl))
-                        BancoFiltroRow(
-                            nombre = bancoPorCodigo(banco).nombre,
-                            seleccionado = state.bancoFiltro == banco,
-                            bancoColor = bancoPorCodigo(banco).color,
-                            onClick = { onBancoSelect(banco); showFiltrosSheet = false },
-                        )
-                    }
-                }
+                FiltrosSheet(
+                    state = state,
+                    onAplicar = { banco, montoMin, montoMax, cats, soloSinCat ->
+                        onAplicarFiltros(banco, montoMin, montoMax, cats, soloSinCat)
+                        showFiltrosSheet = false
+                    },
+                    onLimpiar = {
+                        onLimpiarFiltros()
+                        showFiltrosSheet = false
+                    },
+                    onDismiss = { showFiltrosSheet = false },
+                )
             }
         }
 
@@ -729,6 +721,206 @@ private fun TransaccionDetalle(
                         .padding(horizontal = Spacing.xxl, vertical = Spacing.xxs),
                 )
             }
+        }
+    }
+}
+
+// ─── Sheet de filtros avanzados ───────────────────────────────────────────────
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun FiltrosSheet(
+    state: TransaccionesState,
+    onAplicar: (String?, BigDecimal?, BigDecimal?, Set<String>, Boolean) -> Unit,
+    onLimpiar: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var draftBanco by remember { mutableStateOf(state.bancoFiltro) }
+    var draftMontoMin by remember { mutableStateOf(state.montoMin?.toPlainString() ?: "") }
+    var draftMontoMax by remember { mutableStateOf(state.montoMax?.toPlainString() ?: "") }
+    var draftCategorias by remember { mutableStateOf(state.categoriasFiltro) }
+    var draftSoloSinCat by remember { mutableStateOf(state.soloSinCategorizar) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Cabecera
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.xl)
+                .padding(top = Spacing.md, bottom = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Filtros avanzados",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Ink,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onLimpiar) {
+                Text("Limpiar todo", color = Expense, fontSize = 13.sp)
+            }
+        }
+        HorizontalDivider(color = Line2)
+
+        // Contenido scrollable
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            // ── Banco ─────────────────────────────────────────────────────────
+            Text(
+                "Banco",
+                modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Muted,
+            )
+            BancoFiltroRow(
+                nombre = "Todos los bancos",
+                seleccionado = draftBanco == null,
+                onClick = { draftBanco = null },
+            )
+            state.bancosDisponibles.forEach { banco ->
+                HorizontalDivider(color = Line2, modifier = Modifier.padding(start = Spacing.xl))
+                BancoFiltroRow(
+                    nombre = bancoPorCodigo(banco).nombre,
+                    seleccionado = draftBanco == banco,
+                    bancoColor = bancoPorCodigo(banco).color,
+                    onClick = { draftBanco = banco },
+                )
+            }
+
+            HorizontalDivider(color = Line2, modifier = Modifier.padding(top = Spacing.sm))
+
+            // ── Monto ─────────────────────────────────────────────────────────
+            Text(
+                "Rango de monto (DOP)",
+                modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Muted,
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.xl)
+                    .padding(bottom = Spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                OutlinedTextField(
+                    value = draftMontoMin,
+                    onValueChange = { draftMontoMin = it },
+                    label = { Text("Desde", fontSize = 12.sp) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Primary,
+                        unfocusedBorderColor = Line,
+                    ),
+                )
+                OutlinedTextField(
+                    value = draftMontoMax,
+                    onValueChange = { draftMontoMax = it },
+                    label = { Text("Hasta", fontSize = 12.sp) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Primary,
+                        unfocusedBorderColor = Line,
+                    ),
+                )
+            }
+
+            HorizontalDivider(color = Line2)
+
+            // ── Categorías ────────────────────────────────────────────────────
+            Text(
+                "Categorías",
+                modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Muted,
+            )
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.xl)
+                    .padding(bottom = Spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                categoriaRegistry.values.forEach { cat ->
+                    val selected = cat.id in draftCategorias
+                    FilterChip(
+                        selected = selected,
+                        onClick = {
+                            draftSoloSinCat = false
+                            draftCategorias = if (selected) draftCategorias - cat.id else draftCategorias + cat.id
+                        },
+                        label = { Text(cat.nombre, fontSize = 12.sp) },
+                        leadingIcon = if (selected) {
+                            { Icon(Icons.Outlined.Check, null, modifier = Modifier.size(14.dp)) }
+                        } else null,
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Primary.copy(alpha = 0.12f),
+                            selectedLabelColor = Primary,
+                            selectedLeadingIconColor = Primary,
+                        ),
+                    )
+                }
+            }
+
+            HorizontalDivider(color = Line2)
+
+            // ── Solo sin categorizar ──────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { draftSoloSinCat = !draftSoloSinCat; if (draftSoloSinCat) draftCategorias = emptySet() }
+                    .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Solo sin categorizar", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Ink)
+                    Text("Mostrar solo transacciones sin categoría asignada", fontSize = 12.sp, color = Muted2)
+                }
+                Switch(
+                    checked = draftSoloSinCat,
+                    onCheckedChange = { draftSoloSinCat = it; if (it) draftCategorias = emptySet() },
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Primary),
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.sm))
+        }
+
+        // Botón Aplicar (fuera del scroll)
+        HorizontalDivider(color = Line2)
+        Button(
+            onClick = {
+                onAplicar(
+                    draftBanco,
+                    draftMontoMin.trim().toBigDecimalOrNull(),
+                    draftMontoMax.trim().toBigDecimalOrNull(),
+                    draftCategorias,
+                    draftSoloSinCat,
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+        ) {
+            Text("Aplicar filtros", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }

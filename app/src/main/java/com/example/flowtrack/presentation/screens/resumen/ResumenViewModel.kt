@@ -3,6 +3,8 @@ package com.example.flowtrack.presentation.screens.resumen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.result.AppResult
+import com.example.flowtrack.domain.usecase.BalanceNeto
+import com.example.flowtrack.domain.usecase.ObtenerBalanceNetoUseCase
 import com.example.flowtrack.domain.usecase.ObtenerResumenUseCase
 import com.example.flowtrack.domain.usecase.ResumenGeneral
 import com.google.firebase.auth.FirebaseAuth
@@ -20,13 +22,16 @@ data class ResumenState(
     val fechaInicio: LocalDate,
     val fechaFin: LocalDate,
     val tabSeleccionado: Int = 0, // 0 = Categoría, 1 = Banco
+    val balanceNeto: BalanceNeto? = null,
+    val isLoadingNeto: Boolean = false,
     val error: String? = null
 )
 
 @HiltViewModel
 class ResumenViewModel @Inject constructor(
     private val auth: FirebaseAuth,
-    private val resumenUseCase: ObtenerResumenUseCase
+    private val resumenUseCase: ObtenerResumenUseCase,
+    private val balanceNetoUseCase: ObtenerBalanceNetoUseCase,
 ) : ViewModel() {
 
     private val zona = ZoneId.of("America/Santo_Domingo")
@@ -41,6 +46,20 @@ class ResumenViewModel @Inject constructor(
 
     init {
         cargarResumen()
+        cargarBalanceNeto()
+    }
+
+    fun cargarBalanceNeto() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoadingNeto = true)
+            val result = balanceNetoUseCase.ejecutar(uid)
+            _state.value = if (result is AppResult.Success) {
+                _state.value.copy(isLoadingNeto = false, balanceNeto = result.data)
+            } else {
+                _state.value.copy(isLoadingNeto = false)
+            }
+        }
     }
 
     fun setFechas(inicio: LocalDate, fin: LocalDate) {

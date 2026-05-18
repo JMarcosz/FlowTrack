@@ -144,6 +144,10 @@ dependencies {
     implementation(libs.hilt.work)
     ksp(libs.hilt.androidx.compiler)
 
+    // ── Glance (widgets home screen) ──────────────────────────────────────────
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
     // ── Firebase ──────────────────────────────────────────────────────────────
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)

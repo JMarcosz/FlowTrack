@@ -16,6 +16,7 @@ data class ConversorState(
     val tasa: TasaCambio? = null,
     val montoEntrada: String = "",
     val direccionDopAUsd: Boolean = true, // true = DOP -> USD, false = USD -> DOP
+    val historico: List<TasaCambio> = emptyList(),
     val error: String? = null
 )
 
@@ -29,6 +30,7 @@ class ConversorViewModel @Inject constructor(
 
     init {
         cargarTasa()
+        cargarHistorico()
     }
 
     private fun cargarTasa() {
@@ -39,6 +41,15 @@ class ConversorViewModel @Inject constructor(
                 _state.value = _state.value.copy(isLoading = false, tasa = res.data)
             } else if (res is AppResult.Error) {
                 _state.value = _state.value.copy(isLoading = false, error = res.error.toMensajeUsuario())
+            }
+        }
+    }
+
+    private fun cargarHistorico() {
+        viewModelScope.launch {
+            val res = repository.obtenerHistorico(30)
+            if (res is AppResult.Success) {
+                _state.value = _state.value.copy(historico = res.data)
             }
         }
     }

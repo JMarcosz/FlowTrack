@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.flowtrack.core.extensions.formatMoney
+import com.example.flowtrack.domain.usecase.BalanceNeto
 import com.example.flowtrack.domain.usecase.ResumenBanco
 import com.example.flowtrack.domain.usecase.ResumenCategoria
 import com.example.flowtrack.presentation.components.DonutChart
@@ -55,6 +56,26 @@ fun ResumenScreen(viewModel: ResumenViewModel = hiltViewModel()) {
                 color = Ink,
                 modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xl, bottom = Spacing.md),
             )
+
+            // ── Balance neto ─────────────────────────────────────
+            if (state.isLoadingNeto) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.xl)
+                        .padding(bottom = Spacing.md)
+                        .height(80.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Line2),
+                )
+            } else if (state.balanceNeto != null) {
+                PatrimonioCard(
+                    balanceNeto = state.balanceNeto!!,
+                    modifier = Modifier
+                        .padding(horizontal = Spacing.xl)
+                        .padding(bottom = Spacing.md),
+                )
+            }
 
             // ── Segmented control ────────────────────────────────
             Box(
@@ -323,6 +344,83 @@ private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier 
             }
         }
         item { Spacer(Modifier.height(Spacing.xl)) }
+    }
+}
+
+// ── Patrimonio neto card ─────────────────────────────────────────────────────
+
+@Composable
+private fun PatrimonioCard(balanceNeto: BalanceNeto, modifier: Modifier = Modifier) {
+    val netoPositivo = balanceNeto.neto >= java.math.BigDecimal.ZERO
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = BgCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, Line2, RoundedCornerShape(16.dp)),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.xl)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    "Patrimonio neto",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Muted,
+                )
+                Text(
+                    (if (netoPositivo) "" else "-") + formatMoney(balanceNeto.neto.abs()),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (netoPositivo) Income else Expense,
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.md))
+            HorizontalDivider(color = Line2)
+            Spacer(Modifier.height(Spacing.md))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // Activos
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Activos", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(2.dp))
+                    Text(formatMoney(balanceNeto.totalActivos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Income)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "${balanceNeto.cuentasConBalance.size} cuenta${if (balanceNeto.cuentasConBalance.size == 1) "" else "s"}",
+                        fontSize = 11.sp,
+                        color = Muted2,
+                    )
+                }
+
+                // Divisor vertical
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(48.dp)
+                        .background(Line2)
+                        .align(Alignment.CenterVertically),
+                )
+
+                // Pasivos
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                    Text("Pasivos", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(2.dp))
+                    Text(formatMoney(balanceNeto.totalPasivos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "${balanceNeto.tarjetasConDeuda.size} tarjeta${if (balanceNeto.tarjetasConDeuda.size == 1) "" else "s"}",
+                        fontSize = 11.sp,
+                        color = Muted2,
+                    )
+                }
+            }
+        }
     }
 }
 

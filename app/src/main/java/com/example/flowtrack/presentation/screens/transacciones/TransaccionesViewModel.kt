@@ -43,8 +43,22 @@ data class TransaccionesState(
     val bancosDisponibles: List<String> = emptyList(),
     val bancoFiltro: String? = null,
     val periodo: String = PERIODOS_TRANSACCIONES.first(),
+    val montoMin: java.math.BigDecimal? = null,
+    val montoMax: java.math.BigDecimal? = null,
+    val categoriasFiltro: Set<String> = emptySet(),
+    val soloSinCategorizar: Boolean = false,
     val error: String? = null,
-)
+) {
+    val filtrosActivos: Int get() {
+        var n = 0
+        if (bancoFiltro != null) n++
+        if (montoMin != null) n++
+        if (montoMax != null) n++
+        n += categoriasFiltro.size
+        if (soloSinCategorizar) n++
+        return n
+    }
+}
 
 enum class TipoTransaccionFiltro { TODAS, DEBITO, CREDITO }
 
@@ -111,6 +125,38 @@ class TransaccionesViewModel @Inject constructor(
         aplicarFiltrosAsync()
     }
 
+    fun aplicarFiltros(
+        banco: String?,
+        montoMin: java.math.BigDecimal?,
+        montoMax: java.math.BigDecimal?,
+        categorias: Set<String>,
+        soloSinCategorizar: Boolean,
+    ) {
+        _state.update {
+            it.copy(
+                bancoFiltro = banco,
+                montoMin = montoMin,
+                montoMax = montoMax,
+                categoriasFiltro = categorias,
+                soloSinCategorizar = soloSinCategorizar,
+            )
+        }
+        aplicarFiltrosAsync()
+    }
+
+    fun limpiarFiltrosAvanzados() {
+        _state.update {
+            it.copy(
+                bancoFiltro = null,
+                montoMin = null,
+                montoMax = null,
+                categoriasFiltro = emptySet(),
+                soloSinCategorizar = false,
+            )
+        }
+        aplicarFiltrosAsync()
+    }
+
     fun setSearchQuery(query: String) {
         _state.update { it.copy(searchQuery = query) }
         searchQueryFlow.value = query
@@ -141,7 +187,17 @@ class TransaccionesViewModel @Inject constructor(
                         tx.monto.toPlainString().contains(currState.searchQuery.trim())
                 }
 
-                matchBanco && matchTipo && matchQuery
+                val matchMonto =
+                    (currState.montoMin == null || tx.monto >= currState.montoMin) &&
+                    (currState.montoMax == null || tx.monto <= currState.montoMax)
+
+                val matchCategoria = when {
+                    currState.soloSinCategorizar -> tx.categoriaId == null
+                    currState.categoriasFiltro.isEmpty() -> true
+                    else -> tx.categoriaId in currState.categoriasFiltro
+                }
+
+                matchBanco && matchTipo && matchQuery && matchMonto && matchCategoria
             }
 
             withContext(Dispatchers.Main) {

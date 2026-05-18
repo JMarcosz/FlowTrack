@@ -50,6 +50,30 @@ data class CuentaDto(
     val creadoEn: Timestamp? = null,
 )
 
+/** DTO de Meta de ahorro para Firestore. */
+data class MetaDto(
+    val id: String = "",
+    val uidUsuario: String = "",
+    val nombre: String = "",
+    val emoji: String = "",
+    val montoObjetivo: Double = 0.0,
+    val montoActual: Double = 0.0,
+    val fechaLimite: Timestamp? = null,
+    val activa: Boolean = true,
+    val creadoEn: Timestamp? = null,
+)
+
+/** DTO de Presupuesto para Firestore. */
+data class PresupuestoDto(
+    val id: String = "",
+    val uidUsuario: String = "",
+    val categoriaId: String = "",
+    val montoLimite: Double = 0.0,
+    val periodo: String = "MENSUAL",
+    val activo: Boolean = true,
+    val creadoEn: Timestamp? = null,
+)
+
 /** DTO de Tarjeta para Firestore. */
 data class TarjetaDto(
     val id: String = "",

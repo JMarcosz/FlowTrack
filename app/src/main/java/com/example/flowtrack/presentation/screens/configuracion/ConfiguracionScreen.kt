@@ -177,11 +177,36 @@ fun ConfiguracionScreen(
                 )
                 HorizontalDivider(color = Line2)
                 SettingsRow(
+                    icon = Icons.Outlined.Savings,
+                    label = "Presupuestos",
+                    onClick = { navController.navigate(Screen.Presupuestos.route) },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsRow(
+                    icon = Icons.Outlined.Flag,
+                    label = "Metas de ahorro",
+                    onClick = { navController.navigate(Screen.Metas.route) },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsRow(
                     icon = Icons.Default.FileDownload,
                     label = "Exportar a Excel",
                     onClick = { viewModel.exportarDatosCsv() },
                     trailing = {
                         if (state.isExporting) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Primary)
+                        } else {
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Muted2)
+                        }
+                    },
+                )
+                HorizontalDivider(color = Line2)
+                SettingsRow(
+                    icon = Icons.Outlined.PictureAsPdf,
+                    label = "Exportar a PDF",
+                    onClick = { viewModel.exportarPdf() },
+                    trailing = {
+                        if (state.isExportingPdf) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Primary)
                         } else {
                             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Muted2)

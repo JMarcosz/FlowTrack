@@ -25,6 +25,7 @@ data class ConfiguracionState(
     val config: ConfiguracionUsuario = ConfiguracionUsuario(""),
     val isLoading: Boolean = false,
     val isExporting: Boolean = false,
+    val isExportingPdf: Boolean = false,
     val error: String? = null,
     val exito: String? = null
 )
@@ -95,15 +96,32 @@ class ConfiguracionViewModel @Inject constructor(
         }
     }
 
-    private fun compartirUri(uri: Uri) {
+    fun exportarPdf() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isExportingPdf = true, error = null, exito = null)
+            val zona = ZoneId.of("America/Santo_Domingo")
+            val fin = Instant.now()
+            val inicio = fin.atZone(zona).minusMonths(6).toInstant()
+            val res = exportacionUseCase.exportarPdf(context, uid, inicio, fin)
+            if (res is AppResult.Success) {
+                _state.value = _state.value.copy(isExportingPdf = false, exito = "PDF generado con éxito")
+                compartirUri(res.data, "application/pdf", "Compartir PDF con...")
+            } else if (res is AppResult.Error) {
+                _state.value = _state.value.copy(isExportingPdf = false, error = res.error.toMensajeUsuario())
+            }
+        }
+    }
+
+    private fun compartirUri(uri: Uri, mimeType: String = "text/csv", titulo: String = "Compartir con...") {
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/csv"
+            type = mimeType
             putExtra(Intent.EXTRA_SUBJECT, "Exportación Transacciones FlowTrack")
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        val chooser = Intent.createChooser(intent, "Compartir CSV con...")
+        val chooser = Intent.createChooser(intent, titulo)
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }

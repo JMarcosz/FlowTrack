@@ -3,6 +3,7 @@ package com.example.flowtrack.data.firestore.repositories
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.ZoneId
@@ -51,6 +52,29 @@ class TasaCambioRepository @Inject constructor(
             AppResult.Success(tasaMock)
         } catch (e: Exception) {
             AppResult.Error(ErrorApp.FirestoreError("Error obteniendo tasa de cambio: ${e.message}", e))
+        }
+    }
+
+    suspend fun obtenerHistorico(diasAtras: Int = 30): AppResult<List<TasaCambio>> {
+        return try {
+            val snapshot = firestore.collection("tasasCambio")
+                .orderBy("fecha", Query.Direction.DESCENDING)
+                .limit(diasAtras.toLong())
+                .get()
+                .await()
+
+            val tasas = snapshot.documents.mapNotNull { doc ->
+                val compra = doc.getDouble("compra") ?: return@mapNotNull null
+                val venta = doc.getDouble("venta") ?: return@mapNotNull null
+                val fechaStr = doc.getString("fecha") ?: doc.id
+                runCatching {
+                    TasaCambio(compra, venta, LocalDate.parse(fechaStr), doc.getString("fuente") ?: "Firebase")
+                }.getOrNull()
+            }.sortedBy { it.fecha }
+
+            AppResult.Success(tasas)
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error obteniendo histórico: ${e.message}", e))
         }
     }
 }

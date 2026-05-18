@@ -36,6 +36,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.flowtrack.core.extensions.formatDate
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.core.extensions.toBigDecimalSafe
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.Tarjeta
@@ -168,6 +170,39 @@ fun TarjetasScreen(viewModel: TarjetasViewModel = hiltViewModel()) {
                                             .background(if (isActive) Primary else Line)
                                             .size(width = width, height = 6.dp),
                                     )
+                                }
+                            }
+                        }
+
+                        // ── Próximos pagos ─────────────────────────
+                        val ahora = Instant.now()
+                        val pagosProximos = state.tarjetas.mapNotNull { t ->
+                            val snap = (state.estadosPorTarjeta[t.id] ?: emptyList())
+                                .maxByOrNull { it.fechaCorte }
+                                ?.takeIf { it.fechaLimitePago.isAfter(ahora) && ChronoUnit.DAYS.between(ahora, it.fechaLimitePago) <= 60 }
+                            snap?.let { t to it }
+                        }.sortedBy { it.second.fechaLimitePago }
+
+                        if (pagosProximos.isNotEmpty()) {
+                            item {
+                                SectionLabel(
+                                    "Próximos pagos",
+                                    modifier = Modifier.padding(
+                                        start = Spacing.xxl, end = Spacing.xxl,
+                                        top = Spacing.xxl, bottom = Spacing.sm,
+                                    ),
+                                )
+                            }
+                            item {
+                                WhiteCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = Spacing.xxl),
+                                ) {
+                                    pagosProximos.forEachIndexed { idx, (tarjeta, snap) ->
+                                        PagoProximoRow(tarjeta = tarjeta, snap = snap, ahora = ahora)
+                                        if (idx < pagosProximos.lastIndex) HorizontalDivider(color = Line2)
+                                    }
                                 }
                             }
                         }
@@ -413,6 +448,58 @@ fun WhiteCreditCard(
                 color = Primary,
                 modifier = Modifier.align(Alignment.End),
             )
+        }
+    }
+}
+
+// ── Pago próximo row ──────────────────────────────────────────────────────────
+
+@Composable
+private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Instant) {
+    val badge = bankBadge(tarjeta.bancoCodigo)
+    val banco = bancoPorCodigo(tarjeta.bancoCodigo)
+    val diasRestantes = ChronoUnit.DAYS.between(ahora, snap.fechaLimitePago).toInt()
+    val fechaLocal = snap.fechaLimitePago.atZone(ZONA).toLocalDate()
+
+    val (urgenciaColor, urgenciaLabel) = when {
+        diasRestantes <= 2  -> Expense to "Vence pronto"
+        diasRestantes <= 6  -> Warning to "Esta semana"
+        else                -> Income  to "A tiempo"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xl, vertical = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        BankBadgeCircle(badge, size = 36.dp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                tarjeta.alias.ifBlank { banco.nombre },
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                "Vence ${formatDate(fechaLocal)} • $diasRestantes día${if (diasRestantes == 1) "" else "s"}",
+                fontSize = 12.sp,
+                color = Muted,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(formatMoney(snap.pagoTotal), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense)
+            Box(
+                modifier = androidx.compose.ui.Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(urgenciaColor.copy(alpha = 0.12f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                Text(urgenciaLabel, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = urgenciaColor)
+            }
         }
     }
 }
