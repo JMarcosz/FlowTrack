@@ -11,10 +11,6 @@ class DuplicadosViewModel @Inject constructor() : ViewModel() {
 
     private val _estado = MutableStateFlow<DuplicadosEstado>(DuplicadosEstado.Vacio)
     val estado: StateFlow<DuplicadosEstado> = _estado
-
-    fun cargarPares(pares: List<ParDuplicado>) {
-        _estado.value = if (pares.isEmpty()) DuplicadosEstado.Vacio else DuplicadosEstado.ConDatos(pares)
-    }
 }
 
 sealed class DuplicadosEstado {

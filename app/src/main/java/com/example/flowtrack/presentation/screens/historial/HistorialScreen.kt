@@ -14,7 +14,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,10 +56,8 @@ fun HistorialScreen(
     viewModel: HistorialViewModel = hiltViewModel(),
 ) {
     val estado by viewModel.estado.collectAsState()
-    LaunchedEffect(Unit) { viewModel.cargar() }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     var confirmarEliminarTodo by remember { mutableStateOf(false) }
 
     if (confirmarEliminarTodo) {

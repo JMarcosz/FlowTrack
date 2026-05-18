@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.ProductoTipo
+import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -180,7 +181,7 @@ private fun UploadFormContent(
                 .fillMaxWidth()
                 .height(120.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (bancoSeleccionado != null) Primary50 else Color(0xFFEEF1F5))
+                .background(if (bancoSeleccionado != null) Primary50 else Line2)
                 .border(
                     width = 2.dp,
                     color = if (bancoSeleccionado != null) Primary.copy(alpha = 0.4f) else Line,
@@ -314,22 +315,10 @@ private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> 
         disponible   -> BgCard
         else         -> BgCard.copy(alpha = 0.6f)
     }
-    val bancoColor = when (banco.codigo) {
-        "BANRESERVAS" -> BancoBanReservas
-        "POPULAR"     -> BancoPopular
-        "QIK"         -> BancoQik
-        "CIBAO"       -> BancoCibao
-        else          -> Color(0xFF94A3B8)
-    }.let { if (disponible) it else it.copy(alpha = 0.4f) }
-    val textoColor = if (banco.codigo == "QIK") Color(0xFF0B1220) else Color.White
-    val abbr = when (banco.codigo) {
-        "BANRESERVAS" -> "BR"
-        "POPULAR"     -> "BP"
-        "QIK"         -> "QIK"
-        "CIBAO"       -> "AC"
-        "BHD"         -> "BHD"
-        else          -> banco.codigo.take(3)
-    }
+    val bancoInfo  = bancoPorCodigo(banco.codigo)
+    val bancoColor = bancoInfo.color.let { if (disponible) it else it.copy(alpha = 0.4f) }
+    val textoColor = bancoInfo.fgColor
+    val abbr       = bancoInfo.abbr
 
     Row(
         modifier = Modifier

@@ -83,17 +83,6 @@ fun TransactionShimmerItem() {
 }
 
 @Composable
-fun DashboardStatShimmerCard() {
-    Box(
-        modifier = Modifier
-            .width(150.dp)
-            .height(100.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .shimmerEffect()
-    )
-}
-
-@Composable
 fun CreditCardShimmerItem() {
     Box(
         modifier = Modifier
@@ -105,26 +94,3 @@ fun CreditCardShimmerItem() {
     )
 }
 
-@Composable
-fun ShimmerHistoryItem() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(80.dp)
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .shimmerEffect()
-    )
-}
-
-@Composable
-fun ResumenShimmerItem() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(90.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .shimmerEffect()
-    )
-}
