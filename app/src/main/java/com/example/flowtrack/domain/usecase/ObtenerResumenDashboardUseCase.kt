@@ -13,6 +13,8 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos de dominio
@@ -87,7 +89,10 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
     private val comparisonService: FinancialComparisonService,
 ) {
 
-    suspend fun ejecutar(uid: String, periodo: String): AppResult<ResumenDashboard> {
+    suspend fun ejecutar(
+        uid: String,
+        periodo: String,
+    ): AppResult<ResumenDashboard> = coroutineScope {
         val zona  = ZoneId.of("America/Santo_Domingo")
         val ahora = LocalDate.now(zona)
 
@@ -96,20 +101,59 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         val unidad        = unidadParaPeriodo(periodo)
 
         // ── Cargar ambos rangos sin límite ────────────────────────────────────
-        val resTxActual = transaccionRepository.obtenerTransacciones(uid, rangoActual.inicio, rangoActual.fin, limite = 0)
-        if (resTxActual is AppResult.Error) return AppResult.Error(resTxActual.error)
+        val txActualDeferred = async {
+            transaccionRepository.obtenerTransacciones(
+                uid,
+                rangoActual.inicio,
+                rangoActual.fin,
+                limite = 0,
+            )
+        }
+        val txAnteriorDeferred = async {
+            transaccionRepository.obtenerTransacciones(
+                uid,
+                rangoAnterior.inicio,
+                rangoAnterior.fin,
+                limite = 0,
+            )
+        }
+        val movActualDeferred = async {
+            movimientoTarjetaRepository.obtenerMovimientos(
+                uid,
+                rangoActual.inicio,
+                rangoActual.fin,
+            )
+        }
+        val movAnteriorDeferred = async {
+            movimientoTarjetaRepository.obtenerMovimientos(
+                uid,
+                rangoAnterior.inicio,
+                rangoAnterior.fin,
+            )
+        }
+
+        val resTxActual = txActualDeferred.await()
+        if (resTxActual is AppResult.Error) {
+            return@coroutineScope AppResult.Error(resTxActual.error)
+        }
         val txActuales = (resTxActual as AppResult.Success).data
 
-        val resTxAnterior = transaccionRepository.obtenerTransacciones(uid, rangoAnterior.inicio, rangoAnterior.fin, limite = 0)
-        if (resTxAnterior is AppResult.Error) return AppResult.Error(resTxAnterior.error)
+        val resTxAnterior = txAnteriorDeferred.await()
+        if (resTxAnterior is AppResult.Error) {
+            return@coroutineScope AppResult.Error(resTxAnterior.error)
+        }
         val txAnteriores = (resTxAnterior as AppResult.Success).data
 
-        val resMovActual = movimientoTarjetaRepository.obtenerMovimientos(uid, rangoActual.inicio, rangoActual.fin)
-        if (resMovActual is AppResult.Error) return AppResult.Error(resMovActual.error)
+        val resMovActual = movActualDeferred.await()
+        if (resMovActual is AppResult.Error) {
+            return@coroutineScope AppResult.Error(resMovActual.error)
+        }
         val movActuales = (resMovActual as AppResult.Success).data
 
-        val resMovAnterior = movimientoTarjetaRepository.obtenerMovimientos(uid, rangoAnterior.inicio, rangoAnterior.fin)
-        if (resMovAnterior is AppResult.Error) return AppResult.Error(resMovAnterior.error)
+        val resMovAnterior = movAnteriorDeferred.await()
+        if (resMovAnterior is AppResult.Error) {
+            return@coroutineScope AppResult.Error(resMovAnterior.error)
+        }
         val movAnteriores = (resMovAnterior as AppResult.Success).data
 
         // ── Comparación MTD via FinancialComparisonService ────────────────────
@@ -155,7 +199,7 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
             .sortedByDescending { it.monto }
             .take(5)
 
-        return AppResult.Success(
+        AppResult.Success(
             ResumenDashboard(
                 gastoTotal         = gastoActual,
                 ingresoTotal       = ingresoActual,

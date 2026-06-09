@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -97,6 +98,7 @@ fun TransaccionesScreen(
                         viewModel.aplicarFiltros(banco, montoMin, montoMax, cats, soloSinCat)
                     },
                     onLimpiarFiltros = { viewModel.limpiarFiltrosAvanzados() },
+                    onLoadMore = { viewModel.cargarMas() },
                     onTxClick = { selectedTx = it },
                 )
             } else {
@@ -217,6 +219,7 @@ private fun TransaccionesLista(
     onPeriodo: (String) -> Unit,
     onAplicarFiltros: (String?, BigDecimal?, BigDecimal?, Set<String>, Boolean) -> Unit,
     onLimpiarFiltros: () -> Unit,
+    onLoadMore: () -> Unit,
     onTxClick: (Transaccion) -> Unit,
 ) {
     var showFiltrosSheet by remember { mutableStateOf(false) }
@@ -369,7 +372,33 @@ private fun TransaccionesLista(
                     items(8) { TransactionShimmerItem() }
                 }
             }
-            grouped.isEmpty() -> {
+            state.error != null && grouped.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(Spacing.xl),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.ReceiptLong,
+                            contentDescription = null,
+                            tint = Muted2,
+                            modifier = Modifier.size(40.dp),
+                        )
+                        Spacer(Modifier.height(Spacing.md))
+                        Text(
+                            state.error,
+                            fontSize = 14.sp,
+                            color = Muted,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(Spacing.md))
+                        TextButton(onClick = onLoadMore) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+            }
+            grouped.isEmpty() && !state.hasMore -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
@@ -385,6 +414,31 @@ private fun TransaccionesLista(
             }
             else -> {
                 val listState = rememberLazyListState()
+                val shouldLoadMore by remember {
+                    derivedStateOf {
+                        val layout = listState.layoutInfo
+                        val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: -1
+                        layout.totalItemsCount > 0 &&
+                            lastVisible >= layout.totalItemsCount - 4
+                    }
+                }
+
+                LaunchedEffect(
+                    shouldLoadMore,
+                    state.isLoadingMore,
+                    state.hasMore,
+                    state.transacciones.size,
+                    state.error,
+                ) {
+                    if (
+                        shouldLoadMore &&
+                        state.hasMore &&
+                        !state.isLoadingMore &&
+                        state.error == null
+                    ) {
+                        onLoadMore()
+                    }
+                }
 
                 LazyColumn(
                     state = listState,
@@ -401,31 +455,66 @@ private fun TransaccionesLista(
                                 modifier = Modifier.padding(top = Spacing.xl, bottom = Spacing.sm, start = Spacing.xxs),
                             )
                         }
-                        item(key = "card_$fecha") {
+                        itemsIndexed(
+                            items = txs,
+                            key = { _, tx -> tx.id },
+                        ) { index, tx ->
+                            val shape = when {
+                                txs.size == 1 -> RoundedCornerShape(16.dp)
+                                index == 0 -> RoundedCornerShape(
+                                    topStart = 16.dp,
+                                    topEnd = 16.dp,
+                                )
+                                index == txs.lastIndex -> RoundedCornerShape(
+                                    bottomStart = 16.dp,
+                                    bottomEnd = 16.dp,
+                                )
+                                else -> RoundedCornerShape(0.dp)
+                            }
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .clip(shape)
                                     .background(BgCard)
-                                    .border(1.dp, Line2, RoundedCornerShape(16.dp)),
+                                    .border(1.dp, Line2, shape),
                             ) {
-                                txs.forEachIndexed { i, tx ->
-                                    TransaccionFila(
-                                        tx = tx,
-                                        derivadas = derivadasPorPadre[tx.id] ?: emptyList(),
-                                        onClick = { onTxClick(tx) },
+                                TransaccionFila(
+                                    tx = tx,
+                                    derivadas = derivadasPorPadre[tx.id] ?: emptyList(),
+                                    onClick = { onTxClick(tx) },
+                                )
+                                if (index < txs.lastIndex) {
+                                    HorizontalDivider(
+                                        color = Line2,
+                                        modifier = Modifier.padding(start = 68.dp),
                                     )
-                                    if (i < txs.lastIndex) {
-                                        HorizontalDivider(
-                                            color = Line2,
-                                            modifier = Modifier.padding(start = 68.dp),
-                                        )
-                                    }
                                 }
                             }
                         }
                     }
 
+                    if (state.hasMore || state.isLoadingMore) {
+                        item(key = "loading_more") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(Spacing.xl),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (state.error != null) {
+                                    TextButton(onClick = onLoadMore) {
+                                        Text("Reintentar carga")
+                                    }
+                                } else {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Primary,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

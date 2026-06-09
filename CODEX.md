@@ -53,11 +53,28 @@ analizar y exportar transacciones bancarias de República Dominicana.
   `docs/02-desing-system/`.
 - Se ejecutaron `testDebugUnitTest`, `assembleDebug` y el test instrumentado de
   Qik antes de crear los commits anteriores.
+- Google Sign-In usa el flujo explícito `GetSignInWithGoogleOption` y
+  AndroidX Credentials 1.6.0. En esta PC el acceso fue validado en un Pixel 6
+  Pro después de registrar la SHA-1 del keystore debug en Firebase.
+- Los filtros de Dashboard y Transacciones se conservan al cambiar de pestaña
+  mediante `SavedStateHandle` y navegación con `saveState/restoreState`.
+- Transacciones carga páginas de 30 documentos con cursor Firestore al
+  acercarse al final del scroll. Cada transacción es un ítem lazy individual.
+- El Dashboard mantiene su estado mientras vive su `ViewModel` y ejecuta en
+  paralelo sus cuatro consultas independientes de resumen.
+- Validación del cambio: `assembleDebug`, `testDebugUnitTest`, instalación en
+  Pixel 6 Pro, persistencia de filtros entre pestañas y carga de registros más
+  antiguos por scroll. Sin crashes en Logcat.
 
 ## 4. Trabajo local que se debe preservar
 
 No incluir `.idea/deploymentTargetSelector.xml` en commits. Los fixtures reales
 de `docs/03-fixtures/` continúan siendo locales y sensibles.
+
+La persistencia de filtros solicitada es de sesión/navegación. No se escribe
+cada cambio en Firestore ni DataStore, para evitar I/O innecesario. Si se
+requiere conservar filtros después de cerrar completamente la app, esa es una
+decisión de producto separada.
 
 ## 5. Estado actualizado de issues
 

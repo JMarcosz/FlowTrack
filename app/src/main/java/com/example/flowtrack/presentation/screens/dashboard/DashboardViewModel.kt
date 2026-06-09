@@ -1,5 +1,6 @@
 package com.example.flowtrack.presentation.screens.dashboard
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.result.AppResult
@@ -11,10 +12,8 @@ import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -32,10 +31,14 @@ class DashboardViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val store: AppDataStore,
     private val resumenUseCase: ObtenerResumenDashboardUseCase,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _periodo = MutableStateFlow(PERIODOS_DASHBOARD.first())
-    val periodo: StateFlow<String> = _periodo.asStateFlow()
+    private val _periodo = savedStateHandle.getStateFlow(
+        KEY_PERIODO,
+        PERIODOS_DASHBOARD.first(),
+    )
+    val periodo: StateFlow<String> = _periodo
 
     val estado: StateFlow<DashboardEstado> = _periodo
         .flatMapLatest { periodo ->
@@ -67,16 +70,22 @@ class DashboardViewModel @Inject constructor(
         }
         .onStart { emit(DashboardEstado.Cargando) }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardEstado.Cargando)
+        .stateIn(viewModelScope, SharingStarted.Lazily, DashboardEstado.Cargando)
 
     fun seleccionarPeriodo(p: String) {
-        if (_periodo.value != p) _periodo.value = p
+        if (_periodo.value != p && p in PERIODOS_DASHBOARD) {
+            savedStateHandle[KEY_PERIODO] = p
+        }
     }
 
     fun cargarDatos() {
         val current = _periodo.value
-        _periodo.value = ""
-        _periodo.value = current
+        savedStateHandle[KEY_PERIODO] = ""
+        savedStateHandle[KEY_PERIODO] = current
+    }
+
+    private companion object {
+        const val KEY_PERIODO = "dashboard_periodo"
     }
 }
 
