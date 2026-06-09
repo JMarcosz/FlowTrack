@@ -10,6 +10,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,13 +33,12 @@ import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.ui.theme.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BarChart
 
 @Composable
 fun ResumenScreen(
     viewModel: ResumenViewModel = hiltViewModel(),
     onVerPorPeriodo: () -> Unit = {},
+    onMenuClick: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
     var periodoActivo by remember { mutableStateOf(RangoFecha.ESTE_MES) }
@@ -55,12 +57,17 @@ fun ResumenScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = Spacing.xl, end = Spacing.md, top = Spacing.xl, bottom = Spacing.md),
+                    .padding(start = 4.dp, end = Spacing.md, top = Spacing.xl, bottom = Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Box(modifier = Modifier.width(56.dp)) {
+                    IconButton(onClick = onMenuClick) {
+                        Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = Ink)
+                    }
+                }
                 Text(
                     text = tabLabel,
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Ink,
                     modifier = Modifier.weight(1f),
@@ -70,8 +77,8 @@ fun ResumenScreen(
                 }
             }
 
-            // ── Balance neto ─────────────────────────────────────
-            if (state.isLoadingNeto) {
+            // ── Balance del período ──────────────────────────────
+            if (state.isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -81,9 +88,10 @@ fun ResumenScreen(
                         .clip(RoundedCornerShape(16.dp))
                         .background(Line2),
                 )
-            } else if (state.balanceNeto != null) {
-                PatrimonioCard(
-                    balanceNeto = state.balanceNeto!!,
+            } else if (state.resumen != null) {
+                BalancePeriodoCard(
+                    ingresos = state.resumen!!.ingresosTotales,
+                    gastos = state.resumen!!.gastosTotales,
                     modifier = Modifier
                         .padding(horizontal = Spacing.xl)
                         .padding(bottom = Spacing.md),
@@ -360,11 +368,12 @@ private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier 
     }
 }
 
-// ── Patrimonio neto card ─────────────────────────────────────────────────────
+// ── Balance del período card ──────────────────────────────────────────────────
 
 @Composable
-private fun PatrimonioCard(balanceNeto: BalanceNeto, modifier: Modifier = Modifier) {
-    val netoPositivo = balanceNeto.neto >= java.math.BigDecimal.ZERO
+private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math.BigDecimal, modifier: Modifier = Modifier) {
+    val balance = ingresos - gastos
+    val positivo = balance >= java.math.BigDecimal.ZERO
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = BgCard),
@@ -380,16 +389,16 @@ private fun PatrimonioCard(balanceNeto: BalanceNeto, modifier: Modifier = Modifi
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    "Patrimonio neto",
+                    "Balance del período",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Muted,
                 )
                 Text(
-                    (if (netoPositivo) "" else "-") + formatMoney(balanceNeto.neto.abs()),
+                    (if (positivo) "" else "-") + formatMoney(balance.abs()),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (netoPositivo) Income else Expense,
+                    color = if (positivo) Income else Expense,
                 )
             }
 
@@ -398,17 +407,11 @@ private fun PatrimonioCard(balanceNeto: BalanceNeto, modifier: Modifier = Modifi
             Spacer(Modifier.height(Spacing.md))
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                // Activos
+                // Ingresos
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Activos", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text("Ingresos", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
-                    Text(formatMoney(balanceNeto.totalActivos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Income)
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        "${balanceNeto.cuentasConBalance.size} cuenta${if (balanceNeto.cuentasConBalance.size == 1) "" else "s"}",
-                        fontSize = 11.sp,
-                        color = Muted2,
-                    )
+                    Text(formatMoney(ingresos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Income)
                 }
 
                 // Divisor vertical
@@ -420,17 +423,11 @@ private fun PatrimonioCard(balanceNeto: BalanceNeto, modifier: Modifier = Modifi
                         .align(Alignment.CenterVertically),
                 )
 
-                // Pasivos
+                // Gastos
                 Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text("Pasivos", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text("Gastos", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
-                    Text(formatMoney(balanceNeto.totalPasivos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense)
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        "${balanceNeto.tarjetasConDeuda.size} tarjeta${if (balanceNeto.tarjetasConDeuda.size == 1) "" else "s"}",
-                        fontSize = 11.sp,
-                        color = Muted2,
-                    )
+                    Text(formatMoney(gastos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense)
                 }
             }
         }

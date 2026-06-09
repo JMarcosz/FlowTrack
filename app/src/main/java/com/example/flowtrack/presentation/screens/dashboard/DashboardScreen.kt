@@ -45,6 +45,7 @@ import kotlin.math.abs
 @Composable
 fun DashboardScreen(
     navController: NavController? = null,
+    onMenuClick: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val estado  by viewModel.estado.collectAsState()
@@ -67,6 +68,7 @@ fun DashboardScreen(
                 periodo       = periodo,
                 onPeriodo     = { viewModel.seleccionarPeriodo(it) },
                 navController = navController,
+                onMenuClick   = onMenuClick,
             )
         }
     }
@@ -103,6 +105,7 @@ private fun DashboardContent(
     periodo: String,
     onPeriodo: (String) -> Unit,
     navController: NavController?,
+    onMenuClick: () -> Unit,
 ) {
     val resumen = estado.resumen
 
@@ -133,7 +136,8 @@ private fun DashboardContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                IconButton(onClick = {}) {
+
+                IconButton(onClick = onMenuClick) {
                     Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = Ink)
                 }
                 Text(

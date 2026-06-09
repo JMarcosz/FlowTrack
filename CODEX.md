@@ -65,6 +65,13 @@ analizar y exportar transacciones bancarias de República Dominicana.
 - Validación del cambio: `assembleDebug`, `testDebugUnitTest`, instalación en
   Pixel 6 Pro, persistencia de filtros entre pestañas y carga de registros más
   antiguos por scroll. Sin crashes en Logcat.
+- El botón de menú de las pantallas principales ya abre un `ModalNavigationDrawer`
+  global con `Metas de ahorro`, `Presupuestos`, `Bancos y cuentas` y `Tasas de cambio`.
+- La pantalla `Configuración` quedó reducida a ajustes, perfil, exportación,
+  borrado de datos y cierre de sesión; `Ajustes`/`Ajustes Generales`/`Avanzado`
+  fueron retiradas de la navegación.
+- `ConfiguracionViewModel` absorbió el borrado de datos desde
+  `LimpiezaRepository`; ya no existe una pantalla separada para esa acción.
 
 ## 4. Trabajo local que se debe preservar
 

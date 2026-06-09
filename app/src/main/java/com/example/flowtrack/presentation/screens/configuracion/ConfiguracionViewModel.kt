@@ -7,9 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.ConfiguracionRepository
+import com.example.flowtrack.data.firestore.repositories.LimpiezaRepository
 import com.example.flowtrack.domain.model.ConfiguracionUsuario
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.usecase.ExportacionUseCase
+import com.example.flowtrack.domain.usecase.ObtenerBalanceNetoUseCase
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
@@ -26,6 +29,8 @@ data class ConfiguracionState(
     val isLoading: Boolean = false,
     val isExporting: Boolean = false,
     val isExportingPdf: Boolean = false,
+    val isDeleting: Boolean = false,
+    val balanceNeto: BigDecimal = BigDecimal.ZERO,
     val error: String? = null,
     val exito: String? = null
 )
@@ -34,7 +39,9 @@ data class ConfiguracionState(
 class ConfiguracionViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val configuracionRepository: ConfiguracionRepository,
+    private val limpiezaRepository: LimpiezaRepository,
     private val exportacionUseCase: ExportacionUseCase,
+    private val balanceNetoUseCase: ObtenerBalanceNetoUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -43,6 +50,17 @@ class ConfiguracionViewModel @Inject constructor(
 
     init {
         observarConfig()
+        cargarBalance()
+    }
+
+    private fun cargarBalance() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val result = balanceNetoUseCase.ejecutar(uid)
+            if (result is AppResult.Success) {
+                _state.value = _state.value.copy(balanceNeto = result.data.neto)
+            }
+        }
     }
 
     private fun observarConfig() {
@@ -117,6 +135,27 @@ class ConfiguracionViewModel @Inject constructor(
                 compartirUri(res.data, "application/pdf", "Compartir PDF con...")
             } else if (res is AppResult.Error) {
                 _state.value = _state.value.copy(isExportingPdf = false, error = res.error.toMensajeUsuario())
+            }
+        }
+    }
+
+    fun borrarTodosMisDatos() {
+        val uid = auth.currentUser?.uid ?: run {
+            _state.value = _state.value.copy(error = "No hay sesión activa.")
+            return
+        }
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isDeleting = true, error = null, exito = null)
+            val res = limpiezaRepository.borrarTodosMisDatos(uid)
+            _state.value = when (res) {
+                is AppResult.Success -> _state.value.copy(
+                    isDeleting = false,
+                    exito = "Datos eliminados correctamente (${res.data} documentos).",
+                )
+                is AppResult.Error -> _state.value.copy(
+                    isDeleting = false,
+                    error = res.error.toMensajeUsuario(),
+                )
             }
         }
     }

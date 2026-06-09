@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.CreditCardOff
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,7 +58,10 @@ private val ZONA = ZoneId.of("America/Santo_Domingo")
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun TarjetasScreen(viewModel: TarjetasViewModel = hiltViewModel()) {
+fun TarjetasScreen(
+    onMenuClick: () -> Unit = {},
+    viewModel: TarjetasViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsState()
     var mostrarSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -75,10 +79,16 @@ fun TarjetasScreen(viewModel: TarjetasViewModel = hiltViewModel()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.xxl, bottom = Spacing.xs),
+                    .padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xl, bottom = Spacing.xs),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = Ink)
+                }
                 Column {
                     Text(
                         "Tarjetas",

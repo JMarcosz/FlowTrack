@@ -60,6 +60,7 @@ import java.time.ZoneId
 @Composable
 fun TransaccionesScreen(
     navController: NavController,
+    onMenuClick: () -> Unit = {},
     viewModel: TransaccionesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -100,6 +101,7 @@ fun TransaccionesScreen(
                     onLimpiarFiltros = { viewModel.limpiarFiltrosAvanzados() },
                     onLoadMore = { viewModel.cargarMas() },
                     onTxClick = { selectedTx = it },
+                    onMenuClick = onMenuClick,
                 )
             } else {
                 TransaccionDetalle(
@@ -221,6 +223,7 @@ private fun TransaccionesLista(
     onLimpiarFiltros: () -> Unit,
     onLoadMore: () -> Unit,
     onTxClick: (Transaccion) -> Unit,
+    onMenuClick: () -> Unit,
 ) {
     var showFiltrosSheet by remember { mutableStateOf(false) }
     val filtrosSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -236,7 +239,7 @@ private fun TransaccionesLista(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(modifier = Modifier.width(56.dp)) {
-                IconButton(onClick = {}) {
+                IconButton(onClick = onMenuClick) {
                     Icon(Icons.Outlined.Menu, contentDescription = null, tint = Ink)
                 }
             }

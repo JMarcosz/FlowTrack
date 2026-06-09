@@ -62,6 +62,56 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun signInWithEmail(email: String, pass: String) {
+        if (email.isBlank() || pass.isBlank()) {
+            _uiState.value = LoginUiState.Error("Por favor, completa todos los campos.")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            try {
+                auth.signInWithEmailAndPassword(email, pass).await()
+                _uiState.value = LoginUiState.Success
+            } catch (e: Exception) {
+                Log.e(TAG, "Error en login con email", e)
+                _uiState.value = LoginUiState.Error(mensajeAuth(e))
+            }
+        }
+    }
+
+    fun signUpWithEmail(email: String, pass: String) {
+        if (email.isBlank() || pass.isBlank()) {
+            _uiState.value = LoginUiState.Error("Por favor, completa todos los campos.")
+            return
+        }
+        if (pass.length < 6) {
+            _uiState.value = LoginUiState.Error("La contraseña debe tener al menos 6 caracteres.")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            try {
+                auth.createUserWithEmailAndPassword(email, pass).await()
+                _uiState.value = LoginUiState.Success
+            } catch (e: Exception) {
+                Log.e(TAG, "Error en registro con email", e)
+                _uiState.value = LoginUiState.Error(mensajeAuth(e))
+            }
+        }
+    }
+
+    private fun mensajeAuth(e: Exception): String {
+        val msg = e.message ?: ""
+        return when {
+            msg.contains("user-not-found", true) -> "No existe una cuenta con este email."
+            msg.contains("wrong-password", true) -> "Contraseña incorrecta."
+            msg.contains("invalid-email", true) -> "El formato del email no es válido."
+            msg.contains("email-already-in-use", true) -> "Ya existe una cuenta con este email."
+            msg.contains("weak-password", true) -> "La contraseña es muy débil."
+            else -> "Ocurrió un error en la autenticación. Revisa tus datos e inténtalo de nuevo."
+        }
+    }
+
     private suspend fun fetchCredential(
         context: Context,
         webClientId: String,

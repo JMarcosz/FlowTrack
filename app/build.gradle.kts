@@ -30,6 +30,7 @@ android {
             ndk { abiFilters += listOf("arm64-v8a") }
         }
         release {
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

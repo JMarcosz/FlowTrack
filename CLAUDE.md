@@ -12,7 +12,7 @@ App Android nativa en Kotlin (Jetpack Compose) para consolidar, visualizar, anal
 
 **Bancos en MVP:** BanReservas, Banco Popular, Qik, Asociación Cibao. BHD aparece como "Próximamente" sin parser.
 
-**Estado actual del repo:** módulo `:app` ya creado por Android Studio como template Compose en blanco (`MainActivity` con `Greeting`). Aún no hay código de dominio, parsers, ni navegación — eso entra en Sprint 1+.
+**Estado actual del repo:** módulo `:app` con arquitectura Clean Architecture + MVVM ya implementada. Incluye 20+ pantallas en Compose, parsers para BanReservas, Popular, Qik y Cibao, integración con Firebase Auth (Google) y Firestore, y sistema de notificaciones con WorkManager. Se encuentra en una fase avanzada de desarrollo (Sprints 7-8).
 
 ---
 
