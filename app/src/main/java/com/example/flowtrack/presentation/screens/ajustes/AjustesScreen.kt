@@ -44,6 +44,12 @@ fun AjustesScreen(navController: NavController) {
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
+            AjustesGroup("Preferencias") {
+                AjusteRow(Icons.Outlined.Tune, "Ajustes Generales", "Formato de fecha, moneda y moneda base") {
+                    navController.navigate(Screen.AjustesGenerales.route)
+                }
+            }
+
             AjustesGroup("Cuenta") {
                 AjusteRow(Icons.Outlined.Person, "Perfil", "Nombre y foto de perfil") {
                     navController.navigate(Screen.Perfil.route)

@@ -34,7 +34,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
 
 @Composable
-fun ResumenScreen(viewModel: ResumenViewModel = hiltViewModel()) {
+fun ResumenScreen(
+    viewModel: ResumenViewModel = hiltViewModel(),
+    onVerPorPeriodo: () -> Unit = {},
+) {
     val state by viewModel.state.collectAsState()
     var periodoActivo by remember { mutableStateOf(RangoFecha.ESTE_MES) }
 
@@ -49,13 +52,23 @@ fun ResumenScreen(viewModel: ResumenViewModel = hiltViewModel()) {
         ) {
             // ── Header ──────────────────────────────────────────
             val tabLabel = if (state.tabSeleccionado == 0) "Resumen por banco" else "Resumen por categoría"
-            Text(
-                text = tabLabel,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Ink,
-                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xl, bottom = Spacing.md),
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = Spacing.xl, end = Spacing.md, top = Spacing.xl, bottom = Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = tabLabel,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Ink,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onVerPorPeriodo) {
+                    Icon(Icons.Outlined.BarChart, contentDescription = "Resumen por período", tint = Primary)
+                }
+            }
 
             // ── Balance neto ─────────────────────────────────────
             if (state.isLoadingNeto) {

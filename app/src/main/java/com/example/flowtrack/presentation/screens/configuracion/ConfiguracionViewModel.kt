@@ -64,6 +64,14 @@ class ConfiguracionViewModel @Inject constructor(
         guardarConfiguracion(nuevaConfig)
     }
 
+    fun setFormatoFecha(formato: String) {
+        guardarConfiguracion(_state.value.config.copy(formatoFecha = formato))
+    }
+
+    fun setFormatoMoneda(formato: String) {
+        guardarConfiguracion(_state.value.config.copy(formatoMoneda = formato))
+    }
+
     private fun guardarConfiguracion(config: ConfiguracionUsuario) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)

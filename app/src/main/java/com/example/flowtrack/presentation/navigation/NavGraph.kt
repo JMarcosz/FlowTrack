@@ -14,6 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.flowtrack.presentation.components.FinanzasBottomNav
 import com.example.flowtrack.presentation.screens.categorias.CategoriasScreen
 import com.example.flowtrack.presentation.screens.ajustes.AjustesScreen
+import com.example.flowtrack.presentation.screens.ajustes.AjustesGeneralesScreen
 import com.example.flowtrack.presentation.screens.bancos.BancosYCuentasScreen
 import com.example.flowtrack.presentation.screens.reglas.ReglasScreen
 import com.example.flowtrack.presentation.screens.configuracion.ConfiguracionScreen
@@ -25,6 +26,7 @@ import com.example.flowtrack.presentation.screens.duplicados.DuplicadosScreen
 import com.example.flowtrack.presentation.screens.historial.HistorialScreen
 import com.example.flowtrack.presentation.screens.login.LoginScreen
 import com.example.flowtrack.presentation.screens.resumen.ResumenScreen
+import com.example.flowtrack.presentation.screens.resumen.ResumenPeriodoScreen
 import com.example.flowtrack.presentation.screens.revision.RevisionScreen
 import com.example.flowtrack.presentation.screens.sugerencias.SugerenciasScreen
 import com.example.flowtrack.presentation.screens.avanzado.AvanzadoScreen
@@ -39,6 +41,7 @@ sealed class Screen(val route: String) {
     object Dashboard       : Screen("dashboard")
     object Transacciones   : Screen("transacciones")
     object Resumen         : Screen("resumen")
+    object ResumenPeriodo  : Screen("resumen_periodo")
     object Tarjetas        : Screen("tarjetas")
     object Configuracion   : Screen("configuracion")
     object Upload          : Screen("upload")
@@ -52,6 +55,7 @@ sealed class Screen(val route: String) {
     object Notificaciones  : Screen("notificaciones")
     object Perfil          : Screen("perfil")
     object Ajustes         : Screen("ajustes")
+    object AjustesGenerales : Screen("ajustes_generales")
     object Reglas          : Screen("reglas")
     object Avanzado        : Screen("avanzado")
     object Presupuestos    : Screen("presupuestos")
@@ -89,7 +93,10 @@ fun AppNavGraph(
             composable(Screen.Login.route)         { LoginScreen(navController) }
             composable(Screen.Dashboard.route)     { DashboardScreen(navController) }
             composable(Screen.Transacciones.route) { TransaccionesScreen(navController) }
-            composable(Screen.Resumen.route)       { ResumenScreen() }
+            composable(Screen.Resumen.route)       {
+                ResumenScreen(onVerPorPeriodo = { navController.navigate(Screen.ResumenPeriodo.route) })
+            }
+            composable(Screen.ResumenPeriodo.route) { ResumenPeriodoScreen(navController) }
             composable(Screen.Tarjetas.route)      { TarjetasScreen() }
             composable(Screen.Configuracion.route) { ConfiguracionScreen(navController) }
             composable(Screen.Upload.route)        { UploadScreen(navController) }
@@ -103,6 +110,7 @@ fun AppNavGraph(
             composable(Screen.Notificaciones.route) { NotificacionesScreen(navController) }
             composable(Screen.Perfil.route)         { PerfilScreen(navController) }
             composable(Screen.Ajustes.route)        { AjustesScreen(navController) }
+            composable(Screen.AjustesGenerales.route) { AjustesGeneralesScreen(navController) }
             composable(Screen.Reglas.route)         { ReglasScreen(navController) }
             composable(Screen.Avanzado.route)       { AvanzadoScreen(navController) }
             composable(Screen.Presupuestos.route)   { PresupuestosScreen(navController) }
