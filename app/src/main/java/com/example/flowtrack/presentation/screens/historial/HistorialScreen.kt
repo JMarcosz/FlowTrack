@@ -34,13 +34,13 @@ import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
-import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Income50
 import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
+import com.example.flowtrack.ui.theme.Success
+import com.example.flowtrack.ui.theme.Success50
 import com.example.flowtrack.ui.theme.TextBody
 import com.example.flowtrack.ui.theme.Warning
 import java.time.ZoneId
@@ -275,7 +275,7 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
 @Composable
 private fun EstadoBadge(estado: EstadoCarga) {
     val (bgColor, textColor, texto) = when (estado) {
-        EstadoCarga.EXITOSO  -> Triple(Income50, Income, "Exitoso")
+        EstadoCarga.EXITOSO  -> Triple(Success50, Success, "Exitoso")
         EstadoCarga.PARCIAL  -> Triple(Color(0xFFFFF7ED), Warning, "Parcial")
         EstadoCarga.FALLIDO  -> Triple(Expense50, Expense, "Fallido")
         EstadoCarga.ELIMINADO -> Triple(Color(0xFFE5E7EB), Muted2, "Eliminado")

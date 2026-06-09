@@ -424,7 +424,7 @@ fun WhiteCreditCard(
                         .fillMaxWidth(utilizacionFrac)
                         .fillMaxHeight()
                         .clip(Radii.pill)
-                        .background(if (utilizacionFrac > 0.6f) Expense else Income),
+                        .background(if (utilizacionFrac > 0.6f) Expense else Success),
                 )
             }
             Spacer(Modifier.height(Spacing.sm))
@@ -464,7 +464,7 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
     val (urgenciaColor, urgenciaLabel) = when {
         diasRestantes <= 2  -> Expense to "Vence pronto"
         diasRestantes <= 6  -> Warning to "Esta semana"
-        else                -> Income  to "A tiempo"
+        else                -> Success to "A tiempo"
     }
 
     Row(
@@ -613,10 +613,10 @@ fun StatusBadge(label: String) {
     Box(
         modifier = Modifier
             .clip(Radii.pill)
-            .background(Income50)
+            .background(Success50)
             .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Income)
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Success)
     }
 }
 

@@ -475,7 +475,7 @@ private fun TransaccionFila(
                 text = if (isIncome) "+ ${formatMoney(tx.monto)}" else "- ${formatMoney(tx.monto)}",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isIncome) Income else Ink,
+                color = if (isIncome) Income else Expense,
             )
 
             Icon(

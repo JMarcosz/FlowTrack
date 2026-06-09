@@ -146,7 +146,7 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
     val barColor = when {
         pg.excedido        -> Expense
         pg.porcentaje > 0.7f -> Warning
-        else               -> Income
+        else               -> Success
     }
 
     Surface(
@@ -200,7 +200,7 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
                     formatMoney(pg.gastoActual),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (pg.excedido) Expense else Ink,
+                    color = Expense,
                 )
                 Text(
                     "de ${formatMoney(pg.presupuesto.montoLimite)}",

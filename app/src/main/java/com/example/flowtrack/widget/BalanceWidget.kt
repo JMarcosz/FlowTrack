@@ -25,6 +25,7 @@ import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.flowtrack.MainActivity
 import java.text.NumberFormat
@@ -58,7 +59,7 @@ private fun WidgetContent() {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(GlanceTheme.colors.surface)
-            .padding(horizontal = 16, vertical = 12)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .clickable(actionStartActivity<MainActivity>()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -70,7 +71,7 @@ private fun WidgetContent() {
             ),
         )
 
-        Spacer(GlanceModifier.height(6))
+        Spacer(GlanceModifier.height(6.dp))
 
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
@@ -95,7 +96,7 @@ private fun WidgetContent() {
                 )
             }
 
-            Spacer(GlanceModifier.width(20))
+            Spacer(GlanceModifier.width(20.dp))
 
             Column {
                 Text(
@@ -116,7 +117,7 @@ private fun WidgetContent() {
             }
         }
 
-        Spacer(GlanceModifier.height(8))
+        Spacer(GlanceModifier.height(8.dp))
 
         val balanceColor = if (balance >= 0) GlanceTheme.colors.primary else GlanceTheme.colors.error
         Text(

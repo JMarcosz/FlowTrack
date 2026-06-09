@@ -27,6 +27,7 @@ import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Income50
 import com.example.flowtrack.ui.theme.Ink
@@ -236,7 +237,7 @@ private fun AdvertenciasCard(advertencias: List<String>) {
 @Composable
 private fun TransaccionRevisionRow(tx: TransaccionNormalizada) {
     val esCredito = tx.tipo == TipoTransaccion.CREDITO
-    val colorMonto = if (esCredito) Income else Ink
+    val colorMonto = if (esCredito) Income else Expense
     val signo = if (esCredito) "+" else "-"
 
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 0.5.dp) {
@@ -246,13 +247,13 @@ private fun TransaccionRevisionRow(tx: TransaccionNormalizada) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(
-                Modifier.size(36.dp).background(if (esCredito) Income50 else Line2, RoundedCornerShape(10.dp)),
+                Modifier.size(36.dp).background(if (esCredito) Income50 else Expense50, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     if (esCredito) Icons.Outlined.ArrowDownward else Icons.Outlined.ArrowUpward,
                     null,
-                    tint = if (esCredito) Income else TextBody,
+                    tint = if (esCredito) Income else Expense,
                     modifier = Modifier.size(16.dp),
                 )
             }

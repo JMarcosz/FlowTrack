@@ -23,6 +23,8 @@ val BgDark        = Color(0xFF0B1220)   // login, tarjetas oscuras
 // ── Semánticos (DS §1.3) ──────────────────────────────────────────────────────
 val Income        = Color(0xFF16A34A)
 val Income50      = Color(0xFFE7F7EC)
+val Success       = Color(0xFF16A34A)
+val Success50     = Color(0xFFE7F7EC)
 val Expense       = Color(0xFFDC2626)
 val Expense50     = Color(0xFFFDECEC)
 val Warning       = Color(0xFFF59E0B)

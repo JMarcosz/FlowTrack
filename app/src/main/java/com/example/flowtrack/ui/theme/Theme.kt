@@ -12,9 +12,9 @@ private val FinanzasColorScheme = lightColorScheme(
     primaryContainer   = Primary50,
     onPrimaryContainer = Ink,
 
-    secondary          = Income,
+    secondary          = Success,
     onSecondary        = Color.White,
-    secondaryContainer = Income50,
+    secondaryContainer = Success50,
     onSecondaryContainer = Ink,
 
     error              = Expense,

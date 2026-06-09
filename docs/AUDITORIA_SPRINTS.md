@@ -313,7 +313,7 @@ Color(0xFFF59E0B) → Warning
 |---------|--------|---------|
 | `StatCard` "Gastos actuales" | ✅ | Presente |
 | Comparativa `% vs mes anterior` | ✅ | `estado.comparativa.porcentaje` con `+/-` |
-| Color comparativa (rojo si incremento, verde si decremento) | ⚠️ | Usa `Color.Red` y `Color(0xFF00C853)` hardcodeados — debería usar `Expense` e `Income` |
+| Color comparativa (rojo si empeora, verde si mejora) | ✅ | Usa `Expense` y `Success`; los totales financieros conservan `Expense`/`Income` |
 | DonutChart con categorías | ✅ | Implementado, top 5 categorías |
 | Colores del donut | ⚠️ | Lista hardcodeada `listOf(Color(0xFF2F6FED), Color(0xFFE91E63), ...)` — debería usar tokens `Cat*` del DS §1.4 |
 | Lista de cuentas | ✅ | `CuentaItem` en `LazyColumn` |
@@ -324,13 +324,8 @@ Color(0xFFF59E0B) → Warning
 | Padding lateral `16.dp` | ⚠️ | Usa `Spacing.md` (12.dp) en vez de `Spacing.xl` (16.dp) para padding horizontal |
 | `CalcularComparativaMensualUseCase` del plan §7.2 | ⚠️ | Existe `CalcularComparativaMensualUseCase.kt` en `domain/usecase` pero se ubica en la carpeta equivocada (`usecase` vs `usecases/carga`) — inconsistencia de paquetes |
 
-**Fix colores hardcodeados en Dashboard:**
-```kotlin
-// Reemplazar en DashboardScreen.kt:
-Color.Red          → Expense
-Color(0xFF00C853)  → Income
-// Colores del donut: usar CatCompras, CatServicios, CatTransporte, CatAlimentacion, CatOtros
-```
+**Verificación 2026-06-09:** el verde legacy incorrecto ya no existe. Los colores semánticos de
+comparativas y montos usan tokens del tema.
 
 ---
 
@@ -350,7 +345,7 @@ Color(0xFF00C853)  → Income
 | Checkbox "aplicar a todas" en categorización | ✅ | `Checkbox` presente |
 | Aprendizaje de reglas al recategorizar | ⚠️ | `viewModel.recategorizar()` llama con `aplicarATodas` pero no está claro si persiste en `ReglaCategoriaRepository` |
 | `CategoryIcon` en filas (no icono genérico) | ❌ | Usa `Icons.Outlined.Category` genérico — debería usar el composable `CategoryIcon` con color según categoría |
-| Color ingreso `Income`, gasto `Expense` | ⚠️ | Ingreso usa `Color(0xFF00C853)` en vez de `Income = Color(0xFF16A34A)` |
+| Color ingreso `Income`, gasto `Expense` | ✅ | Ingresos y débitos usan los tokens semánticos correctos |
 | `tnum` en montos | ❌ | No aplica `fontFeatureSettings = "tnum"` |
 | `Divider` deprecado | ⚠️ | Usa `Divider()` en lugar de `HorizontalDivider()` |
 
@@ -426,14 +421,12 @@ containerColor = BgDark  // Color(0xFF0B1220) en vez de Color(0xFF1E293B)
 | Date range picker | ✅ | `DateRangePicker` de Material3 en `DatePickerDialog` |
 | Rangos predefinidos "Este mes" / "Mes pasado" | ✅ | `FilterChip` con `setRangoPredefinido` |
 | Resúmenes diario/semanal/mensual in-app (pantallas dedicadas) | ❌ | No existen. El plan §2 especifica pantallas 22, 23, 24 separadas. Solo hay un `ResumenScreen` genérico |
-| Color de ingresos `Income` | ⚠️ | Usa `Color(0xFF00C853)` en vez de `Income = Color(0xFF16A34A)` |
+| Color de ingresos `Income` | ✅ | Usa `Income = Color(0xFF16A34A)` |
 | `LinearProgressIndicator` deprecado | ⚠️ | Usa overload con `Float` en vez de lambda — warning en build |
 | Drill-down `ResumenBank` (pantalla separada) | ❌ | No existe `ResumenBankScreen` — plan §2 pantalla #6 |
 
-**Fix color ingresos:**
-```kotlin
-Color(0xFF00C853) → Income  // en ResumenScreen y DashboardScreen
-```
+**Verificación 2026-06-09:** Dashboard, Transacciones y Resumen usan los tokens
+`Income` y `Expense`; los estados positivos no financieros usan `Success`.
 
 **Fix pantallas resumen adicionales:**
 ```
@@ -469,7 +462,7 @@ Crear ResumenDiarioScreen, ResumenSemanalScreen, ResumenMensualScreen
 | Detalle de tarjeta (pantalla) | ❌ |
 | Drill-down Resumen-Bank | ❌ |
 | Historial de tasas de cambio | ❌ |
-| Color `Income` correcto | ⚠️ |
+| Color `Income` correcto | ✅ |
 
 ---
 
@@ -667,7 +660,7 @@ El plan v2 §2 especifica **20+ pantallas**. Estado actual:
 |---|-----------|-------|--------|-----|
 | 1 | ✅ COMPLETADO (2026-06-09) | ~~`ExitoTarjeta` devuelve Error — Qik y Cibao no persisten~~ — **Obsoleto**: la persistencia ya funcionaba (refactor `3d09875`). La verificación contra fixtures reales destapó bugs de exactitud, ya corregidos: Cibao metadata columnar + bimoneda DOP/USD; Qik límite "Aprobado" + regex. Cobertura: tests JVM Cibao/mapeo/idempotencia + test instrumentado Qik. Hash de movimiento ahora incluye `montoUsd` (anti-colisión). | S3 | Hecho |
 | 2 | 🔴 Alta | 9 pantallas del plan completamente ausentes | S6-S7 | Crear pantallas faltantes (Reglas, Notificaciones, Perfil, Bancos, Ajustes, Exportar, Resúmenes) |
-| 3 | 🔴 Alta | Color `Income` incorrecto (`#00C853` vs `#16A34A`) | S4-S5 | Reemplazar `Color(0xFF00C853)` → `Income` en Dashboard, Transacciones, Resumen |
+| 3 | ✅ COMPLETADO (2026-06-09) | ~~Color `Income` incorrecto~~. Se normalizaron ingresos, gastos y estados positivos con `Income`, `Expense` y `Success`; hay pruebas JVM e instrumentadas. | S4-S5 | Hecho |
 | 4 | 🟡 Media | Derivadas DGII no se muestran agrupadas bajo su padre | S4 | Implementar accordeon según plan §7.5 |
 | 5 | 🟡 Media | `tnum` ausente en todos los montos monetarios | S1 | Aplicar `TabularNumber` en pantallas con montos |
 | 6 | 🟡 Media | Fuente Inter no integrada | S8 | `ui-text-google-fonts` + `GoogleFont("Inter")` |

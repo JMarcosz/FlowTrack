@@ -126,7 +126,7 @@ fun MetasScreen(
 
 @Composable
 private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit) {
-    val ringColor = if (meta.completada) Income else Primary
+    val ringColor = if (meta.completada) Success else Primary
     var confirmar by remember { mutableStateOf(false) }
 
     if (confirmar) {
@@ -187,7 +187,7 @@ private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit
                 )
                 if (meta.completada) {
                     Spacer(Modifier.height(4.dp))
-                    Text("¡Meta completada! 🎉", fontSize = 11.sp, color = Income, fontWeight = FontWeight.SemiBold)
+                    Text("¡Meta completada! 🎉", fontSize = 11.sp, color = Success, fontWeight = FontWeight.SemiBold)
                 } else {
                     Spacer(Modifier.height(4.dp))
                     Text(

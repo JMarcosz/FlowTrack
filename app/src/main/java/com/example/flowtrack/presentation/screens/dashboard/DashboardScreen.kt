@@ -585,7 +585,7 @@ private fun DeltaBadge(
         return
     }
     val good   = if (inverse) !esIncremento else esIncremento
-    val dColor = if (good) Income else Expense
+    val dColor = if (good) Success else Expense
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),

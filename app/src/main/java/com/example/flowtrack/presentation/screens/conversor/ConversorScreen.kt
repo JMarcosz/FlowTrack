@@ -163,7 +163,7 @@ private fun TasaHistoricoChart(historico: List<TasaCambio>) {
                 Text(
                     "Mín: RD$ ${"%.2f".format(minVal)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Income,
+                    color = Success,
                     fontSize = 11.sp
                 )
                 Text(

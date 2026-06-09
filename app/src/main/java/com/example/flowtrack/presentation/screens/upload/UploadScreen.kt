@@ -385,10 +385,10 @@ private fun UploadExitoContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(
-            modifier = Modifier.size(72.dp).background(Income50, CircleShape),
+            modifier = Modifier.size(72.dp).background(Success50, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = Income, modifier = Modifier.size(36.dp))
+            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = Success, modifier = Modifier.size(36.dp))
         }
         Text("¡Importación exitosa!", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Ink, textAlign = TextAlign.Center)
         Text("$transaccionesInsertadas transacciones importadas desde $banco", style = MaterialTheme.typography.bodyLarge, color = TextBody, textAlign = TextAlign.Center)

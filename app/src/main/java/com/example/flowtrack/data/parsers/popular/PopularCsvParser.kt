@@ -52,7 +52,7 @@ class PopularCsvParser @Inject constructor() : BankStatementParser {
 
     override suspend fun parse(request: ImportRequest): ParseResult {
         return try {
-            val texto = String(request.archivo.bytes, Charsets.UTF_8).trimStart('﻿')
+            val texto = String(request.archivo.bytes, Charsets.UTF_8).trimStart('\uFEFF')
             val lineas = texto.lines()
 
             // Buscar la primera línea que sea el encabezado CSV

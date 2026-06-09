@@ -24,6 +24,8 @@ import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.Transaccion
 import com.example.flowtrack.domain.model.TipoTransaccion
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Income
 
 /**
  * Pantalla de detalle de duplicados detectados.
@@ -121,7 +123,7 @@ private fun TransaccionMiniRow(etiqueta: String, tx: Transaccion) {
         Text(
             "${if (esCredito) "+" else "-"} ${formatMoney(tx.monto)}",
             fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-            color = if (esCredito) Color(0xFF16A34A) else Color(0xFF0F172A),
+            color = if (esCredito) Income else Expense,
         )
     }
 }
