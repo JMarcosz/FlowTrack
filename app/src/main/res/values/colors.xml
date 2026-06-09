@@ -7,4 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Splash / launch screen -->
+    <color name="launch_bg">#06090F</color>
+    <color name="launch_icon_bg">#0D1A3A</color>
 </resources>

@@ -7,11 +7,12 @@ import com.example.flowtrack.data.store.AppDataStore
 import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.TipoCuenta
+import com.example.flowtrack.domain.usecase.balanceEfectivo
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -32,13 +33,18 @@ class BancosYCuentasViewModel @Inject constructor(
     private val cuentaRepository: CuentaRepository,
 ) : ViewModel() {
 
-    // Reactivo: se actualiza automáticamente cuando Firestore cambia
-    val estado: StateFlow<BancosEstado> = store.cuentas
-        .map { cuentas ->
-            val activas = cuentas.filter { it.activa }
-            if (activas.isEmpty()) BancosEstado.Vacio else BancosEstado.ConDatos(activas)
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BancosEstado.Cargando)
+    // Combina cuentas de Firestore con los balances derivados de transacciones.
+    // Cada cuenta muestra el balance de su transacción más reciente con balanceDespues,
+    // con fallback a Cuenta.balanceActual para bancos sin balance por fila (Qik/Cibao).
+    val estado: StateFlow<BancosEstado> = combine(
+        store.cuentas,
+        store.balancesPorCuenta,
+    ) { cuentas, balances ->
+        val activas = cuentas
+            .filter { it.activa }
+            .map { it.copy(balanceActual = it.balanceEfectivo(balances)) }
+        if (activas.isEmpty()) BancosEstado.Vacio else BancosEstado.ConDatos(activas)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BancosEstado.Cargando)
 
     fun guardarCuenta(
         alias: String,

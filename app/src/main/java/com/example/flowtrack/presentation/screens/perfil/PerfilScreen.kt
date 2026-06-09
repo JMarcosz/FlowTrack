@@ -41,7 +41,7 @@ fun PerfilScreen(navController: NavController) {
                 TextButton(onClick = {
                     FirebaseAuth.getInstance().signOut()
                     navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Dashboard.route) { inclusive = true }
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                 }) { Text("Cerrar sesión", color = Expense) }
             },

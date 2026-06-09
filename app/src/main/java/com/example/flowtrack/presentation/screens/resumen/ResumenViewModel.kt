@@ -3,6 +3,7 @@ package com.example.flowtrack.presentation.screens.resumen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.result.AppResult
+import com.example.flowtrack.data.store.AppDataStore
 import com.example.flowtrack.domain.usecase.BalanceNeto
 import com.example.flowtrack.domain.usecase.ObtenerBalanceNetoUseCase
 import com.example.flowtrack.domain.usecase.ObtenerResumenUseCase
@@ -11,6 +12,9 @@ import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -24,12 +28,13 @@ data class ResumenState(
     val tabSeleccionado: Int = 0, // 0 = Categoría, 1 = Banco
     val balanceNeto: BalanceNeto? = null,
     val isLoadingNeto: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 )
 
 @HiltViewModel
 class ResumenViewModel @Inject constructor(
     private val auth: FirebaseAuth,
+    private val store: AppDataStore,
     private val resumenUseCase: ObtenerResumenUseCase,
     private val balanceNetoUseCase: ObtenerBalanceNetoUseCase,
 ) : ViewModel() {
@@ -39,7 +44,7 @@ class ResumenViewModel @Inject constructor(
     private val _state = MutableStateFlow(
         ResumenState(
             fechaInicio = LocalDate.now(zona).withDayOfMonth(1),
-            fechaFin = LocalDate.now(zona)
+            fechaFin = LocalDate.now(zona),
         )
     )
     val state: StateFlow<ResumenState> = _state
@@ -47,6 +52,15 @@ class ResumenViewModel @Inject constructor(
     init {
         cargarResumen()
         cargarBalanceNeto()
+
+        // Recargar patrimonio neto cuando cambien cuentas O balances derivados de transacciones.
+        // drop(1) omite la emisión inicial — ya cubierta por cargarBalanceNeto() arriba.
+        viewModelScope.launch {
+            combine(store.cuentas, store.balancesPorCuenta) { c, b -> c to b }
+                .drop(1)
+                .distinctUntilChanged()
+                .collect { cargarBalanceNeto() }
+        }
     }
 
     fun cargarBalanceNeto() {
@@ -63,7 +77,7 @@ class ResumenViewModel @Inject constructor(
     }
 
     fun setFechas(inicio: LocalDate, fin: LocalDate) {
-        _state.value = _state.value.copy(fechaInicio = inicio, fechaFin = fin)
+        _state.value = _state.value.copy(fechaInicio = inicio, fechaFin = fin, resumen = null)
         cargarResumen()
     }
 
@@ -86,12 +100,12 @@ class ResumenViewModel @Inject constructor(
     }
 
     fun cargarResumen() {
-        if (_state.value.resumen != null || _state.value.isLoading) return
+        if (_state.value.isLoading) return
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             val inicioInst = _state.value.fechaInicio.atStartOfDay(zona).toInstant()
-            val finInst = _state.value.fechaFin.atTime(23, 59, 59).atZone(zona).toInstant()
+            val finInst    = _state.value.fechaFin.atTime(23, 59, 59).atZone(zona).toInstant()
 
             val res = resumenUseCase.ejecutar(uid, inicioInst, finInst)
             if (res is AppResult.Success) {

@@ -60,8 +60,8 @@ class BanReservasPdfParserTest {
     }
 
     @Test
-    fun `version es 1`() {
-        assertEquals(1, parser.version)
+    fun `version es 2`() {
+        assertEquals(2, parser.version)
     }
 
     // ─── Test de flujo del usuario ────────────────────────────────────────────

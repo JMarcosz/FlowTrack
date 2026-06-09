@@ -1,8 +1,8 @@
 package com.example.flowtrack.presentation.screens.dashboard
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -14,39 +14,33 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
-import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
-import com.example.flowtrack.domain.model.TipoTransaccion
+import com.example.flowtrack.domain.usecase.DatosBancoResumen
+import com.example.flowtrack.domain.usecase.DeltaMetrica
+import com.example.flowtrack.domain.usecase.ResumenDashboard
+import com.example.flowtrack.domain.usecase.ResultadoComparacion
 import com.example.flowtrack.presentation.components.*
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.*
 import java.math.BigDecimal
+import kotlin.math.abs
 
-private val TIPOS_GASTO = setOf(
-    TipoMovimientoTarjeta.COMPRA,
-    TipoMovimientoTarjeta.AVANCE_EFECTIVO,
-    TipoMovimientoTarjeta.INTERES,
-    TipoMovimientoTarjeta.COMISION,
-)
-
-private val TIPOS_INGRESO_TARJETA = setOf(
-    TipoMovimientoTarjeta.PAGO,
-    TipoMovimientoTarjeta.CASHBACK,
-    TipoMovimientoTarjeta.DEVOLUCION,
-)
-
-private data class DatosBanco(
-    val cod: String,
-    val gastos: BigDecimal,
-    val ingresos: BigDecimal,
-)
+// ─────────────────────────────────────────────────────────────────────────────
+// Entry point
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun DashboardScreen(
@@ -56,7 +50,6 @@ fun DashboardScreen(
     val estado  by viewModel.estado.collectAsState()
     val periodo by viewModel.periodo.collectAsState()
 
-    // Sin Scaffold interno para no interferir con los window insets del Scaffold externo.
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -65,14 +58,14 @@ fun DashboardScreen(
         when (val st = estado) {
             is DashboardEstado.Cargando -> LoadingContent()
             is DashboardEstado.Error    -> ErrorState(
-                mensaje = st.mensaje,
-                onRetry = { viewModel.cargarDatos() },
+                mensaje  = st.mensaje,
+                onRetry  = { viewModel.cargarDatos() },
                 modifier = Modifier.align(Alignment.Center),
             )
             is DashboardEstado.Exito    -> DashboardContent(
-                estado     = st,
-                periodo    = periodo,
-                onPeriodo  = { viewModel.seleccionarPeriodo(it) },
+                estado        = st,
+                periodo       = periodo,
+                onPeriodo     = { viewModel.seleccionarPeriodo(it) },
                 navController = navController,
             )
         }
@@ -80,27 +73,22 @@ fun DashboardScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading
+// Loading skeleton
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun LoadingContent() {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // TopBar placeholder
         Spacer(modifier = Modifier.height(52.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Box(modifier = Modifier.weight(1f).height(88.dp).clip(RoundedCornerShape(12.dp)).shimmerEffect())
-            Box(modifier = Modifier.weight(1f).height(88.dp).clip(RoundedCornerShape(12.dp)).shimmerEffect())
+        Box(modifier = Modifier.fillMaxWidth(0.55f).height(28.dp).clip(RoundedCornerShape(8.dp)).shimmerEffect())
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.weight(1f).height(100.dp).clip(RoundedCornerShape(18.dp)).shimmerEffect())
+            Box(modifier = Modifier.weight(1f).height(100.dp).clip(RoundedCornerShape(18.dp)).shimmerEffect())
         }
-        Box(modifier = Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(16.dp)).shimmerEffect())
+        Box(modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(16.dp)).shimmerEffect())
         Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)).shimmerEffect())
     }
 }
@@ -116,77 +104,26 @@ private fun DashboardContent(
     onPeriodo: (String) -> Unit,
     navController: NavController?,
 ) {
-    // ── Bank data (fuente única de verdad) ───────────────────────────────────
-    // Recoge TODOS los códigos de banco con cualquier actividad (gastos o ingresos).
-    // Así QIK (solo tarjeta) y CIBAO (solo créditos) aparecen aunque no tengan gastos.
-    val todosCodigos = (
-        estado.transaccionesMes.map { it.bancoCodigo } +
-        estado.movimientosMes.map { it.bancoCodigo }
-    ).distinct()
+    val resumen = estado.resumen
 
-    val datosPorBanco: List<DatosBanco> = todosCodigos.map { cod ->
-        val gastoCuenta = estado.transaccionesMes
-            .filter { it.bancoCodigo == cod && it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
-            .fold(BigDecimal.ZERO) { a, tx -> a + tx.monto }
-        val gastoTarj = estado.movimientosMes
-            .filter { it.bancoCodigo == cod && it.tipoMovimiento in TIPOS_GASTO }
-            .fold(BigDecimal.ZERO) { a, mv -> a + mv.monto }
-        val ingrCuenta = estado.transaccionesMes
-            .filter { it.bancoCodigo == cod && it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }
-            .fold(BigDecimal.ZERO) { a, tx -> a + tx.monto }
-        val ingrTarj = estado.movimientosMes
-            .filter { it.bancoCodigo == cod && it.tipoMovimiento in TIPOS_INGRESO_TARJETA }
-            .fold(BigDecimal.ZERO) { a, mv -> a + mv.monto }
-        DatosBanco(
-            cod      = cod,
-            gastos   = gastoCuenta + gastoTarj,
-            ingresos = ingrCuenta + ingrTarj,
-        )
-    }.sortedByDescending { it.gastos + it.ingresos }
+    // Sparkline data — Float solo para renderizado, cálculo queda en BigDecimal en el UseCase
+    val trendGasto   = remember(resumen.serie) { resumen.serie.map { it.gasto.toFloat() } }
+    val trendIngreso = remember(resumen.serie) { resumen.serie.map { it.ingreso.toFloat() } }
+    val trendBalance = remember(resumen.serie) { resumen.serie.map { it.balanceAcumulado.toFloat() } }
 
-    // Los totales del header son la suma exacta de todos los bancos → siempre coinciden.
-    val gastoTotal      = datosPorBanco.fold(BigDecimal.ZERO) { a, b -> a + b.gastos }
-    val ingresosTotales = datosPorBanco.fold(BigDecimal.ZERO) { a, b -> a + b.ingresos }
-    val balanceNeto     = ingresosTotales - gastoTotal
-
-    // ── Category breakdown (top 5 por gastos) ────────────────────────────────
-    val catCuenta = estado.transaccionesMes
-        .filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
-        .groupBy { it.categoriaId ?: "sin_categorizar" }
-        .mapValues { (_, txs) -> txs.fold(BigDecimal.ZERO) { a, tx -> a + tx.monto } }
-
-    val catTarjeta = estado.movimientosMes
-        .filter { it.tipoMovimiento in TIPOS_GASTO }
-        .groupBy { it.categoriaId ?: "sin_categorizar" }
-        .mapValues { (_, mvs) -> mvs.fold(BigDecimal.ZERO) { a, mv -> a + mv.monto } }
-
-    val gastosPorCat = (catCuenta.keys + catTarjeta.keys).distinct()
-        .map { id ->
-            id to ((catCuenta[id] ?: BigDecimal.ZERO) + (catTarjeta[id] ?: BigDecimal.ZERO))
+    // DonutChart slices desde el breakdown de categorías del UseCase
+    val slices = remember(resumen.gastosPorCategoria) {
+        resumen.gastosPorCategoria.map { dc ->
+            val cat = categoriaPorId(dc.categoriaId)
+            DonutSlice(dc.monto.toFloat(), cat.color, cat.nombre)
         }
-        .sortedByDescending { it.second }
-        .take(5)
-
-    val totalCat = gastosPorCat.fold(BigDecimal.ZERO) { a, p -> a + p.second }
-        .coerceAtLeast(BigDecimal.ONE)
-
-    val slices = gastosPorCat.map { (catId, monto) ->
-        val cat = categoriaPorId(catId)
-        DonutSlice(monto.toFloat(), cat.color, cat.nombre)
     }
 
-    // Delta pill: solo para "Este mes" y cuando la comparativa ya cargó
-    val mostrarDelta = periodo == "Este mes"
-    val deltaPct     = estado.comparativa?.porcentaje
-    val esIncremento = estado.comparativa?.esIncremento ?: false
-
-    // ── UI ────────────────────────────────────────────────────────────────────
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
     ) {
-        // TopBar
+        // ── TopBar ────────────────────────────────────────────────────────────
         item {
             Row(
                 modifier = Modifier
@@ -210,181 +147,178 @@ private fun DashboardContent(
             }
         }
 
-        // ── Resumen general ──────────────────────────────────────────────────
+        // ── Saludo + selector de período ─────────────────────────────────────
         item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                // Título + selector período
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Resumen general",
-                        fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
-                        letterSpacing = (-0.3).sp, color = Ink,
+                        text = "Hola, ${estado.nombreUsuario}",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.6).sp,
+                        color = Ink,
                     )
-                    PeriodoDropdown(
-                        selected = periodo,
-                        options  = PERIODOS_DASHBOARD,
-                        onSelect = onPeriodo,
-                    )
-                }
-
-                // StatCards
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    DashStatCard(
-                        label      = "Gasto total",
-                        value      = formatMoney(gastoTotal),
-                        valueColor = Expense,
-                        bgColor    = Expense50,
-                        modifier   = Modifier.weight(1f),
-                    )
-                    DashStatCard(
-                        label      = "Ingresos totales",
-                        value      = formatMoney(ingresosTotales),
-                        valueColor = Income,
-                        bgColor    = Income50,
-                        modifier   = Modifier.weight(1f),
+                    Text(
+                        text = "Aquí está tu resumen financiero",
+                        fontSize = 13.sp,
+                        color = Muted,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Balance neto card
-                Card(
-                    shape  = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = BgCard),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    border = BorderStroke(1.dp, Line2),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column {
-                            Text("Balance neto", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Muted)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                formatMoney(balanceNeto),
-                                fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.5).sp, color = Ink,
-                            )
-                        }
-                        if (mostrarDelta && deltaPct != null) {
-                            Column(horizontalAlignment = Alignment.End) {
-                                val pctStr  = "%.1f%%".format(deltaPct.toDouble())
-                                val signo   = if (esIncremento) "+" else "-"
-                                Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(Income50)
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.TrendingUp, contentDescription = null,
-                                        tint = Income, modifier = Modifier.size(12.dp),
-                                    )
-                                    Text(
-                                        "$signo$pctStr",
-                                        fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Income,
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("vs mes anterior", fontSize = 11.sp, color = Muted)
-                            }
-                        }
-                    }
-                }
+                Spacer(modifier = Modifier.width(12.dp))
+                PeriodoDropdown(
+                    selected = periodo,
+                    options  = PERIODOS_DASHBOARD,
+                    onSelect = onPeriodo,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
+        }
+
+        // ── Stat cards ────────────────────────────────────────────────────────
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                DashStatCard(
+                    label               = "Gastos totales",
+                    value               = formatMoney(resumen.gastoTotal),
+                    color               = Expense,
+                    bgColor             = Expense50,
+                    isExpense           = true,
+                    porcentaje          = resumen.comparacion.expenseChangePercentage,
+                    esIncremento        = resumen.comparacion.expenseIsIncrement,
+                    comparisonAvailable = resumen.comparacion.comparisonAvailable,
+                    coverageWarning     = resumen.comparacion.coverageWarning,
+                    deltaInverse        = true,
+                    trendData           = trendGasto,
+                    modifier            = Modifier.weight(1f),
+                )
+                DashStatCard(
+                    label               = "Ingresos totales",
+                    value               = formatMoney(resumen.ingresoTotal),
+                    color               = Income,
+                    bgColor             = Income50,
+                    isExpense           = false,
+                    porcentaje          = resumen.comparacion.incomeChangePercentage,
+                    esIncremento        = resumen.comparacion.incomeIsIncrement,
+                    comparisonAvailable = resumen.comparacion.comparisonAvailable,
+                    coverageWarning     = resumen.comparacion.coverageWarning,
+                    trendData           = trendIngreso,
+                    smooth              = true,
+                    modifier            = Modifier.weight(1f),
+                )
+            }
+        }
+
+        // ── Aviso de cobertura insuficiente ───────────────────────────────────
+        if (resumen.comparacion.coverageWarning) {
+            item { CoverageWarningBanner(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) }
+        }
+
+        // ── Balance neto ─────────────────────────────────────────────────────
+        item {
+            BalanceNetoCard(
+                resumen  = resumen,
+                trendData = trendBalance,
+                modifier  = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            )
         }
 
         // ── Gastos por categoría ─────────────────────────────────────────────
         item {
-            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp)) {
-                Card(
-                    shape  = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = BgCard),
-                    elevation = CardDefaults.cardElevation(0.dp),
-                    border = BorderStroke(1.dp, Line2),
+            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { navController?.navigate(Screen.Resumen.route) },
+                        .padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "Gastos por categoría",
+                        fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-0.2).sp, color = Ink,
+                    )
+                    TextButton(
+                        onClick = { navController?.navigate(Screen.Resumen.route) },
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                    ) {
+                        Text(
+                            "Ver detalle",
+                            fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Muted,
+                        )
+                        Icon(
+                            Icons.Outlined.ChevronRight, contentDescription = null,
+                            tint = Muted2, modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
+
+                Card(
+                    shape     = RoundedCornerShape(16.dp),
+                    colors    = CardDefaults.cardColors(containerColor = BgCard),
+                    elevation = CardDefaults.cardElevation(0.dp),
+                    border    = BorderStroke(1.dp, Line2),
+                    modifier  = Modifier.fillMaxWidth(),
+                ) {
+                    if (slices.isEmpty()) {
+                        Text(
+                            "Sin gastos en este período",
+                            fontSize = 14.sp, color = Muted,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    } else {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(18.dp),
                         ) {
-                            Text(
-                                "Gastos por categoría",
-                                fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ink,
+                            DonutChart(
+                                slices      = slices,
+                                modifier    = Modifier.size(140.dp),
+                                strokeWidth = 28f,
                             )
-                            Icon(
-                                Icons.Outlined.ChevronRight, contentDescription = null,
-                                tint = Muted2, modifier = Modifier.size(18.dp),
-                            )
-                        }
-                        if (slices.isEmpty()) {
-                            Text(
-                                "Sin gastos en este período",
-                                fontSize = 14.sp, color = Muted,
-                                modifier = Modifier.padding(vertical = 12.dp),
-                            )
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                DonutChart(
-                                    slices      = slices,
-                                    modifier    = Modifier.size(140.dp),
-                                    strokeWidth = 28f,
-                                )
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                                ) {
-                                    gastosPorCat.forEachIndexed { i, (_, monto) ->
-                                        val slice = slices[i]
-                                        val pct   = ((monto / totalCat) * BigDecimal(100)).toInt()
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(8.dp)
-                                                    .clip(CircleShape)
-                                                    .background(slice.color),
-                                            )
-                                            Text(
-                                                slice.label,
-                                                fontSize = 13.sp, color = TextBody,
-                                                modifier = Modifier.weight(1f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                            Text(
-                                                "$pct%",
-                                                fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Muted,
-                                            )
-                                        }
+                                resumen.gastosPorCategoria.forEachIndexed { i, dc ->
+                                    val slice = slices[i]
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(slice.color),
+                                        )
+                                        Text(
+                                            slice.label,
+                                            fontSize = 13.sp, color = TextBody,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            formatMoney(dc.monto),
+                                            fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                            color = Ink,
+                                        )
                                     }
                                 }
                             }
@@ -399,27 +333,27 @@ private fun DashboardContent(
             Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp)) {
                 Text(
                     "Por banco",
-                    fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
                     letterSpacing = (-0.2).sp, color = Ink,
                     modifier = Modifier.padding(bottom = 10.dp),
                 )
-                if (datosPorBanco.isEmpty()) {
+                if (resumen.gastosPorBanco.isEmpty()) {
                     Text("Sin actividad bancaria en este período", fontSize = 14.sp, color = Muted)
                 } else {
                     Card(
-                        shape  = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = BgCard),
+                        shape     = RoundedCornerShape(16.dp),
+                        colors    = CardDefaults.cardColors(containerColor = BgCard),
                         elevation = CardDefaults.cardElevation(0.dp),
-                        border = BorderStroke(1.dp, Line2),
-                        modifier = Modifier.fillMaxWidth(),
+                        border    = BorderStroke(1.dp, Line2),
+                        modifier  = Modifier.fillMaxWidth(),
                     ) {
-                        datosPorBanco.forEachIndexed { i, datos ->
-                            val banco = bancoPorCodigo(datos.cod)
-                            BancoRow(banco = banco, datos = datos)
-                            if (i < datosPorBanco.size - 1) {
+                        resumen.gastosPorBanco.forEachIndexed { i, datos ->
+                            BancoRow(banco = bancoPorCodigo(datos.bancoCodigo), datos = datos)
+                            if (i < resumen.gastosPorBanco.size - 1) {
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = Line2, thickness = 1.dp,
+                                    modifier  = Modifier.padding(horizontal = 16.dp),
+                                    color     = Line2,
+                                    thickness = 1.dp,
                                 )
                             }
                         }
@@ -433,45 +367,269 @@ private fun DashboardContent(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Sub-composables
+// Stat card
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun DashStatCard(
-    label: String, value: String,
-    valueColor: Color, bgColor: Color,
+    label: String,
+    value: String,
+    color: Color,
+    bgColor: Color,
+    isExpense: Boolean,
+    porcentaje: BigDecimal?,
+    esIncremento: Boolean,
+    comparisonAvailable: Boolean,
+    coverageWarning: Boolean,
+    deltaInverse: Boolean = false,
+    trendData: List<Float> = emptyList(),
+    smooth: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(bgColor)
+            .shadow(
+                elevation    = 4.dp,
+                shape        = RoundedCornerShape(18.dp),
+                ambientColor = Ink.copy(alpha = 0.04f),
+                spotColor    = Ink.copy(alpha = 0.10f),
+            )
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White)
             .padding(14.dp),
     ) {
         Column {
-            Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Muted)
-            Spacer(modifier = Modifier.height(4.dp))
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text     = label,
+                    fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Muted,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(bgColor),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (isExpense) Icons.Outlined.ArrowUpward else Icons.Outlined.ArrowDownward,
+                        contentDescription = null,
+                        tint     = color,
+                        modifier = Modifier.size(15.dp),
+                    )
+                }
+            }
+
+            // Valor
             Text(
-                value,
-                fontSize = 16.sp, fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.2).sp, color = valueColor,
+                text          = value,
+                fontSize      = 19.sp,
+                fontWeight    = FontWeight.Bold,
+                letterSpacing = (-0.6).sp,
+                color         = Ink,
+                maxLines      = 1,
+                overflow      = TextOverflow.Ellipsis,
             )
+
+            // Footer: delta % + sparkline
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DeltaBadge(
+                    porcentaje          = porcentaje,
+                    esIncremento        = esIncremento,
+                    comparisonAvailable = comparisonAvailable,
+                    coverageWarning     = coverageWarning,
+                    inverse             = deltaInverse,
+                )
+                if (trendData.size >= 2) {
+                    Sparkline(
+                        data        = trendData,
+                        color       = color,
+                        modifier    = Modifier.size(72.dp, 22.dp),
+                        strokeWidth = 1.6.dp,
+                        smooth      = smooth,
+                    )
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun BancoRow(banco: BancoUI, datos: DatosBanco) {
-    val abbr = when (banco.codigo) {
-        "BANRESERVAS" -> "BR"
-        "POPULAR"     -> "P"
-        "QIK"         -> "QIK"
-        "CIBAO"       -> "CI"
-        "BHD"         -> "BHD"
-        else          -> banco.codigo.take(2)
-    }
-    val isLight = banco.codigo == "QIK"
+// ─────────────────────────────────────────────────────────────────────────────
+// Balance neto card
+// ─────────────────────────────────────────────────────────────────────────────
 
+@Composable
+private fun BalanceNetoCard(
+    resumen: ResumenDashboard,
+    trendData: List<Float>,
+    modifier: Modifier = Modifier,
+) {
+    val delta   = resumen.deltaBalance
+    val color   = if (delta.esIncremento) Income else Expense
+    val bgColor = if (delta.esIncremento) Income50 else Expense50
+
+    Card(
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = BgCard),
+        elevation = CardDefaults.cardElevation(0.dp),
+        border    = BorderStroke(1.dp, Line2),
+        modifier  = modifier,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column(modifier = Modifier.wrapContentWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 4.dp),
+                ) {
+                    Text("Balance neto", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Muted)
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(bgColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (delta.esIncremento) Icons.Outlined.ArrowUpward else Icons.Outlined.ArrowDownward,
+                            contentDescription = null,
+                            tint     = color,
+                            modifier = Modifier.size(12.dp),
+                        )
+                    }
+                }
+                Text(
+                    text          = formatMoney(resumen.balanceNeto),
+                    fontSize      = 22.sp,
+                    fontWeight    = FontWeight.Bold,
+                    letterSpacing = (-0.6).sp,
+                    color         = Ink,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                DeltaBadge(
+                    porcentaje          = delta.porcentaje,
+                    esIncremento        = delta.esIncremento,
+                    comparisonAvailable = true,
+                    coverageWarning     = false,
+                    inverse             = false,
+                )
+            }
+
+            if (trendData.size >= 2) {
+                Sparkline(
+                    data        = trendData,
+                    color       = color,
+                    modifier    = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    strokeWidth = 2.dp,
+                    area        = true,
+                    smooth      = true,
+                )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DeltaBadge — muestra % con flecha, "—" o icono de advertencia de cobertura
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun DeltaBadge(
+    porcentaje: BigDecimal?,
+    esIncremento: Boolean,
+    comparisonAvailable: Boolean,
+    coverageWarning: Boolean,
+    inverse: Boolean,
+) {
+    if (!comparisonAvailable) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            if (coverageWarning) {
+                Icon(
+                    Icons.Outlined.Warning, contentDescription = null,
+                    tint = Muted2, modifier = Modifier.size(11.dp),
+                )
+            }
+            Text("—", fontSize = 12.sp, color = Muted2)
+        }
+        return
+    }
+    if (porcentaje == null) {
+        Text("—", fontSize = 12.sp, color = Muted2)
+        return
+    }
+    val good   = if (inverse) !esIncremento else esIncremento
+    val dColor = if (good) Income else Expense
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        MiniArrow(up = esIncremento, color = dColor)
+        Text(
+            "${"%.1f".format(porcentaje.toFloat())}%",
+            fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = dColor,
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Banner de cobertura insuficiente
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun CoverageWarningBanner(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            Icons.Outlined.Warning, contentDescription = null,
+            tint = Muted, modifier = Modifier.size(14.dp),
+        )
+        Text(
+            "Sin datos suficientes del período anterior para calcular la variación",
+            fontSize = 12.sp, color = Muted,
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fila de banco
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun BancoRow(banco: BancoUI, datos: DatosBancoResumen) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -479,7 +637,6 @@ private fun BancoRow(banco: BancoUI, datos: DatosBanco) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Badge del banco
         Box(
             modifier = Modifier
                 .size(34.dp)
@@ -488,47 +645,48 @@ private fun BancoRow(banco: BancoUI, datos: DatosBanco) {
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                abbr,
+                banco.abbr,
                 fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
                 letterSpacing = (-0.3).sp,
-                color = if (isLight) Ink else Color.White,
+                color = banco.fgColor,
             )
         }
-
-        // Nombre del banco
         Text(
             banco.nombre,
             modifier = Modifier.weight(1f),
-            fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ink,
+            fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Ink,
             maxLines = 1,
         )
-
-        // Gastos (rojo) e ingresos (verde) alineados a la derecha
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (datos.gastos > BigDecimal.ZERO) {
                 Text(
                     "- ${formatMoney(datos.gastos)}",
-                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Expense,
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense,
                 )
             }
             if (datos.ingresos > BigDecimal.ZERO) {
                 Text(
                     "+ ${formatMoney(datos.ingresos)}",
-                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Income,
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Income,
                 )
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Período dropdown
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun PeriodoDropdown(
     selected: String,
     options: List<String>,
     onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
+    Box(modifier = modifier) {
         OutlinedButton(
             onClick = { expanded = true },
             shape = RoundedCornerShape(12.dp),
@@ -569,5 +727,28 @@ private fun PeriodoDropdown(
                 )
             }
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mini flecha para deltas
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun MiniArrow(up: Boolean, color: Color, size: Dp = 10.dp) {
+    Canvas(modifier = Modifier.size(size)) {
+        val s = this.size.width / 10f
+        val path = Path().apply {
+            if (up) {
+                moveTo(2f * s, 7f * s); lineTo(5f * s, 3.5f * s); lineTo(8f * s, 7f * s)
+            } else {
+                moveTo(2f * s, 3.5f * s); lineTo(5f * s, 7f * s); lineTo(8f * s, 3.5f * s)
+            }
+        }
+        drawPath(
+            path  = path,
+            color = color,
+            style = Stroke(width = 1.8f * s, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
     }
 }

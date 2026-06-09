@@ -22,7 +22,7 @@ class ConfiguracionRepository @Inject constructor(
         val listener = firestore.collection("usuarios").document(uid).collection("configuracion").document("preferencias")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    // No romper el flow — el listener se cancela limpiamente cuando uid cambia
                     return@addSnapshotListener
                 }
                 

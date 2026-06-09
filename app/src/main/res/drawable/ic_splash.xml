@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FlowTrack splash-screen icon.
+  Mismo diseño que el LogoBox del login pero ocupando casi todo el viewport
+  (4–104 dp) para que se vea bien dentro del círculo de 240 dp del splash de
+  Android 12+.  Las esquinas terminan en transparente (#00000000) para que
+  se mezclen sin costura con el fondo negro del splash.
+  Corner radius: 32/140 × 100 ≈ 23 dp.
+  Gradient center: 4 + 100×0.20 = 24 | radius: 100×1.20 = 120.
+  Chart icon escalado 100/92 ≈ 1.087 con offset 4.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ── Rounded-rect background ── -->
+    <path android:pathData="M27,4 L81,4 Q104,4 104,27 L104,81 Q104,104 81,104 L27,104 Q4,104 4,81 L4,27 Q4,4 27,4 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="24"
+                android:centerY="24"
+                android:gradientRadius="120">
+                <item android:offset="0.00" android:color="#60508AFF"/>
+                <item android:offset="0.60" android:color="#9914285A"/>
+                <item android:offset="1.00" android:color="#00000000"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- ── Borde sutil ── -->
+    <path
+        android:pathData="M27,4 L81,4 Q104,4 104,27 L104,81 Q104,104 81,104 L27,104 Q4,104 4,81 L4,27 Q4,4 27,4 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#1AFFFFFF"
+        android:strokeWidth="1" />
+
+    <!-- ── Chart icon (escala 100/92, offset 4) ── -->
+
+    <!-- Círculo (cx=54, cy=54, r≈34.8) -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19.2,54 A34.8,34.8 0,1,0 88.8,54 A34.8,34.8 0,1,0 19.2,54"
+        android:strokeColor="#805E8BFF"
+        android:strokeWidth="2.6" />
+
+    <!-- Línea de tendencia -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M34.4,69.2 L47.5,54 L60.5,60.5 L75.7,36.6"
+        android:strokeColor="#7DA5FF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="3.3" />
+
+    <!-- Puntos -->
+    <path android:fillColor="#7DA5FF"
+        android:pathData="M34.4,69.2 m-3.3,0 a3.3,3.3 0,1,0 6.6,0 a3.3,3.3 0,1,0 -6.6,0" />
+    <path android:fillColor="#7DA5FF"
+        android:pathData="M47.5,54 m-3.3,0 a3.3,3.3 0,1,0 6.6,0 a3.3,3.3 0,1,0 -6.6,0" />
+    <path android:fillColor="#7DA5FF"
+        android:pathData="M60.5,60.5 m-3.3,0 a3.3,3.3 0,1,0 6.6,0 a3.3,3.3 0,1,0 -6.6,0" />
+    <path android:fillColor="#5E8BFF"
+        android:pathData="M75.7,36.6 m-4.3,0 a4.3,4.3 0,1,0 8.6,0 a4.3,4.3 0,1,0 -8.6,0" />
+
+    <!-- Flecha hacia arriba -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M69.2,36.6 L75.7,30.1 L82.3,36.6"
+        android:strokeColor="#5E8BFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="2.4" />
+
+</vector>

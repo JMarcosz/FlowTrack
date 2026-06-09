@@ -593,7 +593,20 @@ fun MovimientoNormalizado.toDomainMovimientoTarjeta(
 fun EstadoCuentaNormalizado.toDomainCuenta(uidUsuario: String): Cuenta {
     val numeroCuenta = (productoId ?: "DESCONOCIDA").takeLast(10)
     val id = HashGenerator.hashCuenta(uidUsuario, bancoCodigo, numeroCuenta)
-    val fechaCorteInstant = fechaFin?.atStartOfDay(java.time.ZoneId.of("America/Santo_Domingo"))?.toInstant()
+
+    // Ordenar por fecha ascendente para que el último movimiento sea siempre el más reciente,
+    // independientemente del orden en que el parser leyó las secciones del archivo.
+    val movimientosOrdenados = movimientos.sortedBy { it.fechaTransaccion }
+    val balancePorFecha = movimientosOrdenados
+        .lastOrNull { it.balancePosterior != null }
+        ?.balancePosterior
+    // Preferir el balance derivado de movimientos ordenados; caer en balanceFinal del parser
+    // solo cuando ningún movimiento tiene balancePosterior (ej. Qik/Cibao usan balanceCorte explícito).
+    val balanceEfectivo = balancePorFecha ?: balanceFinal
+
+    val fechaCorteInst = (movimientosOrdenados.lastOrNull()?.fechaTransaccion ?: fechaFin)
+        ?.atStartOfDay(java.time.ZoneId.of("America/Santo_Domingo"))?.toInstant()
+
     return Cuenta(
         id = id,
         uidUsuario = uidUsuario,
@@ -603,9 +616,9 @@ fun EstadoCuentaNormalizado.toDomainCuenta(uidUsuario: String): Cuenta {
         alias = "$bancoCodigo $numeroCuenta",
         tipoCuenta = TipoCuenta.CORRIENTE,
         moneda = moneda,
-        balanceActual = balanceFinal,
-        balanceAlCorte = balanceFinal,
-        fechaUltimoCorte = fechaCorteInstant,
+        balanceActual = balanceEfectivo,
+        balanceAlCorte = balanceEfectivo,
+        fechaUltimoCorte = fechaCorteInst,
         titular = titular ?: "TITULAR",
         activa = true,
         mostrarEnDashboard = true,

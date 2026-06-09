@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -66,46 +67,7 @@ fun LoginScreen(
         Spacer(Modifier.height(90.dp))
 
         // ── Logo box ──────────────────────────────────────────────
-        Box(
-            modifier = Modifier
-                .size(140.dp)
-                // Glow azul exterior (simula boxShadow: 0 18px 60px rgba(47,111,237,0.35))
-                .drawBehind {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                GlowBlue.copy(alpha = 0.35f),
-                                Color.Transparent,
-                            ),
-                            center = Offset(size.width / 2f, size.height / 2f + 18.dp.toPx()),
-                            radius = 60.dp.toPx(),
-                        ),
-                        radius = 60.dp.toPx(),
-                        center = Offset(size.width / 2f, size.height / 2f + 18.dp.toPx()),
-                    )
-                }
-                .clip(RoundedCornerShape(32.dp))
-                // Gradiente radial con centro al 20%/20% usando drawBehind para
-                // que los cálculos sean en píxeles reales, no en dp
-                .drawBehind {
-                    drawRect(
-                        brush = Brush.radialGradient(
-                            colorStops = arrayOf(
-                                0.00f to Color(0x52508AFF),
-                                0.65f to Color(0x8C14285A),
-                                1.00f to Color(0x000B1220),
-                            ),
-                            center = Offset(size.width * 0.20f, size.height * 0.20f),
-                            radius = size.width * 1.20f,
-                        )
-                    )
-                }
-                // Borde interior sutil (inset 0 0 0 1px rgba(255,255,255,0.06))
-                .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(32.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            ChartIcon()
-        }
+        LogoBox()
 
         // ── Título ────────────────────────────────────────────────
         Spacer(Modifier.height(34.dp))
@@ -223,6 +185,59 @@ fun LoginScreen(
             lineHeight = 18.sp,
         )
         Spacer(Modifier.height(22.dp))
+    }
+}
+
+// ── Contenedor del logo con glow exterior ───────────────────────
+//
+// El truco: graphicsLayer(clip=false) permite que drawBehind pinte fuera de los
+// 140 dp del Box sin afectar el layout (el espacio reservado sigue siendo 140 dp).
+// Los Spacer() del padre se calculan desde el borde del Box, no desde el glow.
+@Composable
+private fun LogoBox() {
+    Box(
+        modifier = Modifier
+            .size(140.dp)
+            .graphicsLayer { clip = false }
+            // Glow — se dibuja fuera del área de 140 dp
+            .drawBehind {
+                val cx = size.width  / 2f
+                val cy = size.height / 2f + 18.dp.toPx()
+                val r  = 96.dp.toPx()
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.00f to Color(0xFF2F6FED).copy(alpha = 0.60f),
+                            0.38f to Color(0xFF2F6FED).copy(alpha = 0.28f),
+                            0.65f to Color(0xFF2F6FED).copy(alpha = 0.09f),
+                            1.00f to Color.Transparent,
+                        ),
+                        center = Offset(cx, cy),
+                        radius = r,
+                    ),
+                    topLeft = Offset(cx - r, cy - r),
+                    size   = Size(r * 2f, r * 2f),
+                )
+            }
+            // A partir de aquí todo se recorta al rectángulo redondeado
+            .clip(RoundedCornerShape(32.dp))
+            .drawBehind {
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.00f to Color(0x60508AFF),
+                            0.60f to Color(0x9914285A),
+                            1.00f to Color(0xFF0B1220),
+                        ),
+                        center = Offset(size.width * 0.20f, size.height * 0.20f),
+                        radius = size.width * 1.20f,
+                    ),
+                )
+            }
+            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(32.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        ChartIcon()
     }
 }
 

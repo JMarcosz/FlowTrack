@@ -236,7 +236,7 @@ fun ConfiguracionScreen(
                     onClick = {
                         FirebaseAuth.getInstance().signOut()
                         navController.navigate(Screen.Login.route) {
-                            popUpTo(0) { inclusive = true }
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
                         }
                     },
                 )

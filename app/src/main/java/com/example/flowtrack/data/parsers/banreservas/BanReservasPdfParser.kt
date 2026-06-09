@@ -52,17 +52,19 @@ class BanReservasPdfParser @Inject constructor() : BankStatementParser {
             val (numeroCuenta, titular, iban) = extraerInfoCuenta(texto)
             val (movimientos, advertencias, ignorados) = extraerMovimientos(lineas)
 
+            val movimientosOrdenados = movimientos.sortedBy { it.fechaTransaccion }
+
             val estado = EstadoCuentaNormalizado(
                 bancoCodigo          = "BANRESERVAS",
                 productoTipo         = ProductoTipo.CUENTA,
                 productoId           = numeroCuenta,
                 titular              = titular,
                 moneda               = Moneda.DOP,
-                fechaInicio          = movimientos.minOfOrNull { it.fechaTransaccion },
-                fechaFin             = movimientos.maxOfOrNull { it.fechaTransaccion },
+                fechaInicio          = movimientosOrdenados.firstOrNull()?.fechaTransaccion,
+                fechaFin             = movimientosOrdenados.lastOrNull()?.fechaTransaccion,
                 balanceInicial       = null,
-                balanceFinal         = movimientos.lastOrNull()?.balancePosterior,
-                movimientos          = movimientos,
+                balanceFinal         = movimientosOrdenados.lastOrNull { it.balancePosterior != null }?.balancePosterior,
+                movimientos          = movimientosOrdenados,
                 numeroCuentaCompleto = iban,
             )
 

@@ -42,8 +42,10 @@ class LoginViewModel @Inject constructor(
                 exchangeForFirebaseToken(response)
             } catch (e: GetCredentialCancellationException) {
                 _uiState.value = LoginUiState.Idle
-            } catch (e: Exception) {
-                _uiState.value = LoginUiState.Error(e.message ?: "Error desconocido")
+            } catch (t: Throwable) {
+                // Captura también Error (NoClassDefFoundError, VerifyError, etc.)
+                // que no son Exception y quedarían sin manejar dejando la UI en Loading.
+                _uiState.value = LoginUiState.Error(t.message ?: "Error desconocido")
             }
         }
     }

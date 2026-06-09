@@ -175,17 +175,21 @@ class PopularCsvParser @Inject constructor() : BankStatementParser {
 
             if (ignorados > 0) advertencias.add("$ignorados fila(s) ignoradas (encabezados repetidos, montos vacíos o fechas inválidas).")
 
+            // Ordenar por fecha para que el mapper calcule correctamente balanceActual
+            // independientemente del orden de las secciones en el archivo.
+            val movimientosOrdenados = movimientos.sortedBy { it.fechaTransaccion }
+
             val estado = EstadoCuentaNormalizado(
                 bancoCodigo = "POPULAR",
                 productoTipo = ProductoTipo.CUENTA,
                 productoId = numeroCuenta.takeLast(10),
                 titular = titular,
                 moneda = moneda,
-                fechaInicio = movimientos.minOfOrNull { it.fechaTransaccion },
-                fechaFin = movimientos.maxOfOrNull { it.fechaTransaccion },
+                fechaInicio = movimientosOrdenados.firstOrNull()?.fechaTransaccion,
+                fechaFin = movimientosOrdenados.lastOrNull()?.fechaTransaccion,
                 balanceInicial = null,
-                balanceFinal = movimientos.lastOrNull()?.balancePosterior,
-                movimientos = movimientos,
+                balanceFinal = movimientosOrdenados.lastOrNull { it.balancePosterior != null }?.balancePosterior,
+                movimientos = movimientosOrdenados,
             )
 
             val report = ParseReport(

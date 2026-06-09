@@ -19,12 +19,17 @@ data class BalanceNeto(
 class ObtenerBalanceNetoUseCase @Inject constructor(
     private val cuentaRepository: CuentaRepository,
     private val tarjetaRepository: TarjetaRepository,
+    private val balancesPorCuentaUseCase: ObtenerBalancesPorCuentaUseCase,
 ) {
     suspend fun ejecutar(uid: String): AppResult<BalanceNeto> {
         val cuentasResult = cuentaRepository.obtenerCuentas(uid)
         if (cuentasResult is AppResult.Error) return AppResult.Error(cuentasResult.error)
+
+        val balancesMap = (balancesPorCuentaUseCase.ejecutar(uid) as? AppResult.Success)?.data
+            ?: emptyMap()
+
         val cuentas = (cuentasResult as AppResult.Success).data
-            .filter { it.activa && it.mostrarEnDashboard && it.balanceActual != null }
+            .filter { it.activa && it.mostrarEnDashboard && it.balanceEfectivo(balancesMap) != null }
 
         val tarjetasResult = tarjetaRepository.obtenerTarjetas(uid)
         if (tarjetasResult is AppResult.Error) return AppResult.Error(tarjetasResult.error)
@@ -36,7 +41,9 @@ class ObtenerBalanceNetoUseCase @Inject constructor(
             snap?.takeIf { it.balanceAlCorte > BigDecimal.ZERO }?.let { tarjeta to it.balanceAlCorte }
         }
 
-        val totalActivos = cuentas.fold(BigDecimal.ZERO) { acc, c -> acc + (c.balanceActual ?: BigDecimal.ZERO) }
+        val totalActivos = cuentas.fold(BigDecimal.ZERO) { acc, c ->
+            acc + (c.balanceEfectivo(balancesMap) ?: BigDecimal.ZERO)
+        }
         val totalPasivos = tarjetasConDeuda.fold(BigDecimal.ZERO) { acc, (_, b) -> acc + b }
 
         return AppResult.Success(
