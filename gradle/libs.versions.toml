@@ -26,7 +26,7 @@ firebaseBom         = "33.7.0"
 coroutines          = "1.9.0"
 
 # Google Sign-In (Credential Manager)
-credentials         = "1.3.0"
+credentials         = "1.6.0"
 googleid            = "1.1.1"
 
 # Parsers
