@@ -106,6 +106,7 @@ data class MovimientoTarjetaDto(
     val descripcionOriginal: String = "",
     val descripcionNormalizada: String = "",
     val monto: Double = 0.0,
+    val montoUsd: Double? = null,
     val tipoMovimiento: String = "",
     val moneda: String = "DOP",
     val numeroAutorizacion: String? = null,

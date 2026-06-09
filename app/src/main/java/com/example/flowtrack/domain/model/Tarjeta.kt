@@ -54,7 +54,8 @@ data class MovimientoTarjeta(
     val fechaPosteo: Instant?,
     val descripcionOriginal: String,
     val descripcionNormalizada: String,
-    val monto: BigDecimal,                  // siempre positivo
+    val monto: BigDecimal,                  // monto en la moneda base (DOP); siempre ≥ 0
+    val montoUsd: BigDecimal? = null,       // monto paralelo en USD (Cibao bimoneda); null si no aplica
     val tipoMovimiento: TipoMovimientoTarjeta,
     val moneda: Moneda,
     val numeroAutorizacion: String?,

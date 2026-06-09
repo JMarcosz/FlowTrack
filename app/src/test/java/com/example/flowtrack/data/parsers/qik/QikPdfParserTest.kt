@@ -1,6 +1,7 @@
 package com.example.flowtrack.data.parsers.qik
 
 import com.example.flowtrack.data.parsers.core.ArchivoEntrada
+import com.example.flowtrack.data.parsers.core.FixtureLoader
 import com.example.flowtrack.data.parsers.core.ImportRequest
 import com.example.flowtrack.data.parsers.core.ParseResult
 import com.example.flowtrack.data.parsers.core.TipoMovimiento
@@ -73,7 +74,7 @@ class QikPdfParserTest {
      */
     @Test
     fun `flujo usuario Qik - parsear y verificar movimientos de tarjeta`() = runTest {
-        val bytes = cargarFixture("qik_v1.pdf", "qik.pdf")
+        val bytes = FixtureLoader.cargar("qik_v1.pdf", "qik")
         if (bytes == null) {
             println("⚠️ Fixture Qik no disponible. Test omitido.")
             return@runTest
@@ -141,11 +142,4 @@ class QikPdfParserTest {
         archivo = archivo,
     )
 
-    private fun cargarFixture(nombreSintetico: String, nombreReal: String): ByteArray? {
-        javaClass.classLoader?.getResourceAsStream("fixtures/$nombreSintetico")
-            ?.let { return it.readBytes() }
-        val f = java.io.File("../docs/03-fixtures/$nombreReal")
-        if (f.exists()) return f.readBytes()
-        return null
-    }
 }

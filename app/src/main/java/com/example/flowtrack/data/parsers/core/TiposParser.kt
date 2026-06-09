@@ -131,38 +131,10 @@ data class MovimientoTarjetaNormalizado(
     val metadataBanco: Map<String, String> = emptyMap(),
 )
 
-// ─── ResultadoParseo ─────────────────────────────────────────────────────────
-
-/** Resultado del parseo completo. Sealed para forzar manejo exhaustivo en UI. */
-sealed class ResultadoParseo {
-
-    data class ExitoCuenta(
-        val cuenta: CuentaDetectada,
-        val transacciones: List<TransaccionNormalizada>,
-        val resumenPeriodo: ResumenPeriodoDetectado?,
-        val advertencias: List<String> = emptyList(),
-    ) : ResultadoParseo()
-
-    data class ExitoTarjeta(
-        val tarjeta: TarjetaDetectada,
-        val estadoTarjeta: EstadoTarjetaDetectado,
-        val movimientos: List<MovimientoTarjetaNormalizado>,
-        val advertencias: List<String> = emptyList(),
-    ) : ResultadoParseo()
-
-    /** El parser reconoce el formato pero necesita confirmación del banco por el usuario. */
-    data class RequiereConfirmacion(
-        val mensaje: String,
-        val opcionesBanco: List<String>,
-        val datosParciales: Any,
-    ) : ResultadoParseo()
-
-    data class Error(
-        val mensaje: String,
-        val excepcion: Throwable? = null,
-        val recuperable: Boolean = false,
-    ) : ResultadoParseo()
-}
+// Nota: el antiguo `sealed class ResultadoParseo` (ExitoCuenta/ExitoTarjeta/RequiereConfirmacion/Error)
+// fue eliminado. Pertenecía al sistema de parsing previo y no tenía referencias vivas; el flujo actual
+// usa `ParseResult` (ver abajo) con `EstadoCuentaNormalizado`. La auditoría que reportaba
+// "ExitoTarjeta devuelve Error" se refería a ese sistema ya retirado.
 
 // ─── Modelos del contrato BankStatementParser ────────────────────────────────
 
@@ -208,6 +180,7 @@ data class MovimientoNormalizado(
     val descripcionNormalizada: String,
     val descripcionCorta: String,
     val monto: BigDecimal,
+    val montoUsd: BigDecimal? = null,       // monto paralelo en USD (Cibao bimoneda); null si no aplica
     val tipo: TipoMovimiento,
     val moneda: Moneda,
     val balancePosterior: BigDecimal?,

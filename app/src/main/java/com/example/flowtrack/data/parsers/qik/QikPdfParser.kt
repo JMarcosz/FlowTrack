@@ -47,7 +47,7 @@ class QikPdfParser @Inject constructor() : BankStatementParser {
             val texto = extraerTexto(request.archivo.bytes)
             val ultimos4 = extraerUltimos4(texto) ?: return ParseResult.Error("No se pudo extraer información de la tarjeta Qik.")
             val titular    = extraerTitular(texto)
-            val limite     = extraerMonto(texto, "(?:L[ií]mite|Limite)[:\\s]+")
+            val limite     = extraerMonto(texto, "(?:L[ií]mite|Limite)(?:\\s+Aprobado)?[:\\s]+")
             val tasa       = Regex("""(?:tasa|TEA|TNA)[:\s]+([\d.]+)\s*%""", RegexOption.IGNORE_CASE)
                 .find(texto)?.groupValues?.getOrNull(1)?.toDoubleOrNull() ?: 60.0
             val fechaCorte = buscarFecha(texto, "Fecha de corte")
@@ -62,7 +62,7 @@ class QikPdfParser @Inject constructor() : BankStatementParser {
                 .takeIf { it > BigDecimal.ZERO }
             val balanceAnterior = extraerMontoLinea(texto, "Balance.*anterior|Saldo.*anterior")
                 .takeIf { it > BigDecimal.ZERO }
-            val interes  = extraerMontoLinea(texto, "Inter[eé]s[^\\n]*financiamiento")
+            val interes  = extraerMontoLinea(texto, "Inter[eé]s[^\n]*financiamiento")
                 .takeIf { it > BigDecimal.ZERO }
             val cashback = extraerMontoLinea(texto, "Cashback|Cash[Bb]ack")
                 .takeIf { it > BigDecimal.ZERO }
@@ -132,7 +132,7 @@ class QikPdfParser @Inject constructor() : BankStatementParser {
 
     /** Busca el patrón y luego el primer monto en esa línea o la siguiente. */
     private fun extraerMontoLinea(texto: String, patron: String): BigDecimal {
-        val montoInlinea = Regex("""$patron[^\\n]*?(?:RD\$?\s*)?([\d,]+\.\d{2})""", RegexOption.IGNORE_CASE)
+        val montoInlinea = Regex("""$patron[^\n]*?(?:RD\$?\s*)?([\d,]+\.\d{2})""", RegexOption.IGNORE_CASE)
             .find(texto)?.groupValues?.getOrNull(1)?.toBigDecimalSafe()
         if (montoInlinea != null) return montoInlinea
 

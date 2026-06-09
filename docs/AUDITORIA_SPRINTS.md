@@ -1,6 +1,17 @@
 # Auditoría de Sprints — FlowTrack
 > Fecha: 2026-05-15 | Auditor: Claude Code | Build: `assembleDebug` ✅
 
+> **⚠️ Actualización 2026-06-09 — Issue #1 OBSOLETO.** El issue prioritario #1
+> ("🔴 `ExitoTarjeta` devuelve Error — Qik y Cibao no persisten") ya **no aplica**.
+> Se refería al sistema de parsing previo (`sealed class ResultadoParseo`), retirado en
+> el refactor del commit `3d09875`. El flujo vivo (`BankStatementParser` → `ParseResult.Success`
+> → `ProcesarArchivoUseCase` rama TARJETA → `ImportacionRepository.persistirCargaTarjeta`)
+> **sí persiste** tarjetas end-to-end. La verificación contra fixtures reales destapó bugs de
+> **exactitud** (no de persistencia), ya corregidos: Cibao no extraía metadata columnar
+> (corte=hoy, límite/balance=0) y confundía las columnas bimoneda DOP/USD con débito/crédito;
+> Qik no extraía el límite (label "Límite Aprobado") y tenía un regex `[^\\n]` defectuoso.
+> Cobertura agregada: tests JVM de Cibao + mapeo/idempotencia, y test instrumentado de Qik.
+
 Este documento evalúa cada sprint y módulo contra las rúbricas del Plan Maestro V2 (`docs/01-analisis/03_PLAN_MAESTRO_V2.md`) y el Design System (`docs/02-desing-system/04_DESIGN_SYSTEM.md`). No se realizaron correcciones durante la auditoría.
 
 **Leyenda:** ✅ Cumple | ⚠️ Parcial | ❌ No cumple | 🔧 Fix posible
@@ -654,13 +665,14 @@ El plan v2 §2 especifica **20+ pantallas**. Estado actual:
 
 | # | Severidad | Issue | Sprint | Fix |
 |---|-----------|-------|--------|-----|
-| 1 | 🔴 Alta | `ExitoTarjeta` devuelve Error — Qik y Cibao no persisten | S3 | Implementar rama en `procesarConParser` |
+| 1 | ✅ COMPLETADO (2026-06-09) | ~~`ExitoTarjeta` devuelve Error — Qik y Cibao no persisten~~ — **Obsoleto**: la persistencia ya funcionaba (refactor `3d09875`). La verificación contra fixtures reales destapó bugs de exactitud, ya corregidos: Cibao metadata columnar + bimoneda DOP/USD; Qik límite "Aprobado" + regex. Cobertura: tests JVM Cibao/mapeo/idempotencia + test instrumentado Qik. Hash de movimiento ahora incluye `montoUsd` (anti-colisión). | S3 | Hecho |
 | 2 | 🔴 Alta | 9 pantallas del plan completamente ausentes | S6-S7 | Crear pantallas faltantes (Reglas, Notificaciones, Perfil, Bancos, Ajustes, Exportar, Resúmenes) |
 | 3 | 🔴 Alta | Color `Income` incorrecto (`#00C853` vs `#16A34A`) | S4-S5 | Reemplazar `Color(0xFF00C853)` → `Income` en Dashboard, Transacciones, Resumen |
 | 4 | 🟡 Media | Derivadas DGII no se muestran agrupadas bajo su padre | S4 | Implementar accordeon según plan §7.5 |
 | 5 | 🟡 Media | `tnum` ausente en todos los montos monetarios | S1 | Aplicar `TabularNumber` en pantallas con montos |
 | 6 | 🟡 Media | Fuente Inter no integrada | S8 | `ui-text-google-fonts` + `GoogleFont("Inter")` |
-| 7 | 🟡 Media | Tests solo para BanReservas — Popular/Qik/Cibao sin cobertura | S3/S9 | Crear 3 tests de regresión |
+| 7 | 🟡 Media (parcial) | Tests de parsers — ~~Popular/Qik/Cibao sin cobertura~~. Cibao y Qik ya cubiertos (issue #1). Popular pendiente | S3/S9 | Crear test de regresión de Popular |
+| 11 | 🟡 Media | Integridad de persistencia de tarjeta (hallazgos del firebase-persistence-tester, derivados del issue #1): **ALTO-1** el `merge` de `Tarjeta` pisa el `alias` editado por el usuario al re-importar; **MEDIO-2** `EstadoTarjetaSnap` se sobreescribe al re-importar el mismo corte; **MEDIO-3** montos como `Double` en los DTOs (viola "dinero = BigDecimal") | S3 | ALTO-1: leer doc existente y preservar `alias` (patrón de `construirDtoCuentaConBalanceProtegido`). MEDIO-2: escribir snap solo si no existe o versionar. MEDIO-3: migrar campos monetarios de DTO a `String` |
 | 8 | 🟡 Media | Exportación es CSV en vez de XLSX con fastexcel | S6 | Reescribir `ExportacionUseCase` con fastexcel, múltiples hojas |
 | 9 | 🟠 Baja | `FinanzasSwitch`, `BankLogo`, `MerchantLogo` no existen | S1/S8 | Crear componentes del DS |
 | 10 | 🟠 Baja | Colores hardcodeados en pantallas (Revisión, Historial, Dashboard) | S8 | Reemplazar `Color(0xFF...)` inline por tokens `Color.kt` |

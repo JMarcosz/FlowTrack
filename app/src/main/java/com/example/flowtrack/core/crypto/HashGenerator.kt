@@ -30,8 +30,14 @@ object HashGenerator {
         monto: BigDecimal,
         tipo: String,
         descripcionNormalizada: String,
+        montoUsd: BigDecimal? = null,
     ): String {
-        val input = "$uidUsuario|$tarjetaId|${fecha.epochSecond}|${monto.toPlainString()}|$tipo|$descripcionNormalizada"
+        // El segmento USD solo se añade cuando hay un monto en USD no nulo (Cibao bimoneda).
+        // Así, los movimientos sin USD conservan exactamente el mismo ID que antes (sin churn),
+        // mientras se desambiguan dos movimientos con igual monto DOP/fecha/tipo/descripción pero
+        // distinto monto en USD (evita colisión y pérdida silenciosa).
+        val usdSeg = montoUsd?.takeIf { it.signum() != 0 }?.let { "|${it.toPlainString()}" } ?: ""
+        val input = "$uidUsuario|$tarjetaId|${fecha.epochSecond}|${monto.toPlainString()}|$tipo|$descripcionNormalizada$usdSeg"
         return sha256(input).take(20)
     }
 

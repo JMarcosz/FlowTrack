@@ -462,6 +462,7 @@ fun MovimientoTarjeta.toDto(): MovimientoTarjetaDto = MovimientoTarjetaDto(
     descripcionOriginal = descripcionOriginal,
     descripcionNormalizada = descripcionNormalizada,
     monto = monto.toDouble(),
+    montoUsd = montoUsd?.toDouble(),
     tipoMovimiento = tipoMovimiento.name,
     moneda = moneda.name,
     numeroAutorizacion = numeroAutorizacion,
@@ -482,6 +483,7 @@ fun MovimientoTarjetaDto.toDomain(): MovimientoTarjeta = MovimientoTarjeta(
     descripcionOriginal = descripcionOriginal,
     descripcionNormalizada = descripcionNormalizada,
     monto = BigDecimal.valueOf(monto).setScale(2),
+    montoUsd = montoUsd?.let { BigDecimal.valueOf(it).setScale(2) },
     tipoMovimiento = TipoMovimientoTarjeta.valueOf(tipoMovimiento),
     moneda = Moneda.valueOf(moneda),
     numeroAutorizacion = numeroAutorizacion,
@@ -568,6 +570,7 @@ fun MovimientoNormalizado.toDomainMovimientoTarjeta(
         monto = monto,
         tipo = tipo.toTipoMovimientoTarjeta().name,
         descripcionNormalizada = descripcionNormalizada,
+        montoUsd = montoUsd,
     )
     return MovimientoTarjeta(
         id = id,
@@ -579,6 +582,7 @@ fun MovimientoNormalizado.toDomainMovimientoTarjeta(
         descripcionOriginal = descripcionOriginal,
         descripcionNormalizada = descripcionNormalizada,
         monto = monto,
+        montoUsd = montoUsd,
         tipoMovimiento = tipo.toTipoMovimientoTarjeta(),
         moneda = moneda,
         numeroAutorizacion = referencia,

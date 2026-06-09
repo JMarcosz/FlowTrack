@@ -1,5 +1,6 @@
 package com.example.flowtrack.data.parsers.cibao
 
+import com.example.flowtrack.data.parsers.core.FixtureLoader
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
 import org.junit.Test
 
@@ -7,10 +8,10 @@ class CibaoXlsDiagnosticTest {
 
     @Test
     fun `diagnostico estructura cibao xls`() {
-        val f = java.io.File("../docs/03-fixtures/cibao.xls")
-        if (!f.exists()) { println("⚠️ Fixture no disponible"); return }
+        val bytes = FixtureLoader.cargar("cibao_v1.xls", "cibao")
+        if (bytes == null) { println("⚠️ Fixture no disponible"); return }
 
-        val wb = runCatching { HSSFWorkbook(f.inputStream()) }.getOrNull()
+        val wb = runCatching { HSSFWorkbook(bytes.inputStream()) }.getOrNull()
             ?: run { println("❌ No se pudo abrir"); return }
 
         val hoja = wb.getSheetAt(0)
@@ -30,10 +31,10 @@ class CibaoXlsDiagnosticTest {
 
     @Test
     fun `diagnostico popular csv lineas con debito credito`() {
-        val f = java.io.File("../docs/03-fixtures/popular.csv")
-        if (!f.exists()) { println("⚠️ Fixture no disponible"); return }
+        val bytes = FixtureLoader.cargar("popular_v1.csv", "popular")
+        if (bytes == null) { println("⚠️ Fixture no disponible"); return }
 
-        val lineas = f.readLines(Charsets.UTF_8)
+        val lineas = bytes.toString(Charsets.UTF_8).lines()
         println("Total líneas CSV: ${lineas.size}")
         lineas.forEachIndexed { idx, linea ->
             val u = linea.uppercase()

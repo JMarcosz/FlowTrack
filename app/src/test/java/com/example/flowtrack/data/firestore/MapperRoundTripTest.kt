@@ -373,6 +373,25 @@ class MapperRoundTripTest {
         assertNull(dominio.categoriaId)
     }
 
+    @Test
+    fun `movimientoTarjeta con montoUsd no nulo round-trip correcto`() {
+        val mov = movimientoBase().copy(montoUsd = BigDecimal("123.45"))
+        val dto = mov.toDto()
+        assertEquals(123.45, dto.montoUsd!!, 0.001)
+        val dominio = dto.toDomain()
+        assertEquals(BigDecimal("123.45"), dominio.montoUsd)
+        assertEquals(2, dominio.montoUsd!!.scale())
+    }
+
+    @Test
+    fun `movimientoTarjeta con montoUsd null round-trip correcto`() {
+        val mov = movimientoBase().copy(montoUsd = null)
+        val dto = mov.toDto()
+        assertNull(dto.montoUsd)
+        val dominio = dto.toDomain()
+        assertNull(dominio.montoUsd)
+    }
+
     // ─── Enums TipoTransaccion ─────────────────────────────────────────────────
 
     @Test
