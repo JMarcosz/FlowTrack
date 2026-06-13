@@ -1,32 +1,47 @@
 package com.example.flowtrack.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
-private val FinanzasColorScheme = darkColorScheme(
-    primary            = Brand500,
-    onPrimary          = TextPrimary,
-    primaryContainer   = Brand600,
-    onPrimaryContainer = TextPrimary,
-    secondary          = Brand400,
-    onSecondary        = BgDeep,
-    background         = BgDeep,
-    onBackground       = TextPrimary,
-    surface            = BgSurface,
-    onSurface          = TextPrimary,
-    surfaceVariant     = BgCard,
-    onSurfaceVariant   = TextSecondary,
-    outline            = BgDivider,
-    error              = SemanticExpense,
-    onError            = TextPrimary,
+// Design system §2 — FinanzasLightColorScheme
+private val FinanzasColorScheme = lightColorScheme(
+    primary            = Primary,
+    onPrimary          = Color.White,
+    primaryContainer   = Primary50,
+    onPrimaryContainer = Ink,
+
+    secondary          = Success,
+    onSecondary        = Color.White,
+    secondaryContainer = Success50,
+    onSecondaryContainer = Ink,
+
+    error              = Expense,
+    onError            = Color.White,
+    errorContainer     = Expense50,
+    onErrorContainer   = Ink,
+
+    background         = BgScreen,
+    onBackground       = Ink,
+
+    surface            = BgCard,
+    onSurface          = Ink,
+    surfaceVariant     = Line2,
+    onSurfaceVariant   = Muted,
+
+    outline            = Line,
+    outlineVariant     = Line2,
 )
 
 @Composable
-fun FlowTrackTheme(content: @Composable () -> Unit) {
+fun FlowTrackTheme(
+    darkTheme: Boolean = false,   // DS es 100% light — solo Login fuerza oscuro localmente
+    content: @Composable () -> Unit,
+) {
     MaterialTheme(
         colorScheme = FinanzasColorScheme,
         typography  = FinanzasTypography,
-        content     = content
+        content     = content,
     )
 }

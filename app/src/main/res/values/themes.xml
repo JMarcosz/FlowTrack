@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.FlowTrack" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.FlowTrack" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Prevents the white flash before Compose renders the first frame -->
+        <item name="android:windowBackground">@color/launch_bg</item>
+        <!-- Android 12+ (API 31) splash screen — minSdk=34 so always active -->
+        <item name="android:windowSplashScreenBackground">@color/launch_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <!-- Mismo color que el fondo para que el círculo del sistema sea invisible -->
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/launch_bg</item>
+    </style>
+
 </resources>

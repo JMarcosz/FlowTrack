@@ -30,7 +30,7 @@
 | `--c-card` | `#FFFFFF` | `Color.White` | Background de cards |
 | `--c-dark` | `#0B1220` | `Color(0xFF0B1220)` | Splash, tarjetas oscuras |
 
-### 1.3 Semánticos (income/expense/warning)
+### 1.3 Semánticos (income/expense/success/warning)
 
 | Token CSS | Hex | Compose | Uso |
 |-----------|-----|---------|-----|
@@ -38,7 +38,13 @@
 | `--c-income-50` | `#E7F7EC` | `Color(0xFFE7F7EC)` | Background suave de ingreso |
 | `--c-expense` | `#DC2626` | `Color(0xFFDC2626)` | Texto/iconos de gastos, eliminación |
 | `--c-expense-50` | `#FDECEC` | `Color(0xFFFDECEC)` | Background suave de gasto, danger outline |
+| `--c-success` | `#16A34A` | `Color(0xFF16A34A)` | Estados positivos no financieros |
+| `--c-success-50` | `#E7F7EC` | `Color(0xFFE7F7EC)` | Background suave de estado exitoso |
 | `--c-warning` | `#F59E0B` | `Color(0xFFF59E0B)` | Warning, duplicados, posibles errores |
+
+`Income` y `Success` comparten valor visual, pero no semántica: `Income` se
+reserva para créditos, ingresos, activos y balances monetarios positivos;
+`Success` se usa para importaciones exitosas, metas completadas y estados al día.
 
 ### 1.4 Categorías
 
@@ -75,7 +81,7 @@ val FinanzasLightColorScheme = lightColorScheme(
     primaryContainer = Color(0xFFEAF1FE),
     onPrimaryContainer = Color(0xFF0F172A),
 
-    secondary = Color(0xFF16A34A),  // income
+    secondary = Color(0xFF16A34A),  // success
     onSecondary = Color.White,
     secondaryContainer = Color(0xFFE7F7EC),
 
@@ -841,6 +847,7 @@ Cuando Claude Code implemente cualquier Composable, debe validar:
 - [ ] Números monetarios usan `fontFeatureSettings = "tnum"`
 - [ ] Botones primarios con `#2F6FED` y sombra suave
 - [ ] Ingresos en `#16A34A`, gastos en `#DC2626`
+- [ ] Estados positivos no financieros usan `Success`, no `Income`
 - [ ] Iconos outline de Material Symbols
 - [ ] Bottom navigation con altura ~56.dp, items con icono 22.dp + label 11sp
 - [ ] Press states con scale(0.98)

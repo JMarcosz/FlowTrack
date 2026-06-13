@@ -83,7 +83,7 @@ const bancos = [
     pais: 'DO',
     monedasSoportadas: ['DOP', 'USD'],
     tiposCuenta: ['CORRIENTE', 'AHORRO', 'CREDITO'],
-    tieneParser: false,
+    tieneParser: true,
     activo: true,
   },
 ];

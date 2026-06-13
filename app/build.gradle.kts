@@ -9,9 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.flowtrack"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.flowtrack"
@@ -24,8 +22,25 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Solo arm64-v8a en debug — el dispositivo de desarrollo es uno solo.
+            // Ahorra 10–20 MB de .so (PdfBox-Android, Firestore native) sin afectar release.
+            ndk { abiFilters += listOf("arm64-v8a") }
+        }
         release {
-            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        create("minifiedDebug") {
+            initWith(getByName("debug"))
+            isMinifyEnabled = true
+            isShrinkResources = true
+            matchingFallbacks += "release"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -42,6 +57,9 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true   // allows Android Log, etc. in JVM unit tests
+    }
     packaging {
         resources {
             // Conflictos comunes de Apache POI, PdfBox y librerías Apache Commons
@@ -52,6 +70,22 @@ android {
             excludes += "/META-INF/LICENSE.txt"
             excludes += "/META-INF/DEPENDENCIES"
             excludes += "mozilla/public-suffix-list.txt"
+
+            // BouncyCastle post-quantum crypto (SIKE, Picnic) — arrastrado por poi-ooxml
+            // para verificar firmas OOXML. CibaoXlsParser solo lee celdas financieras,
+            // nunca verifica firmas digitales. Estos .properties suman ~8 MB sin uso.
+            excludes += "org/bouncycastle/pqc/**"
+            excludes += "org/bouncycastle/crypto/test/**"
+            excludes += "font_metrics.properties"
+
+            // POI office subsystems no usados — CibaoXlsParser solo lee celdas XLS/XLSX,
+            // nunca abre presentaciones PowerPoint (HSLF), documentos Word (HWPF),
+            // ni correos Outlook (HSMF). Los XML de shapes/tables suman ~1.2 MB sin uso.
+            excludes += "org/apache/poi/hslf/**"
+            excludes += "org/apache/poi/hwpf/**"
+            excludes += "org/apache/poi/hsmf/**"
+            excludes += "org/apache/poi/sl/draw/binding/presetShapeDefinitions.xml"
+            excludes += "org/apache/poi/xwpf/usermodel/presetTableStyles.xml"
         }
     }
 }
@@ -69,6 +103,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.ui.text.google.fonts)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons)
 
@@ -93,15 +128,13 @@ dependencies {
     // ── Parsers ───────────────────────────────────────────────────────────────
     implementation(libs.pdfbox.android)          // PDFs: BanReservas, Qik
     implementation(libs.poi)                     // XLS legacy HSSF: Cibao (.xls)
+    implementation(libs.poi.ooxml)               // XLSX XSSF: Cibao (.xlsx)
     implementation(libs.opencsv)                 // CSV: Popular
-    implementation(libs.fastexcel)               // Exportar XLSX (escritura)
+    // fastexcel eliminado — exportación usa FileWriter CSV nativo
 
-    // ── Charts ────────────────────────────────────────────────────────────────
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
+    // Vico eliminado — DonutChart usa Canvas nativo de Compose, Vico nunca se importó
 
-    // ── Images ────────────────────────────────────────────────────────────────
-    implementation(libs.coil.compose)
+    // coil eliminado — app solo usa drawables locales, sin AsyncImage
 
     // ── Local storage ─────────────────────────────────────────────────────────
     implementation(libs.datastore.preferences)
@@ -111,17 +144,33 @@ dependencies {
     implementation(libs.hilt.work)
     ksp(libs.hilt.androidx.compiler)
 
+    // ── Paging 3 ─────────────────────────────────────────────────────────────
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
+
+    // ── Glance (widgets home screen) ──────────────────────────────────────────
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
     // ── Firebase ──────────────────────────────────────────────────────────────
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.messaging)
     // Crashlytics requiere su Gradle plugin — se agrega en Sprint 9 (release)
     // implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.analytics)
+    // firebase-analytics eliminado — no se llama logEvent en ningún lugar
 
     // ── Testing ───────────────────────────────────────────────────────────────
     testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.core.ktx)
+    androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.junit.ktx)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
