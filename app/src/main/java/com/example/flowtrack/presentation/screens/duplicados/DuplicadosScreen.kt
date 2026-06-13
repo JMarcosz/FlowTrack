@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -40,8 +41,6 @@ import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
-import com.example.flowtrack.ui.theme.BgCard
-import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Ink
@@ -67,7 +66,7 @@ fun DuplicadosScreen(
     val estado by viewModel.estado.collectAsState()
 
     Scaffold(
-        containerColor = BgScreen,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Duplicados detectados", fontWeight = FontWeight.SemiBold) },
@@ -76,7 +75,8 @@ fun DuplicadosScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                windowInsets = WindowInsets(0, 0, 0, 0),
             )
         }
     ) { padding ->
@@ -123,7 +123,7 @@ private fun DuplicadosContent(pares: List<ParDuplicado>, modifier: Modifier) {
 
 @Composable
 private fun DuplicadoCard(par: ParDuplicado) {
-    Surface(shape = RoundedCornerShape(12.dp), color = BgCard, shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 1.dp) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Par duplicado", fontWeight = FontWeight.SemiBold, color = Ink, fontSize = 12.sp)
             HorizontalDivider(color = Line2)

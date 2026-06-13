@@ -45,7 +45,7 @@ fun MetasScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Scaffold(
-        containerColor = BgScreen,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Metas de ahorro", fontWeight = FontWeight.SemiBold) },
@@ -54,7 +54,8 @@ fun MetasScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                windowInsets = WindowInsets(0, 0, 0, 0),
             )
         },
         floatingActionButton = {
@@ -104,7 +105,7 @@ fun MetasScreen(
         ModalBottomSheet(
             onDismissRequest = { mostrarSheet = false },
             sheetState = sheetState,
-            containerColor = BgCard,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         ) {
             NuevaMetaSheet(
@@ -141,7 +142,7 @@ private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit
 
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 1.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -224,7 +225,7 @@ private fun DepositoSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = BgCard,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
     ) {
         Column(

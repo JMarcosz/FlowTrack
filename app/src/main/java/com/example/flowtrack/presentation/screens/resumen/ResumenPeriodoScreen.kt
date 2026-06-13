@@ -31,7 +31,7 @@ fun ResumenPeriodoScreen(
     val opciones = listOf(TipoPeriodo.DIA to "Día", TipoPeriodo.SEMANA to "Semana", TipoPeriodo.MES to "Mes")
 
     Scaffold(
-        containerColor = BgScreen,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Resumen por período", fontWeight = FontWeight.SemiBold) },
@@ -40,7 +40,8 @@ fun ResumenPeriodoScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                windowInsets = WindowInsets(0, 0, 0, 0),
             )
         },
     ) { padding ->

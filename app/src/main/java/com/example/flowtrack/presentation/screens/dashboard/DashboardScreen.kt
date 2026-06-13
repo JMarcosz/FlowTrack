@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -74,8 +76,6 @@ import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.presentation.components.categoriaPorId
 import com.example.flowtrack.presentation.components.shimmerEffect
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.BgCard
-import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Income
@@ -107,7 +107,7 @@ fun DashboardScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgScreen),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         when (val st = estado) {
             is DashboardEstado.Cargando -> LoadingContent()
@@ -184,6 +184,7 @@ private fun DashboardContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets(0, 0, 0, 0)) // No duplicar insets si NavHost ya los tiene
                     .padding(horizontal = 8.dp)
                     .height(56.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -325,7 +326,7 @@ private fun DashboardContent(
 
                 Card(
                     shape     = RoundedCornerShape(16.dp),
-                    colors    = CardDefaults.cardColors(containerColor = BgCard),
+                    colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(0.dp),
                     border    = BorderStroke(1.dp, Line2),
                     modifier  = Modifier.fillMaxWidth(),
@@ -400,7 +401,7 @@ private fun DashboardContent(
                 } else {
                     Card(
                         shape     = RoundedCornerShape(16.dp),
-                        colors    = CardDefaults.cardColors(containerColor = BgCard),
+                        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(0.dp),
                         border    = BorderStroke(1.dp, Line2),
                         modifier  = Modifier.fillMaxWidth(),
@@ -449,11 +450,11 @@ private fun DashStatCard(
             .shadow(
                 elevation    = 4.dp,
                 shape        = RoundedCornerShape(18.dp),
-                ambientColor = Ink.copy(alpha = 0.04f),
-                spotColor    = Ink.copy(alpha = 0.10f),
+                ambientColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f),
+                spotColor    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
             )
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(14.dp),
     ) {
         Column {
@@ -545,7 +546,7 @@ private fun BalanceNetoCard(
 
     Card(
         shape     = RoundedCornerShape(16.dp),
-        colors    = CardDefaults.cardColors(containerColor = BgCard),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(0.dp),
         border    = BorderStroke(1.dp, Line2),
         modifier  = modifier,
@@ -752,12 +753,12 @@ private fun PeriodoDropdown(
         OutlinedButton(
             onClick = { expanded = true },
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(containerColor = BgCard, contentColor = Ink),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
             border = BorderStroke(1.dp, Line),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
             modifier = Modifier.height(36.dp),
         ) {
-            Text(selected, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Ink)
+            Text(selected, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 Icons.Outlined.KeyboardArrowDown, contentDescription = null,

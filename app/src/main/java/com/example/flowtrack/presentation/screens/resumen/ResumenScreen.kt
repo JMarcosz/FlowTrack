@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -53,9 +55,6 @@ import com.example.flowtrack.presentation.components.DonutChart
 import com.example.flowtrack.presentation.components.DonutSlice
 import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
-import com.example.flowtrack.presentation.components.categoriaRegistry
-import com.example.flowtrack.ui.theme.BgCard
-import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Ink
@@ -66,7 +65,8 @@ import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.TabularNumber
-
+import androidx.compose.material3.MaterialTheme
+import com.example.flowtrack.presentation.components.categoriaRegistry
 @Composable
 fun ResumenScreen(
     viewModel: ResumenViewModel = hiltViewModel(),
@@ -79,7 +79,7 @@ fun ResumenScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgScreen)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -90,6 +90,7 @@ fun ResumenScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets(0, 0, 0, 0))
                     .padding(start = 4.dp, end = Spacing.md, top = Spacing.xl, bottom = Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -199,7 +200,7 @@ fun ResumenScreen(
 @Composable
 private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () -> Unit) {
     val bgColor by animateColorAsState(
-        targetValue = if (active) BgCard else Color.Transparent,
+        targetValue = if (active) MaterialTheme.colorScheme.surface else Color.Transparent,
         animationSpec = tween(160),
         label = "tab_bg",
     )
@@ -225,9 +226,9 @@ private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () ->
 
 @Composable
 private fun PeriodPill(label: String, active: Boolean, onClick: () -> Unit) {
-    val bg  = if (active) Primary   else BgCard
+    val bg  = if (active) MaterialTheme.colorScheme.primary   else MaterialTheme.colorScheme.surface
     val fg  = if (active) Color.White else Muted
-    val border = if (active) Primary else Line
+    val border = if (active) MaterialTheme.colorScheme.primary else Line
     Box(
         modifier = Modifier
             .clip(Radii.pill)
@@ -269,7 +270,7 @@ private fun BancoCard(b: ResumenBanco) {
     val banco = bancoPorCodigo(b.bancoCodigo)
     Card(
         shape = Radii.lg,
-        colors = CardDefaults.cardColors(containerColor = BgCard),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -362,7 +363,7 @@ private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier 
         item {
             Card(
                 shape = Radii.lg,
-                colors = CardDefaults.cardColors(containerColor = BgCard),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -410,7 +411,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
     val positivo = balance >= java.math.BigDecimal.ZERO
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = BgCard),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()

@@ -26,7 +26,6 @@ import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.TipoCuenta
 import com.example.flowtrack.presentation.components.BankLogo
-import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Primary
@@ -74,7 +73,7 @@ fun BancosYCuentasScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Scaffold(
-        containerColor = BgScreen,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Bancos y Cuentas", fontWeight = FontWeight.SemiBold) },
@@ -83,7 +82,8 @@ fun BancosYCuentasScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                windowInsets = WindowInsets(0, 0, 0, 0),
             )
         },
         floatingActionButton = {

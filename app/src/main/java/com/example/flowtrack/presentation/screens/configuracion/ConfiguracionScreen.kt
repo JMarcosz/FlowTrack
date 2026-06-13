@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -70,8 +71,6 @@ import com.example.flowtrack.core.extensions.formatearFecha
 import com.example.flowtrack.core.extensions.formatearMoneda
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.BgCard
-import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line2
@@ -112,16 +111,17 @@ fun ConfiguracionScreen(
     }
 
     Scaffold(
-        containerColor = BgScreen,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Más", fontWeight = FontWeight.SemiBold) },
+                title = { Text("Configuración", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
                         Icon(Icons.Outlined.Menu, contentDescription = "Menú")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                windowInsets = WindowInsets(0, 0, 0, 0),
             )
         },
     ) { padding ->
@@ -131,17 +131,9 @@ fun ConfiguracionScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text(
-                "Configuración",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Ink,
-                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.md, bottom = Spacing.md),
-            )
-
             Card(
                 shape = Radii.lg,
-                colors = CardDefaults.cardColors(containerColor = BgCard),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -256,7 +248,7 @@ fun ConfiguracionScreen(
                     )
                     Spacer(Modifier.height(Spacing.sm))
                     Surface(
-                        color = BgScreen,
+                        color = MaterialTheme.colorScheme.background,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = Spacing.xl),
@@ -414,7 +406,7 @@ private fun SectionLabel(label: String) {
 private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         shape = Radii.lg,
-        colors = CardDefaults.cardColors(containerColor = BgCard),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -473,7 +465,7 @@ private fun SettingsSwitchRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = BgCard, checkedTrackColor = Primary),
+            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.surface, checkedTrackColor = Primary),
         )
     }
 }

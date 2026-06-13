@@ -20,7 +20,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.core.notifications.NotificationHelper
 import com.example.flowtrack.presentation.components.FinanzasSwitch
-import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Spacing
 
@@ -56,7 +55,7 @@ fun NotificacionesScreen(
     }
 
     Scaffold(
-        containerColor = BgScreen,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Notificaciones", fontWeight = FontWeight.SemiBold) },
@@ -65,7 +64,8 @@ fun NotificacionesScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                windowInsets = WindowInsets(0, 0, 0, 0),
             )
         },
     ) { padding ->

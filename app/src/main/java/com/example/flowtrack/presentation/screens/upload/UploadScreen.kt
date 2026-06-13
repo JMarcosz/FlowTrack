@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -73,8 +74,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.presentation.components.bancoPorCodigo
-import com.example.flowtrack.ui.theme.BgCard
-import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Ink
@@ -117,7 +116,7 @@ fun UploadScreen(
     }
 
     Scaffold(
-        containerColor = BgScreen,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -128,7 +127,8 @@ fun UploadScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgScreen),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                windowInsets = WindowInsets(0, 0, 0, 0),
             )
         }
     ) { innerPadding ->
@@ -288,7 +288,7 @@ private fun DocumentoProtegidoDialog(
                 Text("Cancelar")
             }
         },
-        containerColor = BgCard,
+        containerColor = MaterialTheme.colorScheme.surface,
     )
 }
 
@@ -489,8 +489,8 @@ private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> 
     }
     val bgColor = when {
         seleccionado -> Primary50
-        disponible   -> BgCard
-        else         -> BgCard.copy(alpha = 0.6f)
+        disponible   -> MaterialTheme.colorScheme.surface
+        else         -> MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
     }
     val bancoInfo  = bancoPorCodigo(banco.codigo)
     val bancoColor = bancoInfo.color.let { if (disponible) it else it.copy(alpha = 0.4f) }
@@ -573,7 +573,7 @@ private fun UploadExitoContent(
         Button(onClick = onVerHistorial, colors = ButtonDefaults.buttonColors(containerColor = Primary), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
             Text("Ver historial", fontWeight = FontWeight.SemiBold)
         }
-        Button(onClick = onNuevoArchivo, colors = ButtonDefaults.buttonColors(containerColor = BgCard), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = onNuevoArchivo, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
             Text("Importar otro archivo", color = TextBody, fontWeight = FontWeight.SemiBold)
         }
     }

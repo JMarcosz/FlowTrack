@@ -5,6 +5,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -84,7 +86,7 @@ fun TransaccionesScreen(
     var aplicarATodas by remember { mutableStateOf(true) }
     val sheetState = rememberModalBottomSheetState()
 
-    Box(modifier = Modifier.fillMaxSize().background(BgScreen)) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Crossfade(targetState = selectedTx, label = "tx_nav") { tx ->
             if (tx == null) {
                 TransaccionesLista(
@@ -120,7 +122,7 @@ fun TransaccionesScreen(
             ModalBottomSheet(
                 onDismissRequest = { showCategorySheet = false },
                 sheetState = sheetState,
-                containerColor = BgCard,
+                containerColor = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             ) {
                 Column(modifier = Modifier.padding(bottom = 32.dp)) {
@@ -185,7 +187,7 @@ fun TransaccionesScreen(
             val txForDel = selectedTx!!
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
-                containerColor = BgCard,
+                containerColor = MaterialTheme.colorScheme.surface,
                 title = { Text("Eliminar transacción", fontWeight = FontWeight.SemiBold, color = Ink) },
                 text = { Text("Esta acción no se puede deshacer.", color = Muted, fontSize = 14.sp) },
                 confirmButton = {
@@ -234,7 +236,8 @@ private fun TransaccionesLista(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(BgScreen)
+                .windowInsetsPadding(WindowInsets(0, 0, 0, 0))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = Spacing.xxs, vertical = Spacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -287,7 +290,7 @@ private fun TransaccionesLista(
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.xl)
                 .padding(bottom = Spacing.md)
-                .background(BgCard, RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
                 .border(1.dp, Line2, RoundedCornerShape(12.dp))
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
@@ -347,7 +350,7 @@ private fun TransaccionesLista(
             ModalBottomSheet(
                 onDismissRequest = { showFiltrosSheet = false },
                 sheetState = filtrosSheetState,
-                containerColor = BgCard,
+                containerColor = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             ) {
                 FiltrosSheet(
@@ -478,7 +481,7 @@ private fun TransaccionesLista(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(shape)
-                                    .background(BgCard)
+                                    .background(MaterialTheme.colorScheme.surface)
                                     .border(1.dp, Line2, shape),
                             ) {
                                 TransaccionFila(
@@ -626,12 +629,13 @@ private fun TransaccionDetalle(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgScreen),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         // ── Header ────────────────────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets(0, 0, 0, 0))
                 .padding(horizontal = Spacing.xxs, vertical = Spacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -668,7 +672,7 @@ private fun TransaccionDetalle(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(BgCard)
+                        .background(MaterialTheme.colorScheme.surface)
                         .border(1.dp, Line2, RoundedCornerShape(16.dp))
                         .padding(Spacing.xxl),
                     verticalAlignment = Alignment.CenterVertically,
@@ -709,7 +713,7 @@ private fun TransaccionDetalle(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(BgCard)
+                        .background(MaterialTheme.colorScheme.surface)
                         .border(1.dp, Line2, RoundedCornerShape(16.dp)),
                 ) {
                     DetalleRow("Fecha", formatDate(fechaLocal))
@@ -777,7 +781,7 @@ private fun TransaccionDetalle(
                         border = androidx.compose.foundation.BorderStroke(1.5.dp, Primary100),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = Primary,
-                            containerColor = BgCard,
+                            containerColor = MaterialTheme.colorScheme.surface,
                         ),
                     ) {
                         Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
@@ -791,7 +795,7 @@ private fun TransaccionDetalle(
                         border = androidx.compose.foundation.BorderStroke(1.5.dp, Expense50),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = Expense,
-                            containerColor = BgCard,
+                            containerColor = MaterialTheme.colorScheme.surface,
                         ),
                     ) {
                         Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
@@ -1067,7 +1071,7 @@ private fun PeriodoDropdown(
         OutlinedButton(
             onClick = { expanded = true },
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(containerColor = BgCard, contentColor = Ink),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = Ink),
             border = BorderStroke(1.dp, Line),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
             modifier = Modifier.height(36.dp),

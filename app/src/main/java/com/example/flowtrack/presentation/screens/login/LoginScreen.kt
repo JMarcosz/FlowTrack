@@ -40,6 +40,10 @@ import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Primary100
 import com.example.flowtrack.ui.theme.Primary600
 
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+
 // ── Colores exclusivos de la pantalla de login ───────────────────
 private val BgLogin       = BgDark
 
@@ -51,6 +55,26 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val isLoading = uiState is LoginUiState.Loading
+
+    DisposableEffect(Unit) {
+        val activity = context as? ComponentActivity
+        activity?.enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
+        onDispose {
+            activity?.enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.light(
+                    android.graphics.Color.TRANSPARENT,
+                    android.graphics.Color.TRANSPARENT
+                ),
+                navigationBarStyle = SystemBarStyle.light(
+                    android.graphics.Color.TRANSPARENT,
+                    android.graphics.Color.TRANSPARENT
+                )
+            )
+        }
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
