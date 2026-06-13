@@ -73,7 +73,6 @@ import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Neutral100
-import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.Success50
 import com.example.flowtrack.ui.theme.TextBody
@@ -143,8 +142,8 @@ fun HistorialScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navController.navigate(Screen.Upload.route) },
-                containerColor = Primary,
-                contentColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) { Icon(Icons.Outlined.Add, "Importar nuevo") }
         }
     ) { padding ->
@@ -164,7 +163,7 @@ fun HistorialScreen(
 @Composable
 private fun LoadingHistorial(modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Primary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -177,7 +176,7 @@ private fun EmptyHistorial(navController: NavController, modifier: Modifier) {
             Text("Importa tu primer estado de cuenta para empezar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             Button(
                 onClick = { navController.navigate(Screen.Upload.route) },
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(12.dp),
             ) { Text("Importar ahora") }
         }

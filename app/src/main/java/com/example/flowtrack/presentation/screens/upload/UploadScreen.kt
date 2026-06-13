@@ -79,8 +79,6 @@ import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Primary
-import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.Success
@@ -195,7 +193,7 @@ private fun DocumentoProtegidoDialog(
             Icon(
                 imageVector = Icons.Outlined.Lock,
                 contentDescription = null,
-                tint = Primary,
+                tint = MaterialTheme.colorScheme.primary,
             )
         },
         title = {
@@ -357,10 +355,10 @@ private fun UploadFormContent(
                 .fillMaxWidth()
                 .height(120.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (bancoSeleccionado != null) Primary50 else Line2)
+                .background(if (bancoSeleccionado != null) MaterialTheme.colorScheme.primaryContainer else Line2)
                 .border(
                     width = 2.dp,
-                    color = if (bancoSeleccionado != null) Primary.copy(alpha = 0.4f) else Line,
+                    color = if (bancoSeleccionado != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else Line,
                     shape = RoundedCornerShape(16.dp),
                 )
                 .clickable(enabled = bancoSeleccionado != null, onClick = onSeleccionarArchivo),
@@ -373,7 +371,7 @@ private fun UploadFormContent(
                 Icon(
                     Icons.Outlined.CloudUpload,
                     contentDescription = null,
-                    tint = if (bancoSeleccionado != null) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (bancoSeleccionado != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(32.dp),
                 )
                 Text(
@@ -382,7 +380,7 @@ private fun UploadFormContent(
                     else
                         "Selecciona un banco primero",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (bancoSeleccionado != null) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (bancoSeleccionado != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
                 if (bancoSeleccionado != null) {
@@ -482,12 +480,12 @@ private fun TarjetaFechasSection(
 private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> Unit) {
     val disponible = banco.disponible
     val borderColor = when {
-        seleccionado -> Primary
+        seleccionado -> MaterialTheme.colorScheme.primary
         disponible   -> Line
         else         -> Line.copy(alpha = 0.5f)
     }
     val bgColor = when {
-        seleccionado -> Primary50
+        seleccionado -> MaterialTheme.colorScheme.primaryContainer
         disponible   -> MaterialTheme.colorScheme.surface
         else         -> MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
     }
@@ -531,7 +529,7 @@ private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> 
             )
         }
         if (seleccionado) {
-            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = Primary, modifier = Modifier.size(22.dp))
+            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -543,7 +541,7 @@ private fun UploadProcesandoContent(mensaje: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        CircularProgressIndicator(color = Primary, modifier = Modifier.size(48.dp), strokeWidth = 3.dp)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp), strokeWidth = 3.dp)
         Text(mensaje, style = MaterialTheme.typography.bodyLarge, color = TextBody)
     }
 }
@@ -569,7 +567,7 @@ private fun UploadExitoContent(
         Text("¡Importación exitosa!", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Text("$transaccionesInsertadas transacciones importadas desde $banco", style = MaterialTheme.typography.bodyLarge, color = TextBody, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
-        Button(onClick = onVerHistorial, colors = ButtonDefaults.buttonColors(containerColor = Primary), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = onVerHistorial, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
             Text("Ver historial", fontWeight = FontWeight.SemiBold)
         }
         Button(onClick = onNuevoArchivo, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {

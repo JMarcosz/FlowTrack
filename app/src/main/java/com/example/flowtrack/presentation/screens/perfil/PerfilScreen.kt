@@ -45,8 +45,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Primary
-import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Spacing
 import com.google.firebase.auth.FirebaseAuth
 
@@ -100,14 +98,14 @@ fun PerfilScreen(navController: NavController) {
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .background(Primary50, CircleShape),
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = user?.displayName?.firstOrNull()?.uppercase() ?: "U",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Primary,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 

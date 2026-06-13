@@ -74,7 +74,6 @@ import com.example.flowtrack.ui.theme.CatSinCategorizar
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.TextBody
 import com.example.flowtrack.ui.theme.Warning
@@ -106,7 +105,7 @@ fun PresupuestosScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { mostrarSheet = true },
-                containerColor = Primary,
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
             ) { Icon(Icons.Outlined.Add, "Nuevo presupuesto") }
         },
@@ -115,7 +114,7 @@ fun PresupuestosScreen(
             state.isLoading -> Box(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator(color = Primary) }
+            ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
 
             state.presupuestos.isEmpty() -> Box(
                 Modifier.fillMaxSize().padding(padding),
@@ -306,7 +305,7 @@ private fun NuevoPresupuestoSheet(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = catExpandido) },
                 modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
                 shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Primary, unfocusedBorderColor = Line),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
             )
             ExposedDropdownMenu(expanded = catExpandido, onDismissRequest = { catExpandido = false }) {
                 categorias.forEach { cat ->
@@ -327,7 +326,7 @@ private fun NuevoPresupuestoSheet(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Primary, unfocusedBorderColor = Line),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
         )
 
         // Período
@@ -337,7 +336,7 @@ private fun NuevoPresupuestoSheet(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (sel) Primary else Line2)
+                        .background(if (sel) MaterialTheme.colorScheme.primary else Line2)
                         .clickable { periodo = p }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                 ) {
@@ -366,7 +365,7 @@ private fun NuevoPresupuestoSheet(
                 },
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 enabled = monto.trim().toBigDecimalOrNull() != null && catSeleccionada != null,
             ) { Text("Guardar", fontWeight = FontWeight.SemiBold) }
         }

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,7 +62,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -83,8 +83,6 @@ import com.example.flowtrack.presentation.components.bankBadge
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Primary
-import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.Success
@@ -154,11 +152,11 @@ fun TarjetasScreen(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Primary50)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
                         .clickable { mostrarSheet = true },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar tarjeta", tint = Primary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Add, contentDescription = "Agregar tarjeta", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -223,7 +221,7 @@ fun TarjetasScreen(
                                         modifier = Modifier
                                             .padding(horizontal = 3.dp)
                                             .clip(RoundedCornerShape(3.dp))
-                                            .background(if (isActive) Primary else Line)
+                                            .background(if (isActive) MaterialTheme.colorScheme.primary else Line)
                                             .size(width = width, height = 6.dp),
                                     )
                                 }
@@ -504,7 +502,7 @@ fun WhiteCreditCard(
                 "Ver detalle ›",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Primary,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.End),
             )
         }
@@ -808,7 +806,8 @@ private fun NuevaTarjetaSheet(
                 onClick = { onGuardar(bancoSeleccionado, ultimos4, alias.trim(), limiteValido!!, diaCortValido!!) },
                 modifier = Modifier.weight(1f),
                 enabled = puedeGuardar,
-            ) { Text("Guardar") }
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            ) { Text("Guardar", color = MaterialTheme.colorScheme.onPrimary) }
         }
     }
 }

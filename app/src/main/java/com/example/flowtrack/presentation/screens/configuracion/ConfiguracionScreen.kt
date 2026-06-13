@@ -73,8 +73,6 @@ import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Primary
-import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.google.firebase.auth.FirebaseAuth
@@ -146,14 +144,14 @@ fun ConfiguracionScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Primary50),
+                            .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             displayName.first().toString().uppercase(),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Primary,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
@@ -252,7 +250,7 @@ fun ConfiguracionScreen(
                         shape = Radii.md,
                     ) {
                         Column(modifier = Modifier.padding(Spacing.md)) {
-                            Text("Vista previa", style = MaterialTheme.typography.titleSmall, color = Primary)
+                            Text("Vista previa", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.height(Spacing.xs))
                             Text(
                                 formatearMoneda(state.balanceNeto, config.monedaPredeterminada, config.formatoMoneda),
@@ -463,7 +461,7 @@ private fun SettingsSwitchRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.surface, checkedTrackColor = Primary),
+            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.surface, checkedTrackColor = MaterialTheme.colorScheme.primary),
         )
     }
 }
@@ -479,7 +477,7 @@ private fun PrefRow(titulo: String, valor: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(titulo, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-        Text(valor, style = MaterialTheme.typography.bodyMedium, color = Primary, fontWeight = FontWeight.Medium)
+        Text(valor, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
     }
 }
 

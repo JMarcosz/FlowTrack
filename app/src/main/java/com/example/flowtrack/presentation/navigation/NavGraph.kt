@@ -147,8 +147,8 @@ fun AppNavGraph(
                 composable(Screen.Historial.route)     { HistorialScreen(navController) }
                 composable(Screen.Revision.route)      { RevisionScreen(navController) }
                 composable(Screen.Duplicados.route)    { DuplicadosScreen(navController) }
-                composable(Screen.Conversor.route)     { ConversorScreen() }
-                composable(Screen.Sugerencias.route)   { SugerenciasScreen() }
+                composable(Screen.Conversor.route)     { ConversorScreen(navController) }
+                composable(Screen.Sugerencias.route)   { SugerenciasScreen(navController) }
                 composable(Screen.Categorias.route)    { CategoriasScreen(navController) }
                 composable(Screen.BancosYCuentas.route) { BancosYCuentasScreen(navController) }
                 composable(Screen.Notificaciones.route) { NotificacionesScreen(navController) }

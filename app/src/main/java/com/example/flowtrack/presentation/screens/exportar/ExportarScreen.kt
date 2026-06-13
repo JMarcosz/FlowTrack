@@ -55,10 +55,7 @@ import androidx.navigation.NavController
 import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.components.MerchantLogo
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Primary
-import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.domain.usecase.FormatoExportacion
@@ -131,7 +128,7 @@ fun ExportarScreen(
         ) {
             item {
                 Surface(
-                    color = Primary50,
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     shape = Radii.lg,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -251,14 +248,14 @@ fun ExportarScreen(
                         .fillMaxWidth()
                         .height(52.dp),
                     enabled = !state.isExporting,
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(14.dp),
                 ) {
                     if (state.isExporting) {
                         androidx.compose.material3.CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                         )
                     } else {
                         Text("Exportar")
@@ -267,10 +264,10 @@ fun ExportarScreen(
             }
 
             if (state.error != null) {
-                item { StatusBanner(text = state.error!!, background = Expense50, color = Expense) }
+                item { StatusBanner(text = state.error!!, background = MaterialTheme.colorScheme.errorContainer, color = MaterialTheme.colorScheme.error) }
             }
             if (state.exito != null) {
-                item { StatusBanner(text = state.exito!!, background = Primary50, color = Primary) }
+                item { StatusBanner(text = state.exito!!, background = MaterialTheme.colorScheme.primaryContainer, color = MaterialTheme.colorScheme.primary) }
             }
         }
     }

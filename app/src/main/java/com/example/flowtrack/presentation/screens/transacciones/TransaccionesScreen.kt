@@ -143,7 +143,7 @@ fun TransaccionesScreen(
                         Checkbox(
                             checked = aplicarATodas,
                             onCheckedChange = { aplicarATodas = it },
-                            colors = CheckboxDefaults.colors(checkedColor = Primary),
+                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary),
                         )
                         Spacer(Modifier.width(Spacing.sm))
                         Text(
@@ -174,7 +174,7 @@ fun TransaccionesScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             if (txForSheet.categoriaId == cat.id) {
-                                Icon(Icons.Outlined.Check, null, tint = Primary, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Outlined.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
@@ -302,7 +302,7 @@ private fun TransaccionesLista(
                 onValueChange = onSearchChange,
                 modifier = Modifier.weight(1f),
                 singleLine = true,
-                cursorBrush = SolidColor(Primary),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface),
                 decorationBox = { inner ->
@@ -515,7 +515,7 @@ private fun TransaccionesLista(
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(24.dp),
                                         strokeWidth = 2.dp,
-                                        color = Primary,
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
@@ -778,9 +778,9 @@ private fun TransaccionDetalle(
                         onClick = onCambiarCategoria,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Primary100),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primaryContainer),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Primary,
+                            contentColor = MaterialTheme.colorScheme.primary,
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                     ) {
@@ -915,7 +915,7 @@ private fun FiltrosSheet(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Line,
                     ),
                 )
@@ -928,7 +928,7 @@ private fun FiltrosSheet(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Line,
                     ),
                 )
@@ -965,9 +965,9 @@ private fun FiltrosSheet(
                             { Icon(Icons.Outlined.Check, null, modifier = Modifier.size(14.dp)) }
                         } else null,
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Primary.copy(alpha = 0.12f),
-                            selectedLabelColor = Primary,
-                            selectedLeadingIconColor = Primary,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.primary,
                         ),
                     )
                 }
@@ -990,7 +990,7 @@ private fun FiltrosSheet(
                 Switch(
                     checked = draftSoloSinCat,
                     onCheckedChange = { draftSoloSinCat = it; if (it) draftCategorias = emptySet() },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Primary),
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = MaterialTheme.colorScheme.primary),
                 )
             }
 
@@ -1014,7 +1014,7 @@ private fun FiltrosSheet(
                 .padding(horizontal = Spacing.xl, vertical = Spacing.lg)
                 .height(52.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         ) {
             Text("Aplicar filtros", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
@@ -1100,7 +1100,7 @@ private fun PeriodoDropdown(
                             if (opt == selected) {
                                 Icon(
                                     Icons.Outlined.Check, contentDescription = null,
-                                    tint = Primary, modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp),
                                 )
                             }
                         }
@@ -1124,7 +1124,7 @@ private fun DesignPill(
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(if (active) Primary else Line2)
+            .background(if (active) MaterialTheme.colorScheme.primary else Line2)
             .clickable(onClick = onClick)
             .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
@@ -1161,7 +1161,7 @@ private fun BancoFiltroRow(
         )
         Text(nombre, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         if (seleccionado) {
-            Icon(Icons.Outlined.Check, null, tint = Primary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Outlined.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
         }
     }
 }

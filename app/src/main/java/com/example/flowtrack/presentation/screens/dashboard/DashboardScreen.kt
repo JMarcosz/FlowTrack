@@ -82,7 +82,6 @@ import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Income50
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.TabularNumber
 import com.example.flowtrack.ui.theme.TextBody
@@ -779,7 +778,7 @@ private fun PeriodoDropdown(
                             if (opt == selected) {
                                 Icon(
                                     Icons.Outlined.Check, contentDescription = null,
-                                    tint = Primary, modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp),
                                 )
                             }
                         }

@@ -26,7 +26,6 @@ import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.TipoCuenta
 import com.example.flowtrack.presentation.components.BankLogo
-import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.TabularNumber
 
@@ -87,7 +86,7 @@ fun BancosYCuentasScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { mostrarSheet = true },
-                containerColor = Primary,
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ) { Icon(Icons.Outlined.Add, "Agregar cuenta") }
         },
@@ -96,7 +95,7 @@ fun BancosYCuentasScreen(
             is BancosEstado.Cargando -> Box(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator(color = Primary) }
+            ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
 
             is BancosEstado.Vacio -> Box(
                 Modifier.fillMaxSize().padding(padding),

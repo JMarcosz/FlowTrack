@@ -61,8 +61,6 @@ import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Income50
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Primary
-import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.TabularNumber
 import com.example.flowtrack.ui.theme.Warning
 import com.example.flowtrack.ui.theme.Warning50
@@ -106,7 +104,7 @@ fun RevisionScreen(
                         ) { Text("Cancelar") }
                         Button(
                             onClick = { viewModel.confirmar() },
-                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                         ) { Text("Confirmar (${listo.transacciones.size})", fontWeight = FontWeight.SemiBold) }
@@ -134,7 +132,7 @@ fun RevisionScreen(
 private fun LoadingContent(modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CircularProgressIndicator(color = Primary)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             Text("Analizando archivo...", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -143,7 +141,7 @@ private fun LoadingContent(modifier: Modifier) {
 @Composable
 private fun ErrorContent(mensaje: String, modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(mensaje, color = Expense, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
+        Text(mensaje, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
     }
 }
 
@@ -206,9 +204,9 @@ private fun ResumenCargaCard(estado: RevisionEstado.Listo) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(
-                    Modifier.size(40.dp).background(Primary50, RoundedCornerShape(10.dp)),
+                    Modifier.size(40.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Outlined.Description, null, tint = Primary, modifier = Modifier.size(20.dp)) }
+                ) { Icon(Icons.Outlined.Description, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)) }
                 Column {
                     Text(estado.nombreArchivo, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(estado.banco, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

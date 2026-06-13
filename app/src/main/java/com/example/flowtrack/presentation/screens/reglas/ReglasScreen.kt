@@ -63,7 +63,6 @@ import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.domain.model.TipoMatch
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,7 +113,7 @@ fun ReglasScreen(
 
             if (state.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Primary)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
                 return@Column
             }
@@ -231,7 +230,7 @@ private fun SugeridasTab(
     if (sugerencias.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.AutoAwesome, null, tint = Primary, modifier = Modifier.size(48.dp))
+                Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
                 Text("¡Todo al día!", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                 Text("No hay sugerencias pendientes de revisión.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -261,7 +260,7 @@ private fun SugerenciaCard(
     ) {
         Column(modifier = Modifier.padding(Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Icon(Icons.Default.AutoAwesome, null, tint = Primary)
+                Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary)
                 Text(sugerencia.patronDetectado, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             }
             Spacer(Modifier.height(Spacing.xs))
@@ -278,7 +277,7 @@ private fun SugerenciaCard(
                     Text("Ignorar")
                 }
                 Spacer(Modifier.width(Spacing.sm))
-                Button(onClick = onAceptar, colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
+                Button(onClick = onAceptar, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
                     Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Asignar")

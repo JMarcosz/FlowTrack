@@ -57,7 +57,7 @@ fun CategoriasScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     
@@ -77,7 +77,7 @@ fun CategoriasScreen(
                                 onDeleteClick = { viewModel.eliminarCategoria(cat.id) }
                             )
                         }
-                        item { Divider(Modifier.padding(vertical = Spacing.md)) }
+                        item { HorizontalDivider(Modifier.padding(vertical = Spacing.md)) }
                     }
 
                     item {
@@ -142,10 +142,10 @@ fun CategoriasScreen(
                         viewModel.crearCategoria(nombre, colorElegido)
                         showDialog = false
                     }
-                ) { Text("Guardar") }
+                ) { Text("Guardar", color = MaterialTheme.colorScheme.primary) }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { showDialog = false }) { Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         )
     }
@@ -160,7 +160,7 @@ fun CategoriaItemRow(categoria: CategoriaUI, canDelete: Boolean, onDeleteClick: 
         ) {
             Box(modifier = Modifier.size(16.dp).background(categoria.color, CircleShape))
             Spacer(Modifier.width(Spacing.md))
-            Text(categoria.nombre, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(categoria.nombre, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
             
             if (canDelete) {
                 IconButton(onClick = onDeleteClick) {

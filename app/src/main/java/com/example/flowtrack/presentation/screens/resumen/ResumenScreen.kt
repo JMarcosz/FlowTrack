@@ -59,7 +59,6 @@ import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.TabularNumber

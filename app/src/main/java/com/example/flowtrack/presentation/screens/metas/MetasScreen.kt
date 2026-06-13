@@ -61,14 +61,14 @@ fun MetasScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { mostrarSheet = true },
-                containerColor = Primary,
-                contentColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) { Icon(Icons.Outlined.Add, "Nueva meta") }
         },
     ) { padding ->
         when {
             state.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Primary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
 
             state.metas.isEmpty() -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
@@ -127,7 +127,7 @@ fun MetasScreen(
 
 @Composable
 private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit) {
-    val ringColor = if (meta.completada) Success else Primary
+    val ringColor = if (meta.completada) Success else MaterialTheme.colorScheme.primary
     var confirmar by remember { mutableStateOf(false) }
 
     if (confirmar) {
@@ -202,7 +202,7 @@ private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (!meta.completada) {
                     IconButton(onClick = onDepositar, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Outlined.Add, "Depositar", tint = Primary, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Outlined.Add, "Depositar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     }
                 }
                 IconButton(onClick = { confirmar = true }, modifier = Modifier.size(36.dp)) {
@@ -241,13 +241,13 @@ private fun DepositoSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Primary, unfocusedBorderColor = Line),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
             )
             Button(
                 onClick = { monto.trim().toBigDecimalOrNull()?.let { onDepositar(it) } },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 enabled = monto.trim().toBigDecimalOrNull() != null,
             ) { Text("Agregar", fontWeight = FontWeight.SemiBold) }
         }
@@ -276,7 +276,7 @@ private fun NuevaMetaSheet(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Primary, unfocusedBorderColor = Line),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
         )
 
         OutlinedTextField(
@@ -287,7 +287,7 @@ private fun NuevaMetaSheet(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Primary, unfocusedBorderColor = Line),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
         )
 
         Text("Elige un emoji", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
@@ -297,7 +297,7 @@ private fun NuevaMetaSheet(
                     modifier = Modifier
                         .size(44.dp)
                         .background(
-                            if (emoji == emojiSel) Primary.copy(alpha = 0.12f) else Line2,
+                            if (emoji == emojiSel) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
                             RoundedCornerShape(10.dp),
                         )
                         .clickable { emojiSel = emoji },
@@ -314,7 +314,7 @@ private fun NuevaMetaSheet(
                 onClick = { monto.trim().toBigDecimalOrNull()?.let { onGuardar(nombre, emojiSel, it) } },
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 enabled = nombre.isNotBlank() && monto.trim().toBigDecimalOrNull() != null,
             ) { Text("Crear meta", fontWeight = FontWeight.SemiBold) }
         }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -93,19 +94,31 @@ fun MerchantLogo(
     fontSize: Int = 13,
 ) {
     val merchant = remember(descripcionNormalizada) { merchantPorDescripcion(descripcionNormalizada) }
+    
+    // Si el merchant usa los colores primarios base, los hacemos dinámicos
+    val isDefaultPrimary = merchant.bg == Primary50 || merchant.bg == Primary600
+    val backgroundColor = if (isDefaultPrimary) {
+        if (merchant.bg == Primary50) MaterialTheme.colorScheme.primaryContainer 
+        else MaterialTheme.colorScheme.primary
+    } else merchant.bg
+    
+    val foregroundColor = if (isDefaultPrimary) {
+        if (merchant.fg == Primary600) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onPrimary
+    } else merchant.fg
 
     Box(
         modifier = modifier
             .size(size)
             .clip(RoundedCornerShape(13.dp))
-            .background(merchant.bg),
+            .background(backgroundColor),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = merchant.abbr,
             fontSize = fontSize.sp,
             fontWeight = FontWeight.Bold,
-            color = merchant.fg,
+            color = foregroundColor,
             letterSpacing = (-0.3).sp,
         )
     }

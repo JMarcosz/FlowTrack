@@ -15,49 +15,36 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SugerenciasScreen(viewModel: SugerenciasViewModel = hiltViewModel()) {
+fun SugerenciasScreen(
+    navController: NavController,
+    viewModel: SugerenciasViewModel = hiltViewModel()
+) {
     val state by viewModel.state.collectAsState()
     
     var showCategorySheetFor by remember { mutableStateOf<ReglaSugerida?>(null) }
@@ -67,6 +54,11 @@ fun SugerenciasScreen(viewModel: SugerenciasViewModel = hiltViewModel()) {
         topBar = {
             TopAppBar(
                 title = { Text("Asistente de Categorización", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                 windowInsets = WindowInsets(0, 0, 0, 0),
             )
@@ -74,18 +66,19 @@ fun SugerenciasScreen(viewModel: SugerenciasViewModel = hiltViewModel()) {
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (state.isLoading && state.sugerencias.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             } else if (state.sugerencias.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center).padding(Spacing.lg),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     Spacer(Modifier.height(Spacing.md))
                     Text(
                         "¡Todo al día!",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "El modelo no tiene nuevas sugerencias para agrupar tus gastos en este momento.",
@@ -124,15 +117,17 @@ fun SugerenciasScreen(viewModel: SugerenciasViewModel = hiltViewModel()) {
     if (showCategorySheetFor != null) {
         ModalBottomSheet(
             onDismissRequest = { showCategorySheetFor = null },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
-            Column(modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
+            Column(modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm).padding(bottom = 32.dp)) {
                 Text(
                     "Elige la categoría para '${showCategorySheetFor!!.patronDetectado}'",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Divider(modifier = Modifier.padding(vertical = Spacing.sm))
+                HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
                 
                 LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
                     items(categoriaRegistry.values.toList()) { cat ->
@@ -141,7 +136,8 @@ fun SugerenciasScreen(viewModel: SugerenciasViewModel = hiltViewModel()) {
                                 viewModel.aceptarSugerencia(showCategorySheetFor!!, cat.id)
                                 showCategorySheetFor = null
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color.Transparent
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = Spacing.sm),
@@ -149,7 +145,7 @@ fun SugerenciasScreen(viewModel: SugerenciasViewModel = hiltViewModel()) {
                             ) {
                                 Box(modifier = Modifier.size(16.dp).background(cat.color, CircleShape))
                                 Spacer(Modifier.width(Spacing.md))
-                                Text(cat.nombre, style = MaterialTheme.typography.bodyLarge)
+                                Text(cat.nombre, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -164,7 +160,7 @@ fun SugerenciaItem(sugerencia: ReglaSugerida, onAceptarClick: () -> Unit, onRech
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -173,12 +169,13 @@ fun SugerenciaItem(sugerencia: ReglaSugerida, onAceptarClick: () -> Unit, onRech
                 Text(
                     text = "Patrón: ${sugerencia.patronDetectado}",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(Modifier.height(Spacing.xs))
             Text(
-                text = "Hemos encontrado ${sugerencia.muestras.size} transacciones similares sin categorizar (Confianza: ${"%.1f".format(sugerencia.confianzaCluster)}%).",
+                text = "Hemos encontrado ${sugerencia.muestras.size} transacciones similares sin categorizar (Confianza: ${"%.0f".format(sugerencia.confianzaCluster)}%).",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -190,7 +187,10 @@ fun SugerenciaItem(sugerencia: ReglaSugerida, onAceptarClick: () -> Unit, onRech
                     Text("Ignorar")
                 }
                 Spacer(Modifier.width(Spacing.sm))
-                Button(onClick = onAceptarClick) {
+                Button(
+                    onClick = onAceptarClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Asignar Categoría")
