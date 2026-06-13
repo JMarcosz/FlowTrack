@@ -1,15 +1,34 @@
 package com.example.flowtrack.presentation.screens.conversor
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,8 +44,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.flowtrack.data.firestore.repositories.TasaCambio
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.domain.model.TasaCambio
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Line2
+import com.example.flowtrack.ui.theme.Muted2
+import com.example.flowtrack.ui.theme.Primary
+import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.Success
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -131,10 +155,10 @@ fun ConversorScreen(viewModel: ConversorViewModel = hiltViewModel()) {
 
 @Composable
 private fun TasaHistoricoChart(historico: List<TasaCambio>) {
-    val ventas = historico.map { it.venta }
+    val ventas = historico.map { it.venta.toFloat() }
     val minVal = ventas.min()
     val maxVal = ventas.max()
-    val rango = (maxVal - minVal).takeIf { it > 0.0 } ?: 1.0
+    val rango = (maxVal - minVal).takeIf { it > 0f } ?: 1f
     val lineColor = Primary
     val gridColor = Line2
 

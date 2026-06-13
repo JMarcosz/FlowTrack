@@ -14,10 +14,20 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,14 +35,37 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Error
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +73,21 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.presentation.components.bancoPorCodigo
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.BgCard
+import com.example.flowtrack.ui.theme.BgScreen
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Expense50
+import com.example.flowtrack.ui.theme.Ink
+import com.example.flowtrack.ui.theme.Line
+import com.example.flowtrack.ui.theme.Line2
+import com.example.flowtrack.ui.theme.Muted
+import com.example.flowtrack.ui.theme.Primary
+import com.example.flowtrack.ui.theme.Primary50
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.Success
+import com.example.flowtrack.ui.theme.Success50
+import com.example.flowtrack.ui.theme.TextBody
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -53,11 +100,20 @@ fun UploadScreen(
 ) {
     val estado by viewModel.estado.collectAsState()
     val bancoSeleccionado by viewModel.bancoSeleccionado.collectAsState()
+    val dialogoClave by viewModel.dialogoClave.collectAsState()
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { viewModel.procesarArchivo(it) }
+    }
+
+    dialogoClave?.let { dialogo ->
+        DocumentoProtegidoDialog(
+            estado = dialogo,
+            onDesbloquear = viewModel::desbloquearDocumento,
+            onCancelar = viewModel::cancelarDesbloqueo,
+        )
     }
 
     Scaffold(
@@ -113,6 +169,127 @@ fun UploadScreen(
             }
         }
     }
+}
+
+@Composable
+private fun DocumentoProtegidoDialog(
+    estado: DialogoClaveEstado,
+    onDesbloquear: (String) -> Unit,
+    onCancelar: () -> Unit,
+) {
+    var clave by remember { mutableStateOf("") }
+    var mostrarClave by remember { mutableStateOf(false) }
+
+    fun confirmar() {
+        if (estado.procesando) return
+        val claveActual = clave
+        clave = ""
+        onDesbloquear(claveActual)
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            clave = ""
+            if (!estado.procesando) onCancelar()
+        },
+        icon = {
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = null,
+                tint = Primary,
+            )
+        },
+        title = {
+            Text(
+                text = "Documento protegido",
+                fontWeight = FontWeight.SemiBold,
+                color = Ink,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Text(
+                    text = "Este archivo está cifrado. Ingresa la clave para continuar con la importación.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Muted,
+                )
+                OutlinedTextField(
+                    value = clave,
+                    onValueChange = { clave = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !estado.procesando,
+                    singleLine = true,
+                    label = { Text("Clave del documento") },
+                    isError = estado.errorMensaje != null,
+                    supportingText = estado.errorMensaje?.let { mensaje ->
+                        { Text(mensaje) }
+                    },
+                    visualTransformation = if (mostrarClave) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { confirmar() }),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { mostrarClave = !mostrarClave },
+                            enabled = !estado.procesando,
+                        ) {
+                            Icon(
+                                imageVector = if (mostrarClave) {
+                                    Icons.Outlined.VisibilityOff
+                                } else {
+                                    Icons.Outlined.Visibility
+                                },
+                                contentDescription = if (mostrarClave) {
+                                    "Ocultar clave"
+                                } else {
+                                    "Mostrar clave"
+                                },
+                            )
+                        }
+                    },
+                )
+                if (estado.procesando) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Text(
+                            text = "Desbloqueando...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Muted,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = ::confirmar,
+                enabled = clave.isNotBlank() && !estado.procesando,
+            ) {
+                Text("Desbloquear")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    clave = ""
+                    onCancelar()
+                },
+                enabled = !estado.procesando,
+            ) {
+                Text("Cancelar")
+            }
+        },
+        containerColor = BgCard,
+    )
 }
 
 // ─── Formulario de selección ──────────────────────────────────────────────────

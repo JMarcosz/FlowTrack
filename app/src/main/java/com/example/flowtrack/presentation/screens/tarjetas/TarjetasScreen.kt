@@ -5,7 +5,20 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -20,13 +33,29 @@ import androidx.compose.material.icons.outlined.CreditCardOff
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -37,19 +66,33 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.flowtrack.core.extensions.formatDate
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.core.extensions.toBigDecimalSafe
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
-import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.Tarjeta
 import com.example.flowtrack.presentation.components.BankBadge
 import com.example.flowtrack.presentation.components.CreditCardShimmerItem
 import com.example.flowtrack.presentation.components.EmptyState
-import com.example.flowtrack.presentation.components.bankBadge
 import com.example.flowtrack.presentation.components.bancoPorCodigo
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.presentation.components.bankBadge
+import com.example.flowtrack.ui.theme.BgCard
+import com.example.flowtrack.ui.theme.BgScreen
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Ink
+import com.example.flowtrack.ui.theme.Line
+import com.example.flowtrack.ui.theme.Line2
+import com.example.flowtrack.ui.theme.Muted
+import com.example.flowtrack.ui.theme.Muted2
+import com.example.flowtrack.ui.theme.Primary
+import com.example.flowtrack.ui.theme.Primary50
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.Success
+import com.example.flowtrack.ui.theme.Success50
+import com.example.flowtrack.ui.theme.TabularNumber
+import com.example.flowtrack.ui.theme.Warning
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 private val BANCOS_TARJETA = listOf("BANRESERVAS", "POPULAR", "QIK", "CIBAO", "BHD", "OTRO")
 private val ZONA = ZoneId.of("America/Santo_Domingo")
@@ -397,6 +440,7 @@ fun WhiteCreditCard(
                         fontWeight = FontWeight.Bold,
                         color = Expense,
                         letterSpacing = (-0.4).sp,
+                        style = TabularNumber,
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
@@ -407,6 +451,7 @@ fun WhiteCreditCard(
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Ink,
+                        style = TabularNumber,
                     )
                 }
             }
@@ -445,6 +490,7 @@ fun WhiteCreditCard(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Ink,
+                    style = TabularNumber,
                 )
             }
 
@@ -501,9 +547,9 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
             )
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(formatMoney(snap.pagoTotal), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense)
+            Text(formatMoney(snap.pagoTotal), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense, style = TabularNumber)
             Box(
-                modifier = androidx.compose.ui.Modifier
+                modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(urgenciaColor.copy(alpha = 0.12f))
                     .padding(horizontal = 6.dp, vertical = 2.dp),
@@ -565,6 +611,7 @@ private fun OtraTarjetaRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap?) {
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = Ink,
+            style = TabularNumber,
         )
         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Muted2, modifier = Modifier.size(16.dp))
     }
@@ -593,6 +640,7 @@ private fun HistorialRow(snap: EstadoTarjetaSnap) {
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = Expense,
+            style = TabularNumber,
         )
     }
 }

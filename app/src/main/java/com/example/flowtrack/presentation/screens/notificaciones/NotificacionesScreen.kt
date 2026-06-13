@@ -32,16 +32,26 @@ fun NotificacionesScreen(
 ) {
     val config by viewModel.config.collectAsState()
     val context = LocalContext.current
+    var pruebaPendiente by remember { mutableStateOf(false) }
 
     val permisoLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { /* el usuario decidió; los toggles ya están persistidos igual */ }
+    ) { granted ->
+        if (granted && pruebaPendiente) {
+            pruebaPendiente = false
+            viewModel.probarNotificacion()
+        } else {
+            pruebaPendiente = false
+        }
+    }
 
-    fun pedirPermisoSiHaceFalta() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            !NotificationHelper.puedeNotificar(context)
+    fun pedirPermisoSiHaceFalta(continuarPrueba: Boolean = false) {
+        if (!NotificationHelper.puedeNotificar(context)
         ) {
+            pruebaPendiente = continuarPrueba
             permisoLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (continuarPrueba) {
+            viewModel.probarNotificacion()
         }
     }
 
@@ -93,7 +103,7 @@ fun NotificacionesScreen(
 
                 Spacer(Modifier.height(Spacing.lg))
                 OutlinedButton(
-                    onClick = { pedirPermisoSiHaceFalta(); viewModel.probarNotificacion() },
+                    onClick = { pedirPermisoSiHaceFalta(continuarPrueba = true) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md),
                 ) {
                     Icon(Icons.Outlined.NotificationsActive, null, modifier = Modifier.size(18.dp))

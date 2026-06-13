@@ -3,14 +3,49 @@ package com.example.flowtrack.presentation.screens.dashboard
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,14 +64,32 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.usecase.DatosBancoResumen
-import com.example.flowtrack.domain.usecase.DeltaMetrica
 import com.example.flowtrack.domain.usecase.ResumenDashboard
-import com.example.flowtrack.domain.usecase.ResultadoComparacion
-import com.example.flowtrack.presentation.components.*
+import com.example.flowtrack.presentation.components.BancoUI
+import com.example.flowtrack.presentation.components.DonutChart
+import com.example.flowtrack.presentation.components.DonutSlice
+import com.example.flowtrack.presentation.components.ErrorState
+import com.example.flowtrack.presentation.components.Sparkline
+import com.example.flowtrack.presentation.components.bancoPorCodigo
+import com.example.flowtrack.presentation.components.categoriaPorId
+import com.example.flowtrack.presentation.components.shimmerEffect
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.BgCard
+import com.example.flowtrack.ui.theme.BgScreen
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Expense50
+import com.example.flowtrack.ui.theme.Income
+import com.example.flowtrack.ui.theme.Income50
+import com.example.flowtrack.ui.theme.Ink
+import com.example.flowtrack.ui.theme.Line
+import com.example.flowtrack.ui.theme.Line2
+import com.example.flowtrack.ui.theme.Muted
+import com.example.flowtrack.ui.theme.Muted2
+import com.example.flowtrack.ui.theme.Primary
+import com.example.flowtrack.ui.theme.Success
+import com.example.flowtrack.ui.theme.TabularNumber
+import com.example.flowtrack.ui.theme.TextBody
 import java.math.BigDecimal
-import kotlin.math.abs
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -322,6 +375,7 @@ private fun DashboardContent(
                                             formatMoney(dc.monto),
                                             fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                                             color = Ink,
+                                            style = TabularNumber,
                                         )
                                     }
                                 }
@@ -443,6 +497,7 @@ private fun DashStatCard(
                 color         = Ink,
                 maxLines      = 1,
                 overflow      = TextOverflow.Ellipsis,
+                style        = TabularNumber,
             )
 
             // Footer: delta % + sparkline
@@ -530,6 +585,7 @@ private fun BalanceNetoCard(
                     fontWeight    = FontWeight.Bold,
                     letterSpacing = (-0.6).sp,
                     color         = Ink,
+                    style         = TabularNumber,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 DeltaBadge(
@@ -666,12 +722,14 @@ private fun BancoRow(banco: BancoUI, datos: DatosBancoResumen) {
                 Text(
                     "- ${formatMoney(datos.gastos)}",
                     fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense,
+                    style = TabularNumber,
                 )
             }
             if (datos.ingresos > BigDecimal.ZERO) {
                 Text(
                     "+ ${formatMoney(datos.ingresos)}",
                     fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Income,
+                    style = TabularNumber,
                 )
             }
         }

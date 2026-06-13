@@ -20,6 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.presentation.components.CategoriaUI
+import com.example.flowtrack.ui.theme.CatAlimentacion
+import com.example.flowtrack.ui.theme.CatCompras
+import com.example.flowtrack.ui.theme.CatOtros
+import com.example.flowtrack.ui.theme.CatPagos
+import com.example.flowtrack.ui.theme.CatServicios
 import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,8 +102,8 @@ fun CategoriasScreen(
 
     if (showDialog) {
         var nombre by remember { mutableStateOf("") }
-        var colorElegido by remember { mutableStateOf(Color(0xFFE91E63)) }
-        val paleta = listOf(Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF3F51B5), Color(0xFF009688), Color(0xFFFF9800))
+        var colorElegido by remember { mutableStateOf(CatCompras) }
+        val paleta = listOf(CatCompras, CatServicios, CatPagos, CatAlimentacion, CatOtros)
 
         AlertDialog(
             onDismissRequest = { showDialog = false },

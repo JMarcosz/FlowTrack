@@ -32,13 +32,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.R
 import com.example.flowtrack.presentation.navigation.Screen
+import com.example.flowtrack.ui.theme.BgDark
+import com.example.flowtrack.ui.theme.Expense
+import com.example.flowtrack.ui.theme.Ink
+import com.example.flowtrack.ui.theme.Muted
+import com.example.flowtrack.ui.theme.Primary
+import com.example.flowtrack.ui.theme.Primary100
+import com.example.flowtrack.ui.theme.Primary600
 
 // ── Colores exclusivos de la pantalla de login ───────────────────
-private val BgLogin       = Color(0xFF06090F)
-private val BtnDark       = Color(0xFF0B1220)
-private val GlowBlue      = Color(0xFF2F6FED)
-private val LogoBlue      = Color(0xFF5E8BFF)
-private val LogoBlueLight = Color(0xFF7DA5FF)
+private val BgLogin       = BgDark
 
 @Composable
 fun LoginScreen(
@@ -98,7 +101,7 @@ fun LoginScreen(
         if (uiState is LoginUiState.Error) {
             Text(
                 text = (uiState as LoginUiState.Error).message,
-                color = Color(0xFFFF5C5C),
+                color = Expense,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 12.dp),
@@ -115,7 +118,7 @@ fun LoginScreen(
                 .background(Color.White)
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = ripple(color = BtnDark.copy(alpha = 0.08f)),
+                    indication = ripple(color = Ink.copy(alpha = 0.08f)),
                     enabled = !isLoading,
                 ) {
                     val clientId = context.getString(R.string.default_web_client_id)
@@ -130,16 +133,16 @@ fun LoginScreen(
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
-                        color = BtnDark.copy(alpha = 0.55f),
+                        color = Ink.copy(alpha = 0.55f),
                         strokeWidth = 2.5.dp,
-                        trackColor = BtnDark.copy(alpha = 0.12f),
+                        trackColor = Ink.copy(alpha = 0.12f),
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = "Conectando…",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF64748B),
+                        color = Muted,
                     )
                 }
             } else {
@@ -158,7 +161,7 @@ fun LoginScreen(
                         text = "Continuar con Google",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = BtnDark,
+                        color = Ink,
                     )
                 }
             }
@@ -207,9 +210,9 @@ private fun LogoBox() {
                 drawRect(
                     brush = Brush.radialGradient(
                         colorStops = arrayOf(
-                            0.00f to Color(0xFF2F6FED).copy(alpha = 0.60f),
-                            0.38f to Color(0xFF2F6FED).copy(alpha = 0.28f),
-                            0.65f to Color(0xFF2F6FED).copy(alpha = 0.09f),
+                            0.00f to Primary.copy(alpha = 0.60f),
+                            0.38f to Primary.copy(alpha = 0.28f),
+                            0.65f to Primary.copy(alpha = 0.09f),
                             1.00f to Color.Transparent,
                         ),
                         center = Offset(cx, cy),
@@ -225,9 +228,9 @@ private fun LogoBox() {
                 drawRect(
                     brush = Brush.radialGradient(
                         colorStops = arrayOf(
-                            0.00f to Color(0x60508AFF),
-                            0.60f to Color(0x9914285A),
-                            1.00f to Color(0xFF0B1220),
+                            0.00f to Primary.copy(alpha = 0.38f),
+                            0.60f to Primary600.copy(alpha = 0.60f),
+                            1.00f to BgDark,
                         ),
                         center = Offset(size.width * 0.20f, size.height * 0.20f),
                         radius = size.width * 1.20f,
@@ -255,7 +258,7 @@ private fun ChartIcon() {
 
         // Círculo exterior semitransparente
         drawCircle(
-            color = LogoBlue.copy(alpha = 0.5f),
+            color = Primary.copy(alpha = 0.5f),
             radius = 32f * s,
             center = Offset(46f * s, 46f * s),
             style = Stroke(width = 2.4f * s),
@@ -269,15 +272,15 @@ private fun ChartIcon() {
                 lineTo(52f * s, 52f * s)
                 lineTo(66f * s, 30f * s)
             },
-            color = LogoBlueLight,
+            color = Primary100,
             style = Stroke(width = 3f * s, cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
 
         // Puntos en cada vértice
-        drawCircle(color = LogoBlueLight, radius = 3f * s, center = Offset(28f * s, 60f * s))
-        drawCircle(color = LogoBlueLight, radius = 3f * s, center = Offset(40f * s, 46f * s))
-        drawCircle(color = LogoBlueLight, radius = 3f * s, center = Offset(52f * s, 52f * s))
-        drawCircle(color = LogoBlue,      radius = 4f * s, center = Offset(66f * s, 30f * s))
+        drawCircle(color = Primary100, radius = 3f * s, center = Offset(28f * s, 60f * s))
+        drawCircle(color = Primary100, radius = 3f * s, center = Offset(40f * s, 46f * s))
+        drawCircle(color = Primary100, radius = 3f * s, center = Offset(52f * s, 52f * s))
+        drawCircle(color = Primary,      radius = 4f * s, center = Offset(66f * s, 30f * s))
 
         // Flecha hacia arriba
         drawPath(
@@ -286,7 +289,7 @@ private fun ChartIcon() {
                 lineTo(66f * s, 24f * s)
                 lineTo(72f * s, 30f * s)
             },
-            color = LogoBlue,
+            color = Primary,
             style = Stroke(width = 2.2f * s, cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }

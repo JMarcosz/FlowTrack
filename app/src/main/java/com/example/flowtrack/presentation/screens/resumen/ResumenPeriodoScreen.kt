@@ -109,7 +109,7 @@ private fun TotalCard(titulo: String, monto: BigDecimal, color: androidx.compose
             Text(titulo, style = MaterialTheme.typography.bodySmall, color = Muted)
             Text(
                 formatMoney(monto, withSign = false),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.merge(TabularNumber),
                 fontWeight = FontWeight.Bold,
                 color = color,
             )
@@ -132,10 +132,10 @@ private fun BucketRow(bucket: BucketResumen) {
             Text(bucket.etiqueta, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End) {
                 Text(formatMoney(bucket.balance, withSign = true),
-                    style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyLarge.merge(TabularNumber), fontWeight = FontWeight.SemiBold,
                     color = if (bucket.balance >= BigDecimal.ZERO) Income else Expense)
                 Text("+${formatMoney(bucket.ingresos)} · -${formatMoney(bucket.gastos)}",
-                    style = MaterialTheme.typography.bodySmall, color = Muted)
+                    style = MaterialTheme.typography.bodySmall.merge(TabularNumber), color = Muted)
             }
         }
     }

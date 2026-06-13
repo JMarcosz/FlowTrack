@@ -3,29 +3,32 @@ package com.example.flowtrack.presentation.screens.configuracion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.CurrencyExchange
 import androidx.compose.material.icons.outlined.DeleteForever
-import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.PictureAsPdf
-import androidx.compose.material.icons.outlined.Savings
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -36,7 +39,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -72,7 +74,6 @@ import com.example.flowtrack.ui.theme.BgCard
 import com.example.flowtrack.ui.theme.BgScreen
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Ink
-import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Muted2
@@ -81,12 +82,12 @@ import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.google.firebase.auth.FirebaseAuth
-import java.math.BigDecimal
+import kotlinx.coroutines.delay
 import java.time.LocalDate
+import kotlin.time.Duration.Companion.milliseconds
 
 private val FORMATOS_FECHA = listOf("dd/MM/yyyy", "yyyy-MM-dd", "dd-MM-yyyy")
 private val FORMATOS_MONEDA = listOf("RD$ 0.00", "0.00 RD$", "$0.00")
-private val MONTO_MUESTRA = BigDecimal("1234.56")
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -105,7 +106,7 @@ fun ConfiguracionScreen(
 
     LaunchedEffect(state.error, state.exito) {
         if (state.error != null || state.exito != null) {
-            kotlinx.coroutines.delay(3000)
+            delay(3000.milliseconds)
             viewModel.clearMensajes()
         }
     }
@@ -286,36 +287,8 @@ fun ConfiguracionScreen(
                 HorizontalDivider(color = Line2)
                 SettingsRow(
                     icon = Icons.Filled.FileDownload,
-                    label = "Exportar a Excel",
-                    onClick = { viewModel.exportarDatosCsv() },
-                    trailing = {
-                        if (state.isExporting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = Primary,
-                            )
-                        } else {
-                            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Muted2)
-                        }
-                    },
-                )
-                HorizontalDivider(color = Line2)
-                SettingsRow(
-                    icon = Icons.Outlined.PictureAsPdf,
-                    label = "Exportar a PDF",
-                    onClick = { viewModel.exportarPdf() },
-                    trailing = {
-                        if (state.isExportingPdf) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = Primary,
-                            )
-                        } else {
-                            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Muted2)
-                        }
-                    },
+                    label = "Exportar estados",
+                    onClick = { navController.navigate(Screen.Exportar.route) },
                 )
             }
 

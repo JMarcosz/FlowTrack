@@ -7,7 +7,6 @@ import com.example.flowtrack.ui.theme.BancoCibao
 import com.example.flowtrack.ui.theme.BancoPopular
 import com.example.flowtrack.ui.theme.BancoQik
 import com.example.flowtrack.ui.theme.BgDark
-import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Muted2
 
 // Metadata completa de cada banco — fuente única de verdad para color, abreviatura y fg.
@@ -24,7 +23,7 @@ val bancoRegistry: Map<String, BancoUI> = listOf(
     BancoUI("POPULAR",     "Banco Popular",        BancoPopular,     abbr = "BP"),
     BancoUI("QIK",         "Qik",                 BancoQik,         abbr = "QIK", fgColor = BgDark),
     BancoUI("CIBAO",       "Asociación Cibao",    BancoCibao,       abbr = "AC"),
-    BancoUI("BHD",         "BHD (próximamente)",  BancoBhd,         abbr = "BHD"),
+    BancoUI("BHD",         "BHD León",            BancoBhd,         abbr = "BHD"),
 ).associateBy { it.codigo }
 
 fun bancoPorCodigo(codigo: String): BancoUI =

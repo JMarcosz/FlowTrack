@@ -5,17 +5,55 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,13 +74,15 @@ import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
-import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Muted2
+import com.example.flowtrack.ui.theme.Neutral100
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.Success50
 import com.example.flowtrack.ui.theme.TextBody
 import com.example.flowtrack.ui.theme.Warning
+import com.example.flowtrack.ui.theme.Warning50
+import com.example.flowtrack.ui.theme.Warning900
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -242,16 +282,16 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                     }
 
                     if (carga.advertencias.isNotEmpty()) {
-                        Surface(color = Color(0xFFFFF7ED), shape = RoundedCornerShape(8.dp)) {
+                        Surface(color = Warning50, shape = RoundedCornerShape(8.dp)) {
                             Column(Modifier.fillMaxWidth().padding(8.dp)) {
                                 carga.advertencias.forEach { adv ->
-                                    Text("• $adv", style = MaterialTheme.typography.bodySmall, color = Color(0xFF92400E))
+                                    Text("• $adv", style = MaterialTheme.typography.bodySmall, color = Warning900)
                                 }
                             }
                         }
                     }
 
-                    if (carga.estado != com.example.flowtrack.domain.model.EstadoCarga.ELIMINADO) {
+                    if (carga.estado != EstadoCarga.ELIMINADO) {
                         OutlinedButton(
                             onClick = { confirmarEliminar = true },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Expense),
@@ -276,9 +316,9 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
 private fun EstadoBadge(estado: EstadoCarga) {
     val (bgColor, textColor, texto) = when (estado) {
         EstadoCarga.EXITOSO  -> Triple(Success50, Success, "Exitoso")
-        EstadoCarga.PARCIAL  -> Triple(Color(0xFFFFF7ED), Warning, "Parcial")
+        EstadoCarga.PARCIAL  -> Triple(Warning50, Warning, "Parcial")
         EstadoCarga.FALLIDO  -> Triple(Expense50, Expense, "Fallido")
-        EstadoCarga.ELIMINADO -> Triple(Color(0xFFE5E7EB), Muted2, "Eliminado")
+        EstadoCarga.ELIMINADO -> Triple(Neutral100, Muted2, "Eliminado")
     }
     Box(
         Modifier.clip(RoundedCornerShape(20.dp)).background(bgColor).padding(horizontal = 8.dp, vertical = 3.dp),

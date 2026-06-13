@@ -22,6 +22,7 @@ import com.example.flowtrack.presentation.screens.categorias.CategoriasScreen
 import com.example.flowtrack.presentation.screens.bancos.BancosYCuentasScreen
 import com.example.flowtrack.presentation.screens.reglas.ReglasScreen
 import com.example.flowtrack.presentation.screens.configuracion.ConfiguracionScreen
+import com.example.flowtrack.presentation.screens.exportar.ExportarScreen
 import com.example.flowtrack.presentation.screens.conversor.ConversorScreen
 import com.example.flowtrack.presentation.screens.notificaciones.NotificacionesScreen
 import com.example.flowtrack.presentation.screens.perfil.PerfilScreen
@@ -47,6 +48,7 @@ sealed class Screen(val route: String) {
     object ResumenPeriodo  : Screen("resumen_periodo")
     object Tarjetas        : Screen("tarjetas")
     object Configuracion   : Screen("configuracion")
+    object Exportar        : Screen("exportar")
     object Upload          : Screen("upload")
     object Historial       : Screen("historial")
     object Revision        : Screen("revision")
@@ -76,6 +78,7 @@ private val fadeSpec = tween<Float>(durationMillis = 240)
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
     startDestination: String         = Screen.Login.route,
+    initialRoute: String? = null,
 ) {
     val backStack  = navController.currentBackStackEntryAsState()
     val showBottom = backStack.value?.destination?.route in bottomNavRoutes
@@ -85,6 +88,17 @@ fun AppNavGraph(
         scope.launch { drawerState.open() }
     }
     val currentRoute = backStack.value?.destination?.route
+
+    LaunchedEffect(initialRoute) {
+        initialRoute?.let { route ->
+            if (currentRoute != route) {
+                navController.navigate(route) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -128,6 +142,7 @@ fun AppNavGraph(
                 composable(Screen.ResumenPeriodo.route) { ResumenPeriodoScreen(navController) }
                 composable(Screen.Tarjetas.route)      { TarjetasScreen(onMenuClick = openDrawer) }
                 composable(Screen.Configuracion.route) { ConfiguracionScreen(navController, onMenuClick = openDrawer) }
+                composable(Screen.Exportar.route)     { ExportarScreen(navController) }
                 composable(Screen.Upload.route)        { UploadScreen(navController) }
                 composable(Screen.Historial.route)     { HistorialScreen(navController) }
                 composable(Screen.Revision.route)      { RevisionScreen(navController) }

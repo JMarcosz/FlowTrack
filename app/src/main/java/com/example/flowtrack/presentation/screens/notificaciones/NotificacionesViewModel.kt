@@ -3,6 +3,7 @@ package com.example.flowtrack.presentation.screens.notificaciones
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.flowtrack.core.notifications.NotificacionAlarmScheduler
 import com.example.flowtrack.core.workers.NotificacionScheduler
 import com.example.flowtrack.data.firestore.repositories.NotificacionConfigRepository
 import com.example.flowtrack.domain.model.NotificacionConfig
@@ -19,6 +20,7 @@ import javax.inject.Inject
 class NotificacionesViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val repository: NotificacionConfigRepository,
+    private val alarmScheduler: NotificacionAlarmScheduler,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -29,7 +31,10 @@ class NotificacionesViewModel @Inject constructor(
         val uid = auth.currentUser?.uid
         if (uid != null) {
             viewModelScope.launch {
-                repository.observar(uid).collectLatest { _config.value = it }
+                repository.observar(uid).collectLatest { config ->
+                    _config.value = config
+                    alarmScheduler.sincronizar(uid)
+                }
             }
         }
     }
@@ -40,7 +45,7 @@ class NotificacionesViewModel @Inject constructor(
         _config.value = nueva // optimista
         viewModelScope.launch {
             repository.guardar(nueva)
-            NotificacionScheduler.aplicar(context, nueva)
+            alarmScheduler.sincronizar(uid)
         }
     }
 

@@ -3,11 +3,10 @@ package com.example.flowtrack.presentation.screens.upload
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.ProductoTipo
-import com.example.flowtrack.domain.usecases.carga.ProcesarArchivoUseCase
-import com.example.flowtrack.domain.usecases.carga.ResultadoImportacion
+import com.example.flowtrack.domain.usecase.ProcesarArchivoUseCase
+import com.example.flowtrack.domain.usecase.ResultadoImportacion
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,14 +23,22 @@ data class BancoOpcion(
     val productoTipo: ProductoTipo,
     val formatoLabel: String,
     val disponible: Boolean = true,
+    val formatos: Set<FileFormat> = setOf(formato),
 )
 
 val BANCOS_DISPONIBLES = listOf(
     BancoOpcion("BANRESERVAS", "BanReservas",      FileFormat.PDF, ProductoTipo.CUENTA,   "PDF"),
-    BancoOpcion("POPULAR",     "Banco Popular",    FileFormat.CSV, ProductoTipo.CUENTA,   "CSV"),
+    BancoOpcion(
+        "POPULAR",
+        "Banco Popular",
+        FileFormat.CSV,
+        ProductoTipo.CUENTA,
+        "CSV o PDF",
+        formatos = setOf(FileFormat.CSV, FileFormat.PDF),
+    ),
     BancoOpcion("QIK",         "Qik",              FileFormat.PDF, ProductoTipo.TARJETA,  "PDF"),
     BancoOpcion("CIBAO",       "Asociación Cibao", FileFormat.XLS, ProductoTipo.TARJETA,  "XLS"),
-    BancoOpcion("BHD",         "BHD León",         FileFormat.PDF, ProductoTipo.CUENTA,   "PDF", disponible = false),
+    BancoOpcion("BHD",         "BHD León",         FileFormat.PDF, ProductoTipo.CUENTA,   "PDF"),
 )
 
 @HiltViewModel
@@ -40,8 +47,19 @@ class UploadViewModel @Inject constructor(
     private val auth: FirebaseAuth,
 ) : ViewModel() {
 
+    private data class ImportacionPendiente(
+        val uri: Uri,
+        val uid: String,
+        val banco: BancoOpcion,
+        val fechaCorteManual: LocalDate?,
+        val fechaLimitePagoManual: LocalDate?,
+    )
+
     private val _estado = MutableStateFlow<UploadEstado>(UploadEstado.Idle)
     val estado: StateFlow<UploadEstado> = _estado
+
+    private val _dialogoClave = MutableStateFlow<DialogoClaveEstado?>(null)
+    val dialogoClave: StateFlow<DialogoClaveEstado?> = _dialogoClave
 
     private val _bancoSeleccionado = MutableStateFlow<BancoOpcion?>(null)
     val bancoSeleccionado: StateFlow<BancoOpcion?> = _bancoSeleccionado
@@ -52,11 +70,14 @@ class UploadViewModel @Inject constructor(
     private val _fechaLimitePagoManual = MutableStateFlow<LocalDate?>(null)
     val fechaLimitePagoManual: StateFlow<LocalDate?> = _fechaLimitePagoManual
 
+    private var importacionPendiente: ImportacionPendiente? = null
+
     fun seleccionarBanco(banco: BancoOpcion) {
         if (!banco.disponible) {
             _estado.value = UploadEstado.Error("${banco.nombre} estará disponible próximamente.")
             return
         }
+        cancelarDesbloqueo()
         _bancoSeleccionado.value = banco
         _fechaCorteManual.value = null
         _fechaLimitePagoManual.value = null
@@ -76,30 +97,89 @@ class UploadViewModel @Inject constructor(
             return
         }
 
+        val pendiente = ImportacionPendiente(
+            uri = uri,
+            uid = uid,
+            banco = banco,
+            fechaCorteManual = _fechaCorteManual.value,
+            fechaLimitePagoManual = _fechaLimitePagoManual.value,
+        )
+        importacionPendiente = pendiente
+        procesarImportacion(pendiente)
+    }
+
+    fun desbloquearDocumento(clave: String) {
+        val pendiente = importacionPendiente ?: return
+        if (clave.isBlank()) {
+            _dialogoClave.value = DialogoClaveEstado(
+                errorMensaje = "Ingresa la clave del documento.",
+            )
+            return
+        }
+        if (_dialogoClave.value?.procesando == true) return
+
+        _dialogoClave.value = DialogoClaveEstado(procesando = true)
+        procesarImportacion(pendiente, clave)
+    }
+
+    fun cancelarDesbloqueo() {
+        if (_dialogoClave.value?.procesando == true) return
+        importacionPendiente = null
+        _dialogoClave.value = null
+        if (_estado.value is UploadEstado.Procesando) {
+            _estado.value = UploadEstado.Idle
+        }
+    }
+
+    private fun procesarImportacion(
+        pendiente: ImportacionPendiente,
+        claveDocumento: String? = null,
+    ) {
         viewModelScope.launch {
             _estado.value = UploadEstado.Procesando("Procesando archivo...")
 
             when (val resultado = procesarArchivoUseCase.ejecutar(
-                uri                   = uri,
-                uid                   = uid,
-                bancoCodigo           = banco.codigo,
-                productoTipo          = banco.productoTipo,
-                formato               = banco.formato,
-                fechaCorteManual      = _fechaCorteManual.value,
-                fechaLimitePagoManual = _fechaLimitePagoManual.value,
+                uri                   = pendiente.uri,
+                uid                   = pendiente.uid,
+                bancoCodigo           = pendiente.banco.codigo,
+                productoTipo          = pendiente.banco.productoTipo,
+                formato               = pendiente.banco.formato,
+                fechaCorteManual      = pendiente.fechaCorteManual,
+                fechaLimitePagoManual = pendiente.fechaLimitePagoManual,
+                claveDocumento        = claveDocumento,
             )) {
-                is ResultadoImportacion.Exito -> _estado.value = UploadEstado.Exito(
-                    transaccionesInsertadas = resultado.transaccionesInsertadas,
-                    banco = resultado.carga.bancoCodigo,
-                )
-                is ResultadoImportacion.Error -> _estado.value = UploadEstado.Error(
-                    resultado.error.error.toMensajeUsuario()
-                )
+                is ResultadoImportacion.Exito -> {
+                    limpiarImportacionPendiente()
+                    _estado.value = UploadEstado.Exito(
+                        transaccionesInsertadas = resultado.transaccionesInsertadas,
+                        banco = resultado.carga.bancoCodigo,
+                    )
+                }
+                is ResultadoImportacion.Error -> {
+                    limpiarImportacionPendiente()
+                    _estado.value = UploadEstado.Error(resultado.error.error.toMensajeUsuario())
+                }
+                ResultadoImportacion.ClaveRequerida -> {
+                    _estado.value = UploadEstado.Idle
+                    _dialogoClave.value = DialogoClaveEstado()
+                }
+                ResultadoImportacion.ClaveIncorrecta -> {
+                    _estado.value = UploadEstado.Idle
+                    _dialogoClave.value = DialogoClaveEstado(
+                        errorMensaje = "La clave no es correcta. Inténtalo de nuevo.",
+                    )
+                }
             }
         }
     }
 
+    private fun limpiarImportacionPendiente() {
+        importacionPendiente = null
+        _dialogoClave.value = null
+    }
+
     fun resetear() {
+        limpiarImportacionPendiente()
         _estado.value = UploadEstado.Idle
         _bancoSeleccionado.value = null
         _fechaCorteManual.value = null
@@ -115,3 +195,8 @@ sealed class UploadEstado {
     data class Exito(val transaccionesInsertadas: Int, val banco: String) : UploadEstado()
     data class Error(val mensaje: String) : UploadEstado()
 }
+
+data class DialogoClaveEstado(
+    val errorMensaje: String? = null,
+    val procesando: Boolean = false,
+)

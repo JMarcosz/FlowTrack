@@ -3,7 +3,7 @@ package com.example.flowtrack.presentation.screens.conversor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.result.AppResult
-import com.example.flowtrack.data.firestore.repositories.TasaCambio
+import com.example.flowtrack.domain.model.TasaCambio
 import com.example.flowtrack.data.firestore.repositories.TasaCambioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,17 +62,19 @@ class ConversorViewModel @Inject constructor(
         _state.value = _state.value.copy(direccionDopAUsd = !_state.value.direccionDopAUsd)
     }
 
-    fun calcularResultado(): Double {
+    fun calcularResultado(): java.math.BigDecimal {
         val st = _state.value
-        val monto = st.montoEntrada.toDoubleOrNull() ?: return 0.0
-        val tasa = st.tasa ?: return 0.0
+        val montoStr = st.montoEntrada.takeIf { it.isNotBlank() } ?: "0"
+        val monto = runCatching { java.math.BigDecimal(montoStr) }.getOrDefault(java.math.BigDecimal.ZERO)
+        val tasa = st.tasa ?: return java.math.BigDecimal.ZERO
         
         return if (st.direccionDopAUsd) {
             // Comprando dólares -> usar tasa de venta del banco
-            monto / tasa.venta
+            if (tasa.venta.compareTo(java.math.BigDecimal.ZERO) == 0) java.math.BigDecimal.ZERO
+            else monto.divide(tasa.venta, 2, java.math.RoundingMode.HALF_UP)
         } else {
             // Vendiendo dólares -> usar tasa de compra del banco
-            monto * tasa.compra
+            monto.multiply(tasa.compra).setScale(2, java.math.RoundingMode.HALF_UP)
         }
     }
 }
