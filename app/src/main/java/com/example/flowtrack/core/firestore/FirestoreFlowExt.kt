@@ -19,13 +19,3 @@ fun <T : Any> Query.asListFlow(clazz: Class<T>): Flow<List<T>> = callbackFlow {
     }
     awaitClose { registration.remove() }
 }
-
-/** Variante con mapper explícito para docs que no tienen un DTO 1-a-1. */
-fun <T> Query.asMappedListFlow(mapper: (DocumentSnapshot) -> T?): Flow<List<T>> = callbackFlow {
-    val registration = addSnapshotListener { snapshot, error ->
-        if (error != null) { close(error); return@addSnapshotListener }
-        val items = snapshot?.documents?.mapNotNull(mapper) ?: emptyList()
-        trySend(items)
-    }
-    awaitClose { registration.remove() }
-}

@@ -3,12 +3,17 @@ package com.example.flowtrack.data.firestore.mappers
 import com.example.flowtrack.core.extensions.normalizarDescripcion
 import com.example.flowtrack.core.crypto.HashGenerator
 import com.example.flowtrack.data.firestore.dto.CargaDto
+import com.example.flowtrack.data.firestore.dto.ConfiguracionUsuarioDto
 import com.example.flowtrack.data.parsers.core.EstadoCuentaNormalizado
 import com.example.flowtrack.data.parsers.core.MovimientoNormalizado
 import com.example.flowtrack.data.parsers.core.TipoMovimiento
 import com.example.flowtrack.data.firestore.dto.CuentaDto
+import com.example.flowtrack.data.firestore.dto.DispositivoPushDto
 import com.example.flowtrack.data.firestore.dto.EstadoTarjetaSnapDto
 import com.example.flowtrack.data.firestore.dto.MovimientoTarjetaDto
+import com.example.flowtrack.data.firestore.dto.NotificacionConfigDto
+import com.example.flowtrack.data.firestore.dto.ReglaCategoriaDto
+import com.example.flowtrack.data.firestore.dto.ReglaSugeridaDto
 import com.example.flowtrack.data.firestore.dto.TarjetaDto
 import com.example.flowtrack.data.firestore.dto.TransaccionDto
 import com.example.flowtrack.data.parsers.core.CuentaDetectada
@@ -17,13 +22,18 @@ import com.example.flowtrack.data.parsers.core.MovimientoTarjetaNormalizado
 import com.example.flowtrack.data.parsers.core.TarjetaDetectada
 import com.example.flowtrack.data.parsers.core.TransaccionNormalizada
 import com.example.flowtrack.domain.model.Carga
+import com.example.flowtrack.domain.model.ConfiguracionUsuario
 import com.example.flowtrack.domain.model.Cuenta
+import com.example.flowtrack.domain.model.DispositivoPush
 import com.example.flowtrack.domain.model.EstadoCarga
 import com.example.flowtrack.domain.model.EstadoTarjeta
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.MovimientoTarjeta
+import com.example.flowtrack.domain.model.NotificacionConfig
 import com.example.flowtrack.domain.model.OrigenTasa
+import com.example.flowtrack.domain.model.ReglaCategoria
+import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.domain.model.Tarjeta
 import com.example.flowtrack.domain.model.TipoCuenta
 import com.example.flowtrack.domain.model.TipoDocumento
@@ -31,18 +41,175 @@ import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private val ZONA_RD = ZoneId.of("America/Santo_Domingo")
 
-// ─── LocalDate → Instant ──────────────────────────────────────────────────────
+// --- Métodos de Ayuda para Conversión ---
+private fun BigDecimal.toFirestoreString(): String = setScale(2).toPlainString()
 
+fun Any?.toBigDecimalCompat(): BigDecimal? = when (this) {
+    null -> null
+    is BigDecimal -> setScale(2)
+    is Number -> BigDecimal.valueOf(toDouble()).setScale(2)
+    is String -> toBigDecimalOrNull()?.setScale(2)
+    else -> null
+}
+
+fun DocumentSnapshot.money(field: String): BigDecimal? = get(field).toBigDecimalCompat()
+
+fun Instant.toTimestamp(): Timestamp = Timestamp(this.epochSecond, this.nano)
 fun LocalDate.toInstantRD(): Instant = atStartOfDay(ZONA_RD).toInstant()
-fun Instant.toTimestamp(): Timestamp = Timestamp(epochSecond, nano)
 fun LocalDate.toTimestamp(): Timestamp = toInstantRD().toTimestamp()
+
+private val HORA_NOTIFICACION_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+fun LocalTime.toFirestoreString(): String = format(HORA_NOTIFICACION_FORMATTER)
+
+fun String?.toLocalTimeCompat(): LocalTime =
+    if (this == null) LocalTime.of(8, 0)
+    else runCatching { LocalTime.parse(if (contains(":")) this else "$this:00", HORA_NOTIFICACION_FORMATTER) }
+        .getOrDefault(LocalTime.of(8, 0))
+
+
+// ─── Domain → DTO ─────────────────────────────────────────────────────────────
+
+fun DispositivoPush.toDto(): DispositivoPushDto =
+    DispositivoPushDto(
+        id = id,
+        uidUsuario = uidUsuario,
+        tokenFcm = tokenFcm,
+        activo = activo,
+        actualizadoEn = actualizadoEn.toTimestamp(),
+        ultimoUsuarioUid = ultimoUsuarioUid,
+        versionApp = versionApp,
+        modeloDispositivo = modeloDispositivo,
+    )
+
+fun ConfiguracionUsuario.toDto(): ConfiguracionUsuarioDto =
+    ConfiguracionUsuarioDto(
+        uidUsuario = uidUsuario,
+        idioma = idioma,
+        formatoFecha = formatoFecha,
+        formatoMoneda = formatoMoneda,
+        monedaPredeterminada = monedaPredeterminada.name,
+        temaOscuro = temaOscuro,
+        ultimoBackup = ultimoBackup?.toTimestamp(),
+    )
+
+fun ConfiguracionUsuarioDto.toDomain(): ConfiguracionUsuario =
+    ConfiguracionUsuario(
+        uidUsuario = uidUsuario,
+        idioma = idioma,
+        formatoFecha = formatoFecha,
+        formatoMoneda = formatoMoneda,
+        monedaPredeterminada = runCatching { Moneda.valueOf(monedaPredeterminada) }.getOrDefault(Moneda.DOP),
+        temaOscuro = temaOscuro,
+        ultimoBackup = ultimoBackup?.toDate()?.toInstant(),
+    )
+
+fun DocumentSnapshot.toConfiguracionUsuarioDto(): ConfiguracionUsuarioDto? =
+    toObject(ConfiguracionUsuarioDto::class.java)
+
+fun NotificacionConfig.toDto(): NotificacionConfigDto =
+    NotificacionConfigDto(
+        uidUsuario = uidUsuario,
+        activa = activa,
+        pago7dias = pago7dias,
+        pago3dias = pago3dias,
+        pago1dia = pago1dia,
+        pagoMismoDia = pagoMismoDia,
+        resumenMensual = resumenMensual,
+        alertasGastosAltos = alertasGastosAltos,
+        umbralGastoAlto = umbralGastoAlto.toFirestoreString(),
+        horaNotificacion = horaNotificacion.toFirestoreString(),
+        zonaHoraria = zonaHoraria,
+    )
+
+fun NotificacionConfigDto.toDomain(): NotificacionConfig =
+    NotificacionConfig(
+        uidUsuario = uidUsuario,
+        activa = activa,
+        pago7dias = pago7dias,
+        pago3dias = pago3dias,
+        pago1dia = pago1dia,
+        pagoMismoDia = pagoMismoDia,
+        resumenMensual = resumenMensual,
+        alertasGastosAltos = alertasGastosAltos,
+        umbralGastoAlto = umbralGastoAlto.toBigDecimalCompat() ?: BigDecimal("5000.00"),
+        horaNotificacion = horaNotificacion.toLocalTimeCompat(),
+        zonaHoraria = if (zonaHoraria.isNullOrBlank()) "America/Santo_Domingo" else zonaHoraria,
+    )
+
+fun DocumentSnapshot.toNotificacionConfigDto(): NotificacionConfigDto? =
+    toObject(NotificacionConfigDto::class.java)
+
+fun ReglaCategoria.toDto(): ReglaCategoriaDto =
+    ReglaCategoriaDto(
+        id = id,
+        uidUsuario = uidUsuario.orEmpty(),
+        patron = patron,
+        tipoMatch = tipoMatch.name,
+        categoriaId = categoriaId,
+        prioridad = prioridad,
+        confianza = confianza,
+        activa = activa,
+        creadoPor = creadoPor,
+        creadoEn = creadoEn.toTimestamp(),
+    )
+
+fun ReglaCategoriaDto.toDomain(): ReglaCategoria =
+    ReglaCategoria(
+        id = id,
+        uidUsuario = uidUsuario.takeUnless { it.isBlank() },
+        patron = patron,
+        tipoMatch = runCatching { com.example.flowtrack.domain.model.TipoMatch.valueOf(tipoMatch) }.getOrDefault(com.example.flowtrack.domain.model.TipoMatch.CONTIENE),
+        categoriaId = categoriaId,
+        prioridad = prioridad,
+        confianza = confianza,
+        activa = activa,
+        creadoPor = creadoPor,
+        creadoEn = creadoEn?.toDate()?.toInstant() ?: Instant.now(),
+    )
+
+fun DocumentSnapshot.toReglaCategoriaDto(): ReglaCategoriaDto? =
+    toObject(ReglaCategoriaDto::class.java)
+
+fun ReglaSugerida.toDto(): ReglaSugeridaDto =
+    ReglaSugeridaDto(
+        id = id,
+        uidUsuario = uidUsuario,
+        patronDetectado = patronDetectado,
+        categoriaSugerida = categoriaSugerida,
+        muestras = muestras,
+        confianzaCluster = confianzaCluster,
+        creadaEn = creadaEn.toTimestamp(),
+        aceptada = aceptada,
+        resueltaEn = resueltaEn?.toTimestamp(),
+    )
+
+fun ReglaSugeridaDto.toDomain(): ReglaSugerida =
+    ReglaSugerida(
+        id = id,
+        uidUsuario = uidUsuario,
+        patronDetectado = patronDetectado,
+        categoriaSugerida = categoriaSugerida,
+        muestras = muestras,
+        confianzaCluster = confianzaCluster,
+        creadaEn = creadaEn?.toDate()?.toInstant() ?: Instant.now(),
+        aceptada = aceptada,
+        resueltaEn = resueltaEn?.toDate()?.toInstant(),
+    )
+
+fun DocumentSnapshot.toReglaSugeridaDto(): ReglaSugeridaDto? =
+    toObject(ReglaSugeridaDto::class.java)
+
 
 // ─── Transaccion mapper ───────────────────────────────────────────────────────
 
@@ -100,10 +267,10 @@ fun Transaccion.toDto(): TransaccionDto = TransaccionDto(
     descripcionCorta = descripcionCorta,
     descripcionOriginal = descripcionOriginal,
     descripcionNormalizada = descripcionNormalizada,
-    monto = monto.toDouble(),
+    monto = monto.toFirestoreString(),
     tipo = tipo.name,
     moneda = moneda.name,
-    balanceDespues = balanceDespues?.toDouble(),
+    balanceDespues = balanceDespues?.toFirestoreString(),
     referencia = referencia,
     serial = serial,
     categoriaId = categoriaId,
@@ -127,10 +294,10 @@ fun TransaccionDto.toDomain(): Transaccion = Transaccion(
     descripcionCorta = descripcionCorta,
     descripcionOriginal = descripcionOriginal,
     descripcionNormalizada = descripcionNormalizada,
-    monto = BigDecimal.valueOf(monto).setScale(2),
+    monto = monto.toBigDecimalCompat() ?: BigDecimal.ZERO.setScale(2),
     tipo = TipoTransaccion.valueOf(tipo),
     moneda = Moneda.valueOf(moneda),
-    balanceDespues = balanceDespues?.let { BigDecimal.valueOf(it).setScale(2) },
+    balanceDespues = balanceDespues.toBigDecimalCompat(),
     referencia = referencia,
     serial = serial,
     categoriaId = categoriaId,
@@ -167,27 +334,6 @@ fun CuentaDetectada.toDomain(uidUsuario: String): Cuenta {
     )
 }
 
-fun CuentaDetectada.toDomainConBanco(uidUsuario: String, bancoCodigo: String): Cuenta {
-    val id = HashGenerator.hashCuenta(uidUsuario, bancoCodigo, numeroCuenta)
-    return Cuenta(
-        id = id,
-        uidUsuario = uidUsuario,
-        bancoCodigo = bancoCodigo,
-        numeroCuenta = numeroCuenta,
-        numeroCuentaCompleto = numeroCuentaCompleto,
-        alias = "$bancoCodigo $numeroCuenta",
-        tipoCuenta = tipoCuenta,
-        moneda = moneda,
-        balanceActual = balanceAlCorte,
-        balanceAlCorte = balanceAlCorte,
-        titular = titular,
-        activa = true,
-        mostrarEnDashboard = true,
-        ultimaSincronizacion = Instant.now(),
-        creadoEn = Instant.now(),
-    )
-}
-
 fun Cuenta.toDto(): CuentaDto = CuentaDto(
     id = id,
     uidUsuario = uidUsuario,
@@ -197,8 +343,8 @@ fun Cuenta.toDto(): CuentaDto = CuentaDto(
     alias = alias,
     tipoCuenta = tipoCuenta.name,
     moneda = moneda.name,
-    balanceActual = balanceActual?.toDouble(),
-    balanceAlCorte = balanceAlCorte?.toDouble(),
+    balanceActual = balanceActual?.toFirestoreString(),
+    balanceAlCorte = balanceAlCorte?.toFirestoreString(),
     fechaUltimoCorte = fechaUltimoCorte?.toTimestamp(),
     titular = titular,
     activa = activa,
@@ -216,8 +362,8 @@ fun CuentaDto.toDomain(): Cuenta = Cuenta(
     alias = alias,
     tipoCuenta = TipoCuenta.valueOf(tipoCuenta),
     moneda = Moneda.valueOf(moneda),
-    balanceActual = balanceActual?.let { BigDecimal.valueOf(it).setScale(2) },
-    balanceAlCorte = balanceAlCorte?.let { BigDecimal.valueOf(it).setScale(2) },
+    balanceActual = balanceActual.toBigDecimalCompat(),
+    balanceAlCorte = balanceAlCorte.toBigDecimalCompat(),
     fechaUltimoCorte = fechaUltimoCorte?.toDate()?.toInstant(),
     titular = titular,
     activa = activa,
@@ -304,11 +450,11 @@ fun Tarjeta.toDto(): TarjetaDto = TarjetaDto(
     ultimos4 = ultimos4,
     alias = alias,
     tipoRed = tipoRed,
-    limiteCredito = limiteCredito.toDouble(),
+    limiteCredito = limiteCredito.toFirestoreString(),
     moneda = moneda.name,
     diaCorte = diaCorte,
     diaPago = diaPago,
-    tasaInteresAnual = tasaInteresAnual,
+    tasaInteresAnual = BigDecimal.valueOf(tasaInteresAnual).toFirestoreString(),
     tasaInteresOrigen = tasaInteresOrigen.name,
     estado = estado.name,
     titular = titular,
@@ -324,11 +470,11 @@ fun TarjetaDto.toDomain(): Tarjeta = Tarjeta(
     ultimos4 = ultimos4,
     alias = alias,
     tipoRed = tipoRed,
-    limiteCredito = BigDecimal.valueOf(limiteCredito).setScale(2),
+    limiteCredito = limiteCredito.toBigDecimalCompat() ?: BigDecimal.ZERO.setScale(2),
     moneda = Moneda.valueOf(moneda),
     diaCorte = diaCorte,
     diaPago = diaPago,
-    tasaInteresAnual = tasaInteresAnual,
+    tasaInteresAnual = tasaInteresAnual.toDoubleOrNull() ?: 0.0,
     tasaInteresOrigen = OrigenTasa.valueOf(tasaInteresOrigen),
     estado = EstadoTarjeta.valueOf(estado),
     titular = titular,
@@ -379,14 +525,14 @@ fun EstadoTarjetaSnap.toDto(): EstadoTarjetaSnapDto = EstadoTarjetaSnapDto(
     fechaLimitePago = fechaLimitePago.toTimestamp(),
     periodoInicio = periodoInicio.toTimestamp(),
     periodoFin = periodoFin.toTimestamp(),
-    balanceAlCorte = balanceAlCorte.toDouble(),
-    balanceAnterior = balanceAnterior?.toDouble(),
-    pagoMinimo = pagoMinimo.toDouble(),
-    pagoTotal = pagoTotal.toDouble(),
-    montoVencido = montoVencido.toDouble(),
-    balancePromedioDiario = balancePromedioDiario?.toDouble(),
-    interesFinanciamiento = interesFinanciamiento?.toDouble(),
-    cashbackGanado = cashbackGanado?.toDouble(),
+    balanceAlCorte = balanceAlCorte.toFirestoreString(),
+    balanceAnterior = balanceAnterior?.toFirestoreString(),
+    pagoMinimo = pagoMinimo.toFirestoreString(),
+    pagoTotal = pagoTotal.toFirestoreString(),
+    montoVencido = montoVencido.toFirestoreString(),
+    balancePromedioDiario = balancePromedioDiario?.toFirestoreString(),
+    interesFinanciamiento = interesFinanciamiento?.toFirestoreString(),
+    cashbackGanado = cashbackGanado?.toFirestoreString(),
     moneda = moneda.name,
     cargaId = cargaId,
     creadoEn = creadoEn.toTimestamp(),
@@ -400,14 +546,14 @@ fun EstadoTarjetaSnapDto.toDomain(): EstadoTarjetaSnap = EstadoTarjetaSnap(
     fechaLimitePago = fechaLimitePago?.toDate()?.toInstant() ?: Instant.now(),
     periodoInicio = periodoInicio?.toDate()?.toInstant() ?: Instant.now(),
     periodoFin = periodoFin?.toDate()?.toInstant() ?: Instant.now(),
-    balanceAlCorte = BigDecimal.valueOf(balanceAlCorte).setScale(2),
-    balanceAnterior = balanceAnterior?.let { BigDecimal.valueOf(it).setScale(2) },
-    pagoMinimo = BigDecimal.valueOf(pagoMinimo).setScale(2),
-    pagoTotal = BigDecimal.valueOf(pagoTotal).setScale(2),
-    montoVencido = BigDecimal.valueOf(montoVencido).setScale(2),
-    balancePromedioDiario = balancePromedioDiario?.let { BigDecimal.valueOf(it).setScale(2) },
-    interesFinanciamiento = interesFinanciamiento?.let { BigDecimal.valueOf(it).setScale(2) },
-    cashbackGanado = cashbackGanado?.let { BigDecimal.valueOf(it).setScale(2) },
+    balanceAlCorte = balanceAlCorte.toBigDecimalCompat() ?: BigDecimal.ZERO.setScale(2),
+    balanceAnterior = balanceAnterior.toBigDecimalCompat(),
+    pagoMinimo = pagoMinimo.toBigDecimalCompat() ?: BigDecimal.ZERO.setScale(2),
+    pagoTotal = pagoTotal.toBigDecimalCompat() ?: BigDecimal.ZERO.setScale(2),
+    montoVencido = montoVencido.toBigDecimalCompat() ?: BigDecimal.ZERO.setScale(2),
+    balancePromedioDiario = balancePromedioDiario.toBigDecimalCompat(),
+    interesFinanciamiento = interesFinanciamiento.toBigDecimalCompat(),
+ cashbackGanado = cashbackGanado.toBigDecimalCompat(),
     moneda = Moneda.valueOf(moneda),
     cargaId = cargaId,
     creadoEn = creadoEn?.toDate()?.toInstant() ?: Instant.now(),
@@ -461,8 +607,8 @@ fun MovimientoTarjeta.toDto(): MovimientoTarjetaDto = MovimientoTarjetaDto(
     fechaPosteo = fechaPosteo?.toTimestamp(),
     descripcionOriginal = descripcionOriginal,
     descripcionNormalizada = descripcionNormalizada,
-    monto = monto.toDouble(),
-    montoUsd = montoUsd?.toDouble(),
+    monto = monto.toFirestoreString(),
+    montoUsd = montoUsd?.toFirestoreString(),
     tipoMovimiento = tipoMovimiento.name,
     moneda = moneda.name,
     numeroAutorizacion = numeroAutorizacion,
@@ -482,8 +628,8 @@ fun MovimientoTarjetaDto.toDomain(): MovimientoTarjeta = MovimientoTarjeta(
     fechaPosteo = fechaPosteo?.toDate()?.toInstant(),
     descripcionOriginal = descripcionOriginal,
     descripcionNormalizada = descripcionNormalizada,
-    monto = BigDecimal.valueOf(monto).setScale(2),
-    montoUsd = montoUsd?.let { BigDecimal.valueOf(it).setScale(2) },
+    monto = monto.toBigDecimalCompat() ?: BigDecimal.ZERO.setScale(2),
+    montoUsd = montoUsd.toBigDecimalCompat(),
     tipoMovimiento = TipoMovimientoTarjeta.valueOf(tipoMovimiento),
     moneda = Moneda.valueOf(moneda),
     numeroAutorizacion = numeroAutorizacion,
@@ -609,7 +755,7 @@ fun EstadoCuentaNormalizado.toDomainCuenta(uidUsuario: String): Cuenta {
     val balanceEfectivo = balancePorFecha ?: balanceFinal
 
     val fechaCorteInst = (movimientosOrdenados.lastOrNull()?.fechaTransaccion ?: fechaFin)
-        ?.atStartOfDay(java.time.ZoneId.of("America/Santo_Domingo"))?.toInstant()
+        ?.atStartOfDay(ZoneId.of("America/Santo_Domingo"))?.toInstant()
 
     return Cuenta(
         id = id,
@@ -662,7 +808,7 @@ fun EstadoCuentaNormalizado.toDomainEstadoTarjeta(
     periodoInicio: Instant,
     periodoFin: Instant,
 ): EstadoTarjetaSnap {
-    val corteInstant = (fechaCorte ?: fechaFin ?: java.time.LocalDate.now()).toInstantRD()
+    val corteInstant = (fechaCorte ?: fechaFin ?: LocalDate.now()).toInstantRD()
     val id = HashGenerator.hashEstadoTarjeta(tarjetaId, corteInstant)
     return EstadoTarjetaSnap(
         id = id,
