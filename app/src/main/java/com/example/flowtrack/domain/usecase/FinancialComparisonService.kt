@@ -1,8 +1,6 @@
 package com.example.flowtrack.domain.usecase
 
 import com.example.flowtrack.domain.model.MovimientoTarjeta
-import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
-import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -32,19 +30,6 @@ data class ResultadoComparacion(
 
 @Singleton
 class FinancialComparisonService @Inject constructor() {
-
-    private val tiposGasto = setOf(
-        TipoMovimientoTarjeta.COMPRA,
-        TipoMovimientoTarjeta.AVANCE_EFECTIVO,
-        TipoMovimientoTarjeta.INTERES,
-        TipoMovimientoTarjeta.COMISION,
-    )
-
-    private val tiposIngreso = setOf(
-        TipoMovimientoTarjeta.PAGO,
-        TipoMovimientoTarjeta.CASHBACK,
-        TipoMovimientoTarjeta.DEVOLUCION,
-    )
 
     /** Período actual según el selector (p.ej. "Este mes" → 01/05 – hoy). */
     fun getCurrentComparisonPeriod(periodo: String, ahora: LocalDate, zona: ZoneId): RangoPeriodo =
@@ -129,15 +114,8 @@ class FinancialComparisonService @Inject constructor() {
         txs: List<Transaccion>,
         movs: List<MovimientoTarjeta>,
     ): Pair<BigDecimal, BigDecimal> {
-        val gastos = txs.filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
-            .fold(BigDecimal.ZERO) { a, tx -> a + tx.monto } +
-            movs.filter { it.tipoMovimiento in tiposGasto }
-            .fold(BigDecimal.ZERO) { a, mv -> a + mv.monto }
-        val ingresos = txs.filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }
-            .fold(BigDecimal.ZERO) { a, tx -> a + tx.monto } +
-            movs.filter { it.tipoMovimiento in tiposIngreso }
-            .fold(BigDecimal.ZERO) { a, mv -> a + mv.monto }
-        return Pair(gastos, ingresos)
+        val totales = calcularTotalesFinancieros(txs, movs)
+        return Pair(totales.gastos, totales.ingresos)
     }
 
     /**

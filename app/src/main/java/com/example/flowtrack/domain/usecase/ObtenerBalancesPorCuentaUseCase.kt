@@ -1,7 +1,6 @@
 package com.example.flowtrack.domain.usecase
 
 import com.example.flowtrack.core.result.AppResult
-import com.example.flowtrack.core.result.ErrorApp
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.domain.model.Cuenta
 import java.math.BigDecimal

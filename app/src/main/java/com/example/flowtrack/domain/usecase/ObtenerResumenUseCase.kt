@@ -3,7 +3,6 @@ package com.example.flowtrack.domain.usecase
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
-import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,21 +27,6 @@ data class ResumenGeneral(
     val porBanco: List<ResumenBanco>
 )
 
-/** Tipos de movimiento de tarjeta que suman a gastosTotales. */
-private val TIPOS_GASTO_TARJETA = setOf(
-    TipoMovimientoTarjeta.COMPRA,
-    TipoMovimientoTarjeta.AVANCE_EFECTIVO,
-    TipoMovimientoTarjeta.INTERES,
-    TipoMovimientoTarjeta.COMISION,
-)
-
-/** Tipos de movimiento de tarjeta que reducen gastosTotales (pagos/devoluciones). */
-private val TIPOS_CREDITO_TARJETA = setOf(
-    TipoMovimientoTarjeta.PAGO,
-    TipoMovimientoTarjeta.CASHBACK,
-    TipoMovimientoTarjeta.DEVOLUCION,
-)
-
 class ObtenerResumenUseCase @Inject constructor(
     private val transaccionRepository: TransaccionRepository,
     private val movimientoTarjetaRepository: MovimientoTarjetaRepository,
@@ -64,28 +48,16 @@ class ObtenerResumenUseCase @Inject constructor(
         transacciones: List<com.example.flowtrack.domain.model.Transaccion>,
         movimientos: List<com.example.flowtrack.domain.model.MovimientoTarjeta>,
     ): AppResult<ResumenGeneral> {
-        // Ingresos: créditos de cuenta + pagos/devoluciones/cashback de tarjeta
-        val ingresosCuenta = transacciones
-            .filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }
-            .sumOf { it.monto }
-        val ingresosIngresosNetos = movimientos
-            .filter { it.tipoMovimiento in TIPOS_CREDITO_TARJETA }
-            .sumOf { it.monto }
-        val ingresosTotales = ingresosCuenta + ingresosIngresosNetos
-
-        // Gastos: débitos de cuenta + compras/avances/intereses/comisiones de tarjeta
-        val gastosCuenta = transacciones
-            .filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
-        val gastosTarjeta = movimientos
-            .filter { it.tipoMovimiento in TIPOS_GASTO_TARJETA }
-
-        val gastosCuentaTotal = gastosCuenta.sumOf { it.monto }
-        val gastosTarjetaTotal = gastosTarjeta.sumOf { it.monto }
-        val gastosTotales = gastosCuentaTotal + gastosTarjetaTotal
+        val totales = calcularTotalesFinancieros(transacciones, movimientos)
+        val ingresosTotales = totales.ingresos
+        val gastosTotales = totales.gastos
 
         val totalFloat = gastosTotales.toFloat().coerceAtLeast(1f)
 
         // Agrupación por categoría (cuenta + tarjeta combinados)
+        val gastosCuenta = transacciones.filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
+        val gastosTarjeta = movimientos.filter { it.tipoMovimiento.esGastoFinanciero() }
+
         val gastosPorCat = mutableMapOf<String, BigDecimal>()
         gastosCuenta.forEach { tx ->
             val cat = tx.categoriaId ?: "Sin Categorizar"
@@ -112,7 +84,7 @@ class ObtenerResumenUseCase @Inject constructor(
         transacciones.filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }.forEach { tx ->
             ingresosPorBanco[tx.bancoCodigo] = (ingresosPorBanco[tx.bancoCodigo] ?: BigDecimal.ZERO) + tx.monto
         }
-        movimientos.filter { it.tipoMovimiento in TIPOS_CREDITO_TARJETA }.forEach { mov ->
+        movimientos.filter { it.tipoMovimiento.esIngresoFinanciero() }.forEach { mov ->
             ingresosPorBanco[mov.bancoCodigo] = (ingresosPorBanco[mov.bancoCodigo] ?: BigDecimal.ZERO) + mov.monto
         }
 
@@ -133,4 +105,3 @@ class ObtenerResumenUseCase @Inject constructor(
         )
     }
 }
-

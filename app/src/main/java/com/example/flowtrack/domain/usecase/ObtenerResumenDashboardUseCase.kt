@@ -3,7 +3,6 @@ package com.example.flowtrack.domain.usecase
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
-import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -60,23 +59,6 @@ data class ResumenDashboard(
     val unidad: UnidadBucket,
     val gastosPorBanco: List<DatosBancoResumen>,
     val gastosPorCategoria: List<DatosCategoriaResumen>,
-)
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Constantes de predicado para sparkline / breakdown (no comparación)
-// ─────────────────────────────────────────────────────────────────────────────
-
-private val TIPOS_GASTO_TARJETA_RES = setOf(
-    TipoMovimientoTarjeta.COMPRA,
-    TipoMovimientoTarjeta.AVANCE_EFECTIVO,
-    TipoMovimientoTarjeta.INTERES,
-    TipoMovimientoTarjeta.COMISION,
-)
-
-private val TIPOS_INGRESO_TARJETA_RES = setOf(
-    TipoMovimientoTarjeta.PAGO,
-    TipoMovimientoTarjeta.CASHBACK,
-    TipoMovimientoTarjeta.DEVOLUCION,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,9 +161,10 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         // ── Breakdown por banco ───────────────────────────────────────────────
         val codigosBanco = (txActuales.map { it.bancoCodigo } + movActuales.map { it.bancoCodigo }).distinct()
         val gastosPorBanco = codigosBanco.map { cod ->
-            val g = sumaGastos(txActuales.filter { it.bancoCodigo == cod }, movActuales.filter { it.bancoCodigo == cod })
-            val i = sumaIngresos(txActuales.filter { it.bancoCodigo == cod }, movActuales.filter { it.bancoCodigo == cod })
-            DatosBancoResumen(cod, g, i)
+            val txBanco = txActuales.filter { it.bancoCodigo == cod }
+            val movBanco = movActuales.filter { it.bancoCodigo == cod }
+            val totales = calcularTotalesFinancieros(txBanco, movBanco)
+            DatosBancoResumen(cod, totales.gastos, totales.ingresos)
         }.filter { it.gastos > BigDecimal.ZERO || it.ingresos > BigDecimal.ZERO }
             .sortedByDescending { it.gastos + it.ingresos }
 
@@ -191,7 +174,7 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
             .groupBy { it.categoriaId ?: "sin_categorizar" }
             .mapValues { (_, txs) -> txs.fold(BigDecimal.ZERO) { a, tx -> a + tx.monto } }
         val catTarjeta = movActuales
-            .filter { it.tipoMovimiento in TIPOS_GASTO_TARJETA_RES }
+            .filter { it.tipoMovimiento.esGastoFinanciero() }
             .groupBy { it.categoriaId ?: "sin_categorizar" }
             .mapValues { (_, mvs) -> mvs.fold(BigDecimal.ZERO) { a, mv -> a + mv.monto } }
         val gastosPorCategoria = (catCuenta.keys + catTarjeta.keys).distinct()
@@ -223,24 +206,6 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         "Este año"        -> UnidadBucket.MES
         else              -> UnidadBucket.DIA
     }
-
-    private fun sumaGastos(
-        txs: List<com.example.flowtrack.domain.model.Transaccion>,
-        movs: List<com.example.flowtrack.domain.model.MovimientoTarjeta>,
-    ): BigDecimal =
-        txs.filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
-            .fold(BigDecimal.ZERO) { a, tx -> a + tx.monto } +
-        movs.filter { it.tipoMovimiento in TIPOS_GASTO_TARJETA_RES }
-            .fold(BigDecimal.ZERO) { a, mv -> a + mv.monto }
-
-    private fun sumaIngresos(
-        txs: List<com.example.flowtrack.domain.model.Transaccion>,
-        movs: List<com.example.flowtrack.domain.model.MovimientoTarjeta>,
-    ): BigDecimal =
-        txs.filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }
-            .fold(BigDecimal.ZERO) { a, tx -> a + tx.monto } +
-        movs.filter { it.tipoMovimiento in TIPOS_INGRESO_TARJETA_RES }
-            .fold(BigDecimal.ZERO) { a, mv -> a + mv.monto }
 
     private fun delta(actual: BigDecimal, anterior: BigDecimal): DeltaMetrica {
         val pct = if (anterior.compareTo(BigDecimal.ZERO) == 0) null
@@ -274,20 +239,15 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
 
         var balanceAcumulado = BigDecimal.ZERO
         return buckets.map { (etiqueta, inicio, fin) ->
-            val g = sumaGastos(
-                txs.filter { !it.fecha.isBefore(inicio) && it.fecha.isBefore(fin) },
-                movs.filter { !it.fechaTransaccion.isBefore(inicio) && it.fechaTransaccion.isBefore(fin) },
-            )
-            val i = sumaIngresos(
-                txs.filter { !it.fecha.isBefore(inicio) && it.fecha.isBefore(fin) },
-                movs.filter { !it.fechaTransaccion.isBefore(inicio) && it.fechaTransaccion.isBefore(fin) },
-            )
-            balanceAcumulado += i - g
+            val txBucket = txs.filter { !it.fecha.isBefore(inicio) && it.fecha.isBefore(fin) }
+            val movBucket = movs.filter { !it.fechaTransaccion.isBefore(inicio) && it.fechaTransaccion.isBefore(fin) }
+            val totales = calcularTotalesFinancieros(txBucket, movBucket)
+            balanceAcumulado += totales.ingresos - totales.gastos
             PuntoSerie(
                 etiqueta         = etiqueta,
                 instanteInicio   = inicio,
-                gasto            = g,
-                ingreso          = i,
+                gasto            = totales.gastos,
+                ingreso          = totales.ingresos,
                 balanceAcumulado = balanceAcumulado,
             )
         }

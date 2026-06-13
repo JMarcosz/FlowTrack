@@ -1,4 +1,4 @@
-package com.example.flowtrack.domain.usecases.carga
+package com.example.flowtrack.domain.usecase
 
 import com.example.flowtrack.data.firestore.mappers.toDomainEstadoTarjeta
 import com.example.flowtrack.data.firestore.mappers.toDomainMovimientoTarjeta

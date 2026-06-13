@@ -1,8 +1,6 @@
 package com.example.flowtrack.domain.usecase
 
 import com.example.flowtrack.domain.model.Moneda
-import com.example.flowtrack.domain.model.MovimientoTarjeta
-import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 import org.junit.Assert.assertEquals

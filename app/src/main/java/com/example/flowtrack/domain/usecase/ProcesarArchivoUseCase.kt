@@ -1,7 +1,10 @@
-package com.example.flowtrack.domain.usecases.carga
+package com.example.flowtrack.domain.usecase
 
 import android.content.Context
 import android.net.Uri
+import com.example.flowtrack.core.crypto.HashGenerator
+import com.example.flowtrack.core.notifications.NotificationHelper
+import com.example.flowtrack.core.notifications.NotificationRoute
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
 import com.example.flowtrack.data.firestore.mappers.toDomainCuenta
@@ -10,20 +13,22 @@ import com.example.flowtrack.data.firestore.mappers.toDomainMovimientoTarjeta
 import com.example.flowtrack.data.firestore.mappers.toDomainTarjeta
 import com.example.flowtrack.data.firestore.mappers.toDomainTransaccion
 import com.example.flowtrack.data.firestore.repositories.ImportacionRepository
+import com.example.flowtrack.data.firestore.repositories.NotificacionConfigRepository
 import com.example.flowtrack.data.firestore.repositories.ReglaCategoriaRepository
 import com.example.flowtrack.data.parsers.core.ArchivoEntrada
 import com.example.flowtrack.data.parsers.core.BankParserFactory
 import com.example.flowtrack.data.parsers.core.ImportRequest
 import com.example.flowtrack.data.parsers.core.ParseResult
 import com.example.flowtrack.data.parsers.core.ParserNoDisponibleException
-import com.example.flowtrack.core.crypto.HashGenerator
+import com.example.flowtrack.data.parsers.core.detectarFormatoArchivo
 import com.example.flowtrack.domain.model.Carga
 import com.example.flowtrack.domain.model.EstadoCarga
 import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.domain.model.TipoDocumento
-import com.example.flowtrack.domain.usecase.MotorCategorizacion
+import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -35,8 +40,8 @@ private val ZONA_RD = ZoneId.of("America/Santo_Domingo")
 /**
  * Orquestador del flujo de importación.
  *
- * El banco, tipo de producto y formato son elegidos por el usuario antes de llamar a [ejecutar].
- * El banco nunca se auto-detecta — [BankParserFactory] resuelve el parser por clave exacta.
+     * El banco y tipo de producto son elegidos por el usuario. El formato se detecta
+     * desde la firma del archivo y [BankParserFactory] resuelve el parser por clave exacta.
  *
  * Pasos:
  *   1. Leer el archivo (Uri → ArchivoEntrada, validar tamaño)
@@ -50,6 +55,7 @@ class ProcesarArchivoUseCase @Inject constructor(
     private val parserFactory: BankParserFactory,
     private val importacionRepository: ImportacionRepository,
     private val reglaCategoriaRepository: ReglaCategoriaRepository,
+    private val notificacionConfigRepository: NotificacionConfigRepository,
 ) {
 
     suspend fun ejecutar(
@@ -60,6 +66,7 @@ class ProcesarArchivoUseCase @Inject constructor(
         formato: FileFormat,
         fechaCorteManual: LocalDate? = null,
         fechaLimitePagoManual: LocalDate? = null,
+        claveDocumento: String? = null,
     ): ResultadoImportacion {
 
         val archivo = leerArchivo(uri) ?: return ResultadoImportacion.Error(
@@ -72,14 +79,35 @@ class ProcesarArchivoUseCase @Inject constructor(
             )
         }
 
-        val parser = parserFactory.obtenerParser(bancoCodigo, productoTipo, formato)
+        val formatoDetectado = detectarFormatoArchivo(archivo)
+            ?: return ResultadoImportacion.Error(
+                AppResult.Error(
+                    ErrorApp.FormatoIncompatible(
+                        "No se pudo identificar el formato real del archivo seleccionado."
+                    )
+                )
+            )
+
+        val parser = parserFactory.obtenerParser(bancoCodigo, productoTipo, formatoDetectado)
             .getOrElse { ex ->
-                val error = if (ex is ParserNoDisponibleException) ex.error
-                else ErrorApp.Desconocido(ex.message ?: "Parser no disponible.")
+                val error = if (ex is ParserNoDisponibleException) {
+                    ErrorApp.FormatoIncompatible(
+                        "$bancoCodigo no admite archivos ${formatoDetectado.name}."
+                    )
+                } else {
+                    ErrorApp.Desconocido(ex.message ?: "Parser no disponible.")
+                }
                 return ResultadoImportacion.Error(AppResult.Error(error))
             }
 
-        val request = ImportRequest(uid, bancoCodigo, productoTipo, formato, archivo)
+        val request = ImportRequest(
+            uidUsuario = uid,
+            bancoCodigo = bancoCodigo,
+            productoTipo = productoTipo,
+            formato = formatoDetectado,
+            archivo = archivo,
+            claveDocumento = claveDocumento,
+        )
         return when (val resultado = parser.parse(request)) {
             is ParseResult.Success -> mapearYPersistir(
                 resultado, uid, archivo, parser.version,
@@ -88,6 +116,8 @@ class ProcesarArchivoUseCase @Inject constructor(
             is ParseResult.Error   -> ResultadoImportacion.Error(
                 AppResult.Error(ErrorApp.ParseError(resultado.message, resultado.cause))
             )
+            ParseResult.ClaveRequerida -> ResultadoImportacion.ClaveRequerida
+            ParseResult.ClaveIncorrecta -> ResultadoImportacion.ClaveIncorrecta
         }
     }
 
@@ -142,8 +172,14 @@ class ProcesarArchivoUseCase @Inject constructor(
                 )
 
                 when (val r = importacionRepository.persistirCarga(uid, cuenta, txCategorizadas, carga)) {
-                    is AppResult.Success -> ResultadoImportacion.Exito(carga, txCategorizadas.size)
-                    is AppResult.Error   -> ResultadoImportacion.Error(r)
+                    is AppResult.Success -> {
+                        notificarImportacionYAlertas(uid, carga, txCategorizadas, emptyList())
+                        ResultadoImportacion.Exito(carga, txCategorizadas.size)
+                    }
+                    is AppResult.Error   -> {
+                        notificarErrorImportacion(uid, archivo.nombre, r.error.toMensajeUsuario())
+                        ResultadoImportacion.Error(r)
+                    }
                 }
             }
 
@@ -176,8 +212,14 @@ class ProcesarArchivoUseCase @Inject constructor(
                 )
 
                 when (val r = importacionRepository.persistirCargaTarjeta(uid, tarjeta, estadoTarjeta, movimientos, carga)) {
-                    is AppResult.Success -> ResultadoImportacion.Exito(carga, movimientos.size)
-                    is AppResult.Error   -> ResultadoImportacion.Error(r)
+                    is AppResult.Success -> {
+                        notificarImportacionYAlertas(uid, carga, emptyList(), movimientos)
+                        ResultadoImportacion.Exito(carga, movimientos.size)
+                    }
+                    is AppResult.Error   -> {
+                        notificarErrorImportacion(uid, archivo.nombre, r.error.toMensajeUsuario())
+                        ResultadoImportacion.Error(r)
+                    }
                 }
             }
         }
@@ -224,6 +266,91 @@ class ProcesarArchivoUseCase @Inject constructor(
         procesadoEn = Instant.now(),
     )
 
+    private suspend fun notificarImportacionYAlertas(
+        uid: String,
+        carga: Carga,
+        transacciones: List<com.example.flowtrack.domain.model.Transaccion>,
+        movimientos: List<com.example.flowtrack.domain.model.MovimientoTarjeta>,
+    ) {
+        val config = notificacionConfigRepository.observar(uid).first()
+        if (!config.activa) return
+
+        NotificationHelper.notificar(
+            context = context,
+            canalId = NotificationHelper.CANAL_PUSH,
+            notifId = carga.id.hashCode(),
+            titulo = "Importación completada",
+            texto = "Se procesó ${carga.nombreArchivo} con éxito.",
+        )
+
+        if (!config.alertasGastosAltos) return
+
+        val gastosCuenta = transacciones.filter { tx ->
+            tx.tipo == com.example.flowtrack.domain.model.TipoTransaccion.DEBITO && !tx.esDerivada &&
+                tx.monto >= config.umbralGastoAlto
+        }
+        val gastosTarjeta = movimientos.filter { mov ->
+            mov.tipoMovimiento in setOf(
+                TipoMovimientoTarjeta.COMPRA,
+                TipoMovimientoTarjeta.AVANCE_EFECTIVO,
+                TipoMovimientoTarjeta.INTERES,
+                TipoMovimientoTarjeta.COMISION,
+            ) && mov.monto >= config.umbralGastoAlto
+        }
+
+        val totales = gastosCuenta.size + gastosTarjeta.size
+        if (totales <= 0) return
+
+        val texto = when {
+            totales == 1 && gastosCuenta.isNotEmpty() ->
+                "Un gasto superó tu umbral de ${config.umbralGastoAlto}."
+            totales == 1 ->
+                "Un movimiento de tarjeta superó tu umbral de ${config.umbralGastoAlto}."
+            else ->
+                "$totales movimientos superaron tu umbral de ${config.umbralGastoAlto}."
+        }
+
+        NotificationHelper.notificar(
+            context = context,
+            canalId = NotificationHelper.CANAL_ALERTAS,
+            notifId = (carga.id.hashCode() * 31) + 7,
+            titulo = "Gasto alto detectado",
+            texto = texto,
+            contentIntent = android.app.PendingIntent.getActivity(
+                context,
+                (carga.id.hashCode() * 31) + 7,
+                android.content.Intent(context, com.example.flowtrack.MainActivity::class.java).apply {
+                    putExtra(NotificationRoute.EXTRA_ROUTE, NotificationRoute.ROUTE_TRANSACCIONES)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                },
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            ),
+        )
+    }
+
+    private suspend fun notificarErrorImportacion(uid: String, nombreArchivo: String, mensaje: String) {
+        val config = notificacionConfigRepository.observar(uid).first()
+        if (!config.activa) return
+
+        val notifId = (uid + nombreArchivo).hashCode()
+        NotificationHelper.notificar(
+            context = context,
+            canalId = NotificationHelper.CANAL_ALERTAS,
+            notifId = notifId,
+            titulo = "Importación fallida",
+            texto = mensaje,
+            contentIntent = android.app.PendingIntent.getActivity(
+                context,
+                notifId,
+                android.content.Intent(context, com.example.flowtrack.MainActivity::class.java).apply {
+                    putExtra(NotificationRoute.EXTRA_ROUTE, NotificationRoute.ROUTE_HISTORIAL)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                },
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            ),
+        )
+    }
+
     private fun leerArchivo(uri: Uri): ArchivoEntrada? {
         return try {
             val contentResolver = context.contentResolver
@@ -248,4 +375,6 @@ class ProcesarArchivoUseCase @Inject constructor(
 sealed class ResultadoImportacion {
     data class Exito(val carga: Carga, val transaccionesInsertadas: Int) : ResultadoImportacion()
     data class Error(val error: AppResult.Error) : ResultadoImportacion()
+    data object ClaveRequerida : ResultadoImportacion()
+    data object ClaveIncorrecta : ResultadoImportacion()
 }

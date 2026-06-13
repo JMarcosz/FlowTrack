@@ -4,7 +4,6 @@ import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.domain.model.MovimientoTarjeta
-import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 import kotlinx.coroutines.Dispatchers
@@ -53,21 +52,6 @@ class ObtenerResumenPeriodoUseCase @Inject constructor(
 ) {
     private val zona = ZoneId.of("America/Santo_Domingo")
 
-    /** Tipos de movimiento de tarjeta que cuentan como gasto. */
-    private val tiposGastoTarjeta = setOf(
-        TipoMovimientoTarjeta.COMPRA,
-        TipoMovimientoTarjeta.AVANCE_EFECTIVO,
-        TipoMovimientoTarjeta.INTERES,
-        TipoMovimientoTarjeta.COMISION,
-    )
-
-    /** Tipos de movimiento de tarjeta que cuentan como ingreso (pagos/devoluciones/cashback). */
-    private val tiposCreditoTarjeta = setOf(
-        TipoMovimientoTarjeta.PAGO,
-        TipoMovimientoTarjeta.CASHBACK,
-        TipoMovimientoTarjeta.DEVOLUCION,
-    )
-
     suspend fun ejecutar(
         uid: String,
         inicio: Instant,
@@ -108,10 +92,11 @@ class ObtenerResumenPeriodoUseCase @Inject constructor(
             }
         }
         movimientos.forEach { mov ->
-            when (mov.tipoMovimiento) {
-                in tiposGastoTarjeta   -> sumar(gastosPorBucket, mov.fechaTransaccion, mov.monto)
-                in tiposCreditoTarjeta -> sumar(ingresosPorBucket, mov.fechaTransaccion, mov.monto)
-                else -> Unit
+            when {
+                mov.tipoMovimiento.esGastoFinanciero() ->
+                    sumar(gastosPorBucket, mov.fechaTransaccion, mov.monto)
+                mov.tipoMovimiento.esIngresoFinanciero() ->
+                    sumar(ingresosPorBucket, mov.fechaTransaccion, mov.monto)
             }
         }
 

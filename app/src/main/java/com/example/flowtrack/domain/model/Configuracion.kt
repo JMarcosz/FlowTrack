@@ -2,6 +2,7 @@ package com.example.flowtrack.domain.model
 
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalTime
 
 data class ConfiguracionUsuario(
     val uidUsuario: String,
@@ -23,4 +24,6 @@ data class NotificacionConfig(
     val resumenMensual: Boolean = true,
     val alertasGastosAltos: Boolean = false,
     val umbralGastoAlto: BigDecimal = BigDecimal("5000"),
+    val horaNotificacion: LocalTime = LocalTime.of(8, 0),
+    val zonaHoraria: String = "America/Santo_Domingo",
 )
