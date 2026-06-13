@@ -5,15 +5,15 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="database" path="flowtrack_offline.db" />
+        <exclude domain="database" path="flowtrack_offline.db-journal" />
+        <exclude domain="database" path="flowtrack_offline.db-wal" />
+        <exclude domain="database" path="flowtrack_offline.db-shm" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="database" path="flowtrack_offline.db" />
+        <exclude domain="database" path="flowtrack_offline.db-journal" />
+        <exclude domain="database" path="flowtrack_offline.db-wal" />
+        <exclude domain="database" path="flowtrack_offline.db-shm" />
     </device-transfer>
-    -->
 </data-extraction-rules>

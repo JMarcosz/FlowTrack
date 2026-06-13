@@ -1,5 +1,8 @@
 *.iml
 .gradle
+/.gradle-local
+/.gradle-user-home
+/.firebase-config
 /local.properties
 /.idea/caches
 /.idea/libraries
@@ -17,6 +20,8 @@ local.properties
 /scripts/serviceAccount.json
 /app/google-services.json
 /node_modules
+/functions/node_modules
+/functions/lib
 nul
 NUL
 **/nul

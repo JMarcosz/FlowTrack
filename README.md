@@ -105,7 +105,7 @@ Aplicación Android nativa para consolidar, visualizar y analizar transacciones 
 | Banco Popular | CSV | `PopularCsvParser` |
 | Qik (Banesco) | PDF | `QikPdfParser` |
 | Asociación Cibao | XLS | `CibaoXlsParser` |
-| BHD León | — | Próximamente |
+| BHD | PDF | Cuenta DOP/USD |
 
 ---
 

@@ -28,6 +28,10 @@ val Success50     = Color(0xFFE7F7EC)
 val Expense       = Color(0xFFDC2626)
 val Expense50     = Color(0xFFFDECEC)
 val Warning       = Color(0xFFF59E0B)
+val Warning50     = Color(0xFFFFF7ED)
+val Warning700    = Color(0xFFA16207)
+val Warning900    = Color(0xFF92400E)
+val Neutral100    = Color(0xFFE5E7EB)
 
 // ── Categorías (DS §1.4) ──────────────────────────────────────────────────────
 val CatCompras          = Color(0xFF3B82F6)

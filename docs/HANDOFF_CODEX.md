@@ -5,6 +5,11 @@
 > gotchas de setup local y guía de implementación por issue.
 > Branch activo: `sprint-3-parsers-flujo-importacion`. Fecha: 2026-06-09.
 
+**Nota BHD**
+
+- BHD está activo como parser de cuentas PDF, registrado en Hilt, factory, upload y seed (`tieneParser: true`).
+- El fixture real vive solo en `docs/03-fixtures/bhd.pdf`. La regresión completa y los casos cifrados se ejecutan como prueba instrumentada; el archivo no se empaqueta, commitea ni imprime.
+
 ---
 
 ## 0. ⚠️ Regla de oro: la auditoría está DESACTUALIZADA
@@ -30,6 +35,15 @@ no confíes en la descripción de la auditoría. Cada issue abajo trae el estado
 Antes de estos commits se verificaron `testDebugUnitTest`, `assembleDebug` y el
 test instrumentado de Qik en un Pixel 6 Pro.
 
+En esta sesión se cerró un refactor adicional de core/data/domain:
+
+- `ClasificacionFinanciera` centraliza los totales financieros compartidos.
+- `TasaCambio` vive en `domain/model` y usa `BigDecimal`.
+- `ProcesarArchivoUseCase` quedó en `com.example.flowtrack.domain.usecase`.
+- Los repositorios de configuración, reglas y presupuesto usan DTOs y mappers
+  explícitos para documentos existentes.
+- `CategorizadorTransaccion` fue retirado.
+
 `.idea/deploymentTargetSelector.xml` es ruido del IDE, no lo commitees.
 
 ---
@@ -46,13 +60,15 @@ test instrumentado de Qik en un Pixel 6 Pro.
   `Banreservas.pdf`, `Banco Popular Dominicano 026.csv`. Los tests los localizan por patrón vía
   `FixtureLoader` (test/.../parsers/core/FixtureLoader.kt) — busca por substring, no nombre exacto.
 - **PDFBox no corre en JVM puro** (PDFBox-Android lanza `ExceptionInInitializerError`). Los parsers PDF
-  (Qik, BanReservas) **solo se testean por test instrumentado** (`androidTest`, requiere device). Hay un
+  **solo se testean por test instrumentado** (`androidTest`, requiere device). Hay un
   device disponible. Correr instrumentados con:
   `.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=<FQN>"`
   (`--tests` NO funciona en connectedDebugAndroidTest).
 - **Fixtures sintéticos CI** (datos falsos, commiteables): `app/src/test/resources/fixtures/` (popular_v1.csv)
   y `app/src/androidTest/assets/fixtures/qik_v1.pdf`. Generar más con Python (reportlab/pypdf instalados).
 - Tras tocar modelos/DTOs corré la suite completa: `.\gradlew.bat testDebugUnitTest` (≈205 tests).
+- BHD usa `BhdTextParserTest` con texto sintético en JVM y `BhdPdfParserInstrumentedTest` con el fixture
+  real transferido temporalmente al `cacheDir` del Pixel 6 Pro.
 
 ---
 

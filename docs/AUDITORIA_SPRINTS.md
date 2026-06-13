@@ -1,6 +1,10 @@
 # Auditoría de Sprints — FlowTrack
 > Fecha: 2026-05-15 | Auditor: Claude Code | Build: `assembleDebug` ✅
-
+> 
+> **⚠️ ADVERTENCIA DE OBSOLESCENCIA ⚠️**
+> **Este documento describe un estado del proyecto de mediados de mayo y está sustancialmente DESACTUALIZADO.** 
+> **Para conocer el estado actual del proyecto, issues pendientes y notas de implementación verificadas al día de hoy, consulta EXCLUSIVAMENTE el archivo `docs/HANDOFF_CODEX.md`.**
+> 
 > **⚠️ Actualización 2026-06-09 — Issue #1 OBSOLETO.** El issue prioritario #1
 > ("🔴 `ExitoTarjeta` devuelve Error — Qik y Cibao no persisten") ya **no aplica**.
 > Se refería al sistema de parsing previo (`sealed class ResultadoParseo`), retirado en

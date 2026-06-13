@@ -27,7 +27,7 @@ Esta es la lista completa de decisiones que normalizan el plan v1 contra el dise
 |---|---------|----------|
 | 9 | Comparativa "% vs mes anterior" en Dashboard | **MVP** |
 | 10 | Eliminar transacción | **MVP** con diálogo de dos opciones (solo esta / toda la carga) |
-| 11 | Badge "Próximamente" para BHD | **MVP** |
+| 11 | Parser de estados de cuenta BHD | **MVP** |
 | 12 | Vista de duplicados detectados | **MVP** |
 | 13 | Conversor USD/DOP en vivo | **MVP** |
 | 14 | Vista previa de reporte XLSX | **MVP** |
@@ -48,10 +48,10 @@ App Android nativa en Kotlin que permite a un usuario consolidar, visualizar, an
 ### Bancos soportados en MVP
 
 - **BanReservas** — PDF tabular (cuenta corriente)
-- **Banco Popular Dominicano** — CSV web (cuenta corriente/ahorro)
+- **Banco Popular Dominicano** — CSV web o PDF (cuenta corriente/ahorro)
 - **Qik Banco Digital** — PDF narrativo (tarjeta de crédito)
 - **Asociación Cibao** — XLS legacy (tarjeta de crédito)
-- **BHD** — badge "Próximamente" sin parser activo
+- **BHD** — PDF de cuenta, DOP/USD
 
 ### Restricciones técnicas
 
@@ -135,7 +135,7 @@ Ver `02_MODELADO_DE_DATOS.md` original para tipos auxiliares completos. Sin camb
 - `PopularCsvParser` (cuenta corriente/ahorro, DOP, USD opcional)
 - `QikPdfParser` (tarjeta crédito, DOP, auto-extracción completa)
 - `CibaoXlsParser` — antes `GenericoTarjetaXlsParser`; ahora se llama directamente Cibao porque ya confirmamos el banco (tarjeta crédito, DOP/USD paralelos)
-- BHD: ningún parser, solo entrada en catálogo con `tieneParser: false`
+- `BhdPdfParser` (cuenta, DOP/USD)
 
 ### 3.3 Capa C — Modelo de dominio (cambios respecto a v1)
 
@@ -306,14 +306,37 @@ Sprints de 2 semanas. Plan extendido de **18 semanas** por el alcance ampliado.
 **Entregable**: subir BanReservas y verlo en Firestore con DGII agrupado.
 
 ### Sprint 3 — Resto de parsers + flujo de importación completo
-- Parser de **Popular** (CSV)
+- Parsers de **Popular** (CSV/PDF)
 - Parser de **Qik** (PDF) con auto-extracción de tarjeta
 - Parser de **Cibao** (XLS) con detección de banco por estructura
 - Pantalla de Revisión con duplicados detectados
 - Pantalla de Detalle de duplicados
 - Historial de importaciones inmutable
 
-**Entregable**: los 4 parsers consumen archivos reales, duplicados se detectan y muestran.
+**Entregable**: los 5 bancos consumen archivos reales, duplicados se detectan y muestran.
+
+### Bloque BHD — Parser PDF activo
+**Dependencias**
+1. Catálogo de bancos cargado con `BHD` y `tieneParser = true`.
+2. Componentes de lista/selector de bancos y navegación de importación ya disponibles.
+3. Fixture real local en `docs/03-fixtures/bhd.pdf`, siempre ignorado por Git.
+
+**Orden de ejecución**
+1. Registrar BHD en el catálogo de bancos y en cualquier registro visual que pinte logos o badges.
+2. Registrar `BhdPdfParser` en Hilt y en el factory de parsers.
+3. Habilitar BHD en el selector de importación como cuenta PDF.
+4. Validar reconstrucción textual, moneda, cuenta, balances, referencias y metadatos.
+5. Ejecutar la regresión del fixture real y los casos de PDF cifrado únicamente en Android.
+
+**Criterios de aceptación**
+- BHD permite seleccionar e importar un estado de cuenta PDF.
+- El registro y el factory resuelven la clave `BHD/CUENTA/PDF`.
+- El fixture real produce cuenta, periodo, balances y movimientos normalizados.
+- Los documentos cifrados distinguen clave requerida, incorrecta y correcta.
+- El flujo de los otros bancos permanece intacto.
+
+**Nota de seguridad sobre fixture real**
+- Toda muestra real de BHD es sensible. El fixture se usa solo localmente, se transfiere temporalmente al dispositivo para pruebas instrumentadas y se elimina al finalizar. No se commitea, no se sube a servicios externos y su contenido no aparece en logs, PRs, mensajes, assets ni APKs.
 
 ### Sprint 4 — Dashboard + Transacciones
 - Dashboard con StatCards, comparativa mensual, donut categorías, lista por banco
@@ -570,7 +593,7 @@ Requiere índice adicional (agregado a `firestore.indexes.json`):
 
 ## 8. Datos de seeding actualizados
 
-### 8.1 `/catalogoBancos` (sin cambios en estructura, BHD con `tieneParser: false`)
+### 8.1 `/catalogoBancos` (sin cambios en estructura, BHD con `tieneParser: true`)
 
 Tal como en v1 + Cibao con `tieneParser: true`.
 
@@ -624,7 +647,7 @@ Resumen rápido:
 
 - [ ] Firebase proyecto operativo con reglas, índices y seedings
 - [ ] APK release firmado bajo 50MB
-- [ ] 4 parsers funcionando contra fixtures reales (BanReservas, Popular, Qik, Cibao)
+- [ ] 5 bancos funcionando contra fixtures reales (BanReservas, Popular, Qik, Cibao, BHD)
 - [ ] Google Sign-In sin errores
 - [ ] 25 pantallas implementadas pixel-perfect según design system
 - [ ] Detección con confianza ramifica correctamente a las 3 rutas (alta/media/baja)

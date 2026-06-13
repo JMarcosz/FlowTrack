@@ -10,7 +10,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 App Android nativa en Kotlin (Jetpack Compose) para consolidar, visualizar, analizar y exportar transacciones bancarias y de tarjetas de crédito de bancos de República Dominicana. El usuario sube estados de cuenta (PDF, CSV, XLS), la app los parsea localmente, los persiste en Firebase Firestore, y los presenta en dashboards.
 
-**Bancos en MVP:** BanReservas, Banco Popular, Qik, Asociación Cibao. BHD aparece como "Próximamente" sin parser.
+**Bancos en MVP:** BanReservas, Banco Popular, Qik, Asociación Cibao y BHD.
 
 **Estado actual del repo:** módulo `:app` con arquitectura Clean Architecture + MVVM ya implementada. Incluye 20+ pantallas en Compose, parsers para BanReservas, Popular, Qik y Cibao, integración con Firebase Auth (Google) y Firestore, y sistema de notificaciones con WorkManager. Se encuentra en una fase avanzada de desarrollo (Sprints 7-8).
 
@@ -43,7 +43,8 @@ docs/03-fixtures/
 ├── banreservas.pdf
 ├── popular.csv
 ├── qik.pdf
-└── cibao.xls
+├── cibao.xls
+└── bhd.pdf
 ```
 
 Úsalos para tests de regresión de los parsers desde Sprint 2.
@@ -73,7 +74,7 @@ docs/03-fixtures/
 |--------|------|------------|
 | 1 | Cimientos + design tokens + nav | App con Google Sign-In y dashboard vacío |
 | 2 | Modelo + Parser BanReservas | Subir PDF de BanReservas → Firestore |
-| 3 | Parsers Popular, Qik, Cibao + flujo importación | 4 parsers reales con duplicados y selección de banco |
+| 3 | Parsers Popular, Qik, Cibao, BHD + flujo importación | 5 bancos reales con duplicados y selección de banco |
 | 4 | Dashboard + Transacciones + Detalle | CRUD completo de transacciones con DGII agrupado |
 | 5 | Tarjetas + Resúmenes + Date picker | Análisis completo + conversor DOP/USD |
 | 6 | Reglas + Categorización + Export XLSX | Ciclo full cargar→categorizar→exportar |

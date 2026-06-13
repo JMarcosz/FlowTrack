@@ -104,13 +104,11 @@ class MapperRoundTripTest {
     }
 
     @Test
-    fun `transaccion toDto convierte monto BigDecimal a Double correctamente`() {
+    fun `transaccion toDto convierte monto BigDecimal a String canonico correctamente`() {
         val original = transaccionBase()
         val dto = original.toDto()
-        // 1234.56 como Double
-        assertEquals(1234.56, dto.monto, 0.001)
-        // balanceDespues nullable
-        assertEquals(9876.44, dto.balanceDespues!!, 0.001)
+        assertEquals("1234.56", dto.monto)
+        assertEquals("9876.44", dto.balanceDespues)
     }
 
     @Test
@@ -236,7 +234,7 @@ class MapperRoundTripTest {
 
     @Test
     fun `transaccion con monto grande round-trip no pierde precision`() {
-        // Hasta ~15 dígitos significativos en Double — suficiente para uso personal
+        // La serialización canónica en String conserva la precisión exacta.
         val montoGrande = BigDecimal("999999.99")
         val tx = transaccionBase().copy(monto = montoGrande)
         val dominio = tx.toDto().toDomain()
@@ -280,9 +278,9 @@ class MapperRoundTripTest {
     }
 
     @Test
-    fun `movimientoTarjeta toDto convierte monto BigDecimal a Double`() {
+    fun `movimientoTarjeta toDto convierte monto BigDecimal a String canonico`() {
         val dto = movimientoBase().toDto()
-        assertEquals(850.0, dto.monto, 0.001)
+        assertEquals("850.00", dto.monto)
     }
 
     @Test
@@ -377,7 +375,7 @@ class MapperRoundTripTest {
     fun `movimientoTarjeta con montoUsd no nulo round-trip correcto`() {
         val mov = movimientoBase().copy(montoUsd = BigDecimal("123.45"))
         val dto = mov.toDto()
-        assertEquals(123.45, dto.montoUsd!!, 0.001)
+        assertEquals("123.45", dto.montoUsd)
         val dominio = dto.toDomain()
         assertEquals(BigDecimal("123.45"), dominio.montoUsd)
         assertEquals(2, dominio.montoUsd!!.scale())
@@ -441,7 +439,7 @@ class MapperRoundTripTest {
             cuentaId = "cuenta-001",
             bancoCodigo = "BANRESERVAS",
             fecha = null,  // simula campo ausente en Firestore
-            monto = 100.0,
+            monto = "100.00",
             tipo = "DEBITO",
             moneda = "DOP",
             cargaId = "carga-001",
@@ -460,7 +458,7 @@ class MapperRoundTripTest {
             cuentaId = "cuenta-001",
             bancoCodigo = "BANRESERVAS",
             fecha = Timestamp(instanteReferencia().epochSecond, instanteReferencia().nano),
-            monto = 200.0,
+            monto = "200.00",
             tipo = "CREDITO",
             moneda = "DOP",
             cargaId = "carga-001",
@@ -479,7 +477,7 @@ class MapperRoundTripTest {
             tarjetaId = "tarjeta-001",
             bancoCodigo = "QIK",
             fechaTransaccion = null,
-            monto = 300.0,
+            monto = "300.00",
             tipoMovimiento = "PAGO",
             moneda = "DOP",
             cargaId = "carga-003",
