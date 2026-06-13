@@ -14,6 +14,7 @@ import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -46,7 +47,7 @@ class BanReservasPdfParser @Inject constructor() : BankStatementParser {
 
     override suspend fun parse(request: ImportRequest): ParseResult {
         return try {
-            val texto  = extraerTexto(request.archivo.bytes)
+            val texto  = extraerTexto(request.archivo.bytes, request.claveDocumento)
             val lineas = texto.lines()
 
             val (numeroCuenta, titular, iban) = extraerInfoCuenta(texto)
@@ -78,6 +79,9 @@ class BanReservasPdfParser @Inject constructor() : BankStatementParser {
             )
 
             ParseResult.Success(estado, report)
+        } catch (e: InvalidPasswordException) {
+            if (request.claveDocumento == null) ParseResult.ClaveRequerida
+            else ParseResult.ClaveIncorrecta
         } catch (e: Exception) {
             ParseResult.Error("Error al parsear PDF de BanReservas: ${e.message}", e)
         }
@@ -85,8 +89,8 @@ class BanReservasPdfParser @Inject constructor() : BankStatementParser {
 
     // ─── Texto ───────────────────────────────────────────────────────────────
 
-    private fun extraerTexto(bytes: ByteArray): String =
-        PDDocument.load(bytes).use { doc ->
+    private fun extraerTexto(bytes: ByteArray, claveDocumento: String?): String =
+        (claveDocumento?.let { PDDocument.load(bytes, it) } ?: PDDocument.load(bytes)).use { doc ->
             PDFTextStripper().apply { sortByPosition = true }.getText(doc)
         }
 

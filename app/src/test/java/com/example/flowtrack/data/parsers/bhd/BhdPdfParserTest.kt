@@ -1,19 +1,25 @@
-package com.example.flowtrack.data.parsers.qik
+package com.example.flowtrack.data.parsers.bhd
 
 import com.example.flowtrack.data.parsers.core.ParserKey
 import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.ProductoTipo
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 
-class QikPdfParserTest {
+class BhdPdfParserTest {
 
-    private val parser = QikPdfParser()
+    private lateinit var parser: BhdPdfParser
+
+    @Before
+    fun setUp() {
+        parser = BhdPdfParser()
+    }
 
     @Test
-    fun `declara contrato Qik para tarjetas PDF`() {
+    fun `declara contrato BHD para cuentas PDF`() {
         assertEquals(
-            ParserKey("QIK", ProductoTipo.TARJETA, FileFormat.PDF),
+            ParserKey("BHD", ProductoTipo.CUENTA, FileFormat.PDF),
             parser.key,
         )
         assertEquals(1, parser.version)

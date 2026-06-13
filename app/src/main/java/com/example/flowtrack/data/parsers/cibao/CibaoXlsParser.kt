@@ -13,6 +13,7 @@ import com.example.flowtrack.data.parsers.core.TipoMovimiento
 import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.ProductoTipo
+import org.apache.poi.EncryptedDocumentException
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
@@ -49,8 +50,17 @@ class CibaoXlsParser @Inject constructor() : BankStatementParser {
 
     override suspend fun parse(request: ImportRequest): ParseResult {
         return try {
-            val wb = try { WorkbookFactory.create(request.archivo.bytes.inputStream()) }
-                catch (e: Exception) { return ParseResult.Error("No se pudo abrir el archivo de Cibao (XLS/XLSX).", e) }
+            val wb = try {
+                request.archivo.bytes.inputStream().use { input ->
+                    request.claveDocumento?.let { WorkbookFactory.create(input, it) }
+                        ?: WorkbookFactory.create(input)
+                }
+            } catch (e: EncryptedDocumentException) {
+                return if (request.claveDocumento == null) ParseResult.ClaveRequerida
+                else ParseResult.ClaveIncorrecta
+            } catch (e: Exception) {
+                return ParseResult.Error("No se pudo abrir el archivo de Cibao (XLS/XLSX).", e)
+            }
 
             val hoja = wb.getSheetAt(0)
 
@@ -166,9 +176,9 @@ class CibaoXlsParser @Inject constructor() : BankStatementParser {
 
     private fun extraerUltimos4(texto: String): String? =
         listOf(
-            Regex("""(?:[\*Xx]{4}[\s\-]?){3}(\d{4})(?!\d)"""),
-            Regex("""[\*Xx]{4}[\s\-](\d{4})(?!\d)"""),
-            Regex("""[\*Xx]{4}(\d{4})(?!\d)"""),
+            Regex("""(?:[*Xx]{4}[\s\-]?){3}(\d{4})(?!\d)"""),
+            Regex("""[*Xx]{4}[\s\-](\d{4})(?!\d)"""),
+            Regex("""[*Xx]{4}(\d{4})(?!\d)"""),
             Regex("""\d{4}[\s\-]\d{4}[\s\-]\d{4}[\s\-](\d{4})"""),
             Regex("""(\d{4})(?!\d)\s*$"""),
         ).firstNotNullOfOrNull { it.find(texto)?.groupValues?.getOrNull(1) }

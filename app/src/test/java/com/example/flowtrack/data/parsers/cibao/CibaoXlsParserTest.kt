@@ -12,6 +12,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.apache.poi.poifs.crypt.EncryptionInfo
+import org.apache.poi.poifs.crypt.EncryptionMode
+import org.apache.poi.poifs.filesystem.POIFSFileSystem
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 
 /**
@@ -129,14 +134,70 @@ class CibaoXlsParserTest {
         println("✅ Cibao: ${estado.movimientos.size} movimientos ($conUsd con USD), corte=$fechaCorte, tipos=$tiposPresentes")
     }
 
+    @Test
+    fun `Excel cifrado sin clave solicita clave`() = runTest {
+        val archivo = archivoExcelCifrado("clave-correcta")
+
+        val resultado = parser.parse(makeRequest(archivo))
+
+        assertEquals(ParseResult.ClaveRequerida, resultado)
+    }
+
+    @Test
+    fun `Excel cifrado con clave incorrecta informa rechazo`() = runTest {
+        val archivo = archivoExcelCifrado("clave-correcta")
+
+        val resultado = parser.parse(makeRequest(archivo, claveDocumento = "incorrecta"))
+
+        assertEquals(ParseResult.ClaveIncorrecta, resultado)
+    }
+
+    @Test
+    fun `Excel cifrado con clave correcta supera el desbloqueo`() = runTest {
+        val archivo = archivoExcelCifrado("clave-correcta")
+
+        val resultado = parser.parse(makeRequest(archivo, claveDocumento = "clave-correcta"))
+
+        assertTrue(resultado !is ParseResult.ClaveRequerida)
+        assertTrue(resultado !is ParseResult.ClaveIncorrecta)
+    }
+
     // ─── Helper ──────────────────────────────────────────────────────────────
 
-    private fun makeRequest(archivo: ArchivoEntrada) = ImportRequest(
+    private fun makeRequest(
+        archivo: ArchivoEntrada,
+        claveDocumento: String? = null,
+    ) = ImportRequest(
         uidUsuario = "test_uid",
         bancoCodigo = "CIBAO",
         productoTipo = ProductoTipo.TARJETA,
         formato = FileFormat.XLS,
         archivo = archivo,
+        claveDocumento = claveDocumento,
     )
 
+    private fun archivoExcelCifrado(clave: String): ArchivoEntrada {
+        val bytes = POIFSFileSystem().use { fileSystem ->
+            val encryptionInfo = EncryptionInfo(EncryptionMode.agile)
+            encryptionInfo.encryptor.confirmPassword(clave)
+
+            XSSFWorkbook().use { workbook ->
+                encryptionInfo.encryptor.getDataStream(fileSystem).use { encryptedStream ->
+                    workbook.write(encryptedStream)
+                }
+            }
+
+            ByteArrayOutputStream().use { output ->
+                fileSystem.writeFilesystem(output)
+                output.toByteArray()
+            }
+        }
+        return ArchivoEntrada(
+            nombre = "estado-cifrado.xlsx",
+            extension = "xlsx",
+            tamanioBytes = bytes.size.toLong(),
+            bytes = bytes,
+            mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    }
 }

@@ -14,6 +14,7 @@ import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -44,7 +45,7 @@ class QikPdfParser @Inject constructor() : BankStatementParser {
 
     override suspend fun parse(request: ImportRequest): ParseResult {
         return try {
-            val texto = extraerTexto(request.archivo.bytes)
+            val texto = extraerTexto(request.archivo.bytes, request.claveDocumento)
             val ultimos4 = extraerUltimos4(texto) ?: return ParseResult.Error("No se pudo extraer información de la tarjeta Qik.")
             val titular    = extraerTitular(texto)
             val limite     = extraerMonto(texto, "(?:L[ií]mite|Limite)(?:\\s+Aprobado)?[:\\s]+")
@@ -103,6 +104,9 @@ class QikPdfParser @Inject constructor() : BankStatementParser {
             )
 
             ParseResult.Success(estado, report)
+        } catch (e: InvalidPasswordException) {
+            if (request.claveDocumento == null) ParseResult.ClaveRequerida
+            else ParseResult.ClaveIncorrecta
         } catch (e: Exception) {
             ParseResult.Error("Error al parsear PDF de Qik: ${e.message}", e)
         }
@@ -110,8 +114,8 @@ class QikPdfParser @Inject constructor() : BankStatementParser {
 
     // ─── Extracción de texto ──────────────────────────────────────────────────
 
-    private fun extraerTexto(bytes: ByteArray): String =
-        PDDocument.load(bytes).use { doc ->
+    private fun extraerTexto(bytes: ByteArray, claveDocumento: String?): String =
+        (claveDocumento?.let { PDDocument.load(bytes, it) } ?: PDDocument.load(bytes)).use { doc ->
             PDFTextStripper().apply { sortByPosition = true }.getText(doc)
         }
 

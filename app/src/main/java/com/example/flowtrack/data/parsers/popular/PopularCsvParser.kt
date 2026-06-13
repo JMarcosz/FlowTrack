@@ -2,14 +2,13 @@ package com.example.flowtrack.data.parsers.popular
 
 import com.example.flowtrack.core.extensions.normalizarDescripcion
 import com.example.flowtrack.core.extensions.toBigDecimalSafe
+import com.example.flowtrack.data.parsers.core.BankStatementParser
 import com.example.flowtrack.data.parsers.core.EstadoCuentaNormalizado
 import com.example.flowtrack.data.parsers.core.ImportRequest
 import com.example.flowtrack.data.parsers.core.MovimientoNormalizado
 import com.example.flowtrack.data.parsers.core.ParseReport
 import com.example.flowtrack.data.parsers.core.ParseResult
 import com.example.flowtrack.data.parsers.core.ParserKey
-import com.example.flowtrack.data.parsers.core.BankStatementParser
-import com.example.flowtrack.data.parsers.core.TipoMovimiento
 import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.ProductoTipo
@@ -67,7 +66,7 @@ class PopularCsvParser @Inject constructor() : BankStatementParser {
             var titular = "TITULAR"
             var moneda = Moneda.DOP
             lineas.take(headerIdx).forEach { l ->
-                Regex("""Cuenta:\s*([\d]+)""").find(l)?.groupValues?.getOrNull(1)?.let { numeroCuenta = it }
+                Regex("""Cuenta:\s*(\d+)""").find(l)?.groupValues?.getOrNull(1)?.let { numeroCuenta = it }
                 if (l.uppercase().contains("USD")) moneda = Moneda.USD
             }
 
@@ -143,28 +142,17 @@ class PopularCsvParser @Inject constructor() : BankStatementParser {
                 if (fecha == null) { ignorados++; continue }
 
                 // Determinar tipo de movimiento desde Descripción Corta
-                val descCortaN = descCorta.uppercase().normalizarDescripcion()
-                val descLargaN = descLarga.uppercase().normalizarDescripcion()
-
-                val tipo = when {
-                    descCortaN.contains("CREDITO") -> TipoMovimiento.INGRESO
-                    descCortaN.contains("ATM") || descLargaN.contains("RET DE CHK") -> TipoMovimiento.RETIRO_ATM
-                    descCortaN.contains("DEBITO") -> clasificarDebito(descLargaN)
-                    descCorta.isBlank() -> clasificarSinTipo(descLargaN)
-                    else -> TipoMovimiento.GASTO
-                }
-
-                val descripcionCorta = normalizarConceptoPopular(descCortaN, descLargaN)
+                val clasificacion = PopularMovementNormalizer.clasificar(descCorta, descLarga)
 
                 movimientos.add(
                     MovimientoNormalizado(
                         fechaTransaccion = fecha,
                         fechaPosteo = null,
                         descripcionOriginal = descLarga.ifBlank { descCorta },
-                        descripcionNormalizada = descLargaN.ifBlank { descCortaN },
-                        descripcionCorta = descripcionCorta,
+                        descripcionNormalizada = clasificacion.descripcionNormalizada,
+                        descripcionCorta = clasificacion.descripcionCorta,
                         monto = monto,
-                        tipo = tipo,
+                        tipo = clasificacion.tipo,
                         moneda = moneda,
                         balancePosterior = balance,
                         referencia = ref,
@@ -207,43 +195,4 @@ class PopularCsvParser @Inject constructor() : BankStatementParser {
         }
     }
 
-    private fun clasificarDebito(descLargaN: String): TipoMovimiento = when {
-        descLargaN.contains("COMISION") || descLargaN.contains("CARGO MENSUAL") -> TipoMovimiento.COMISION
-        descLargaN.contains("LBTR") || descLargaN.contains("MB A ") ||
-            descLargaN.contains("PAGO ACH") || descLargaN.contains("ACH ") -> TipoMovimiento.TRANSFERENCIA
-        descLargaN.contains("PAG ") || descLargaN.contains("PAGO ") -> TipoMovimiento.GASTO
-        else -> TipoMovimiento.GASTO
-    }
-
-    private fun clasificarSinTipo(descLargaN: String): TipoMovimiento = when {
-        descLargaN.contains("PAGO IMPUESTO") || descLargaN.contains("DGII") -> TipoMovimiento.COMISION
-        descLargaN.contains("CARGO") || descLargaN.contains("COMISION") -> TipoMovimiento.COMISION
-        else -> TipoMovimiento.GASTO
-    }
-
-    private fun normalizarConceptoPopular(descCortaN: String, descLargaN: String): String {
-        return when {
-            descCortaN.contains("CREDITO") -> when {
-                descLargaN.contains("MB DESDE") -> "TRANSFERENCIA RECIBIDA"
-                descLargaN.contains("DEPOSITO CHEQUE") || descLargaN.contains("DEPOSITO EN EFECTIVO") -> "DEPOSITO"
-                descLargaN.contains("DEPOSITO EN SUBAGENTE") || descLargaN.contains("DEPOSITO SUBAGENTE") -> "DEPOSITO SUBAGENTE"
-                descLargaN.contains("LBTR") -> "TRANSFERENCIA LBTR RECIBIDA"
-                descLargaN.contains("COD CASH") -> "DEPOSITO CODIGO"
-                else -> "CREDITO"
-            }
-            descCortaN.contains("ATM") || descLargaN.contains("RET DE CHK") -> "RETIRO ATM"
-            descLargaN.contains("LBTR") -> "TRANSFERENCIA LBTR"
-            descLargaN.contains("MB A ") -> "TRANSFERENCIA ENVIADA"
-            descLargaN.contains("PAGO ACH") || descLargaN.contains("ACH ") -> "TRANSFERENCIA ACH"
-            descLargaN.contains("PAGO IMPUESTO") || descLargaN.contains("DGII") -> "IMPUESTO DGII"
-            descLargaN.contains("CARGO MENSUAL") -> "CARGO MENSUAL TD"
-            descLargaN.contains("PAG ") || descLargaN.contains("PAGO ") -> {
-                val servicio = Regex("""PAG\s+(\w+)""").find(descLargaN)?.groupValues?.getOrNull(1)
-                    ?: Regex("""PAGO\s+(\w+)""").find(descLargaN)?.groupValues?.getOrNull(1)
-                    ?: "SERVICIO"
-                "PAGO $servicio".take(40)
-            }
-            else -> descLargaN.take(40).ifBlank { descCortaN.take(40) }
-        }
-    }
 }

@@ -17,7 +17,8 @@ interface BankStatementParser {
 
     /**
      * Parsea el estado de cuenta descrito en [request] y devuelve el resultado normalizado.
-     * Toda excepción interna debe ser capturada y convertida en [ParseResult.Error].
+     * Las excepciones internas se convierten en resultados tipados para que la UI pueda
+     * distinguir archivos inválidos de documentos cifrados.
      */
     suspend fun parse(request: ImportRequest): ParseResult
 }

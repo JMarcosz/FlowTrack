@@ -4,7 +4,6 @@ import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.domain.model.TipoCuenta
-import com.example.flowtrack.domain.model.TipoDocumento
 import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import java.math.BigDecimal
@@ -152,6 +151,7 @@ data class ImportRequest(
     val productoTipo: ProductoTipo,
     val formato: FileFormat,
     val archivo: ArchivoEntrada,
+    val claveDocumento: String? = null,
 )
 
 /**
@@ -241,4 +241,7 @@ sealed interface ParseResult {
         val message: String,
         val cause: Throwable? = null,
     ) : ParseResult
+
+    data object ClaveRequerida : ParseResult
+    data object ClaveIncorrecta : ParseResult
 }

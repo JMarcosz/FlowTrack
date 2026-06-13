@@ -11,7 +11,7 @@ import org.mockito.kotlin.mock
 
 class ParserRegistryTest {
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    // Helpers
 
     private fun parserFake(
         bancoCodigo: String,
@@ -21,8 +21,6 @@ class ParserRegistryTest {
         on { key } doReturn ParserKey(bancoCodigo, productoTipo, formato)
         on { version } doReturn 1
     }
-
-    // ─── get() ────────────────────────────────────────────────────────────────
 
     @Test
     fun `get - devuelve el parser correcto para una clave existente`() {
@@ -75,14 +73,12 @@ class ParserRegistryTest {
         assertEquals(FileFormat.CSV, resultCsv!!.key.formato)
     }
 
-    // ─── clavesRegistradas() ──────────────────────────────────────────────────
-
     @Test
     fun `clavesRegistradas - lista todas las claves`() {
         val parsers = setOf(
             parserFake("BANRESERVAS", ProductoTipo.CUENTA, FileFormat.PDF),
-            parserFake("POPULAR",     ProductoTipo.CUENTA, FileFormat.CSV),
-            parserFake("QIK",         ProductoTipo.TARJETA, FileFormat.PDF),
+            parserFake("POPULAR", ProductoTipo.CUENTA, FileFormat.CSV),
+            parserFake("QIK", ProductoTipo.TARJETA, FileFormat.PDF),
         )
         val registry = ParserRegistry(parsers)
 
@@ -97,22 +93,21 @@ class ParserRegistryTest {
         assertEquals(emptyList<ParserKey>(), registry.clavesRegistradas())
     }
 
-    // ─── 4 parsers del MVP ────────────────────────────────────────────────────
-
     @Test
-    fun `registro con 4 parsers del MVP recupera cada uno por su clave`() {
+    fun `registro con 5 parsers del MVP recupera cada uno por su clave`() {
         val parsers = setOf(
-            parserFake("BANRESERVAS", ProductoTipo.CUENTA,   FileFormat.PDF),
-            parserFake("POPULAR",     ProductoTipo.CUENTA,   FileFormat.CSV),
-            parserFake("QIK",         ProductoTipo.TARJETA,  FileFormat.PDF),
-            parserFake("CIBAO",       ProductoTipo.TARJETA,  FileFormat.XLS),
+            parserFake("BANRESERVAS", ProductoTipo.CUENTA, FileFormat.PDF),
+            parserFake("POPULAR", ProductoTipo.CUENTA, FileFormat.CSV),
+            parserFake("QIK", ProductoTipo.TARJETA, FileFormat.PDF),
+            parserFake("CIBAO", ProductoTipo.TARJETA, FileFormat.XLS),
+            parserFake("BHD", ProductoTipo.CUENTA, FileFormat.PDF),
         )
         val registry = ParserRegistry(parsers)
 
         assertNotNull(registry.get(ParserKey("BANRESERVAS", ProductoTipo.CUENTA, FileFormat.PDF)))
-        assertNotNull(registry.get(ParserKey("POPULAR",     ProductoTipo.CUENTA, FileFormat.CSV)))
-        assertNotNull(registry.get(ParserKey("QIK",         ProductoTipo.TARJETA, FileFormat.PDF)))
-        assertNotNull(registry.get(ParserKey("CIBAO",       ProductoTipo.TARJETA, FileFormat.XLS)))
-        assertNull   (registry.get(ParserKey("BHD",         ProductoTipo.CUENTA, FileFormat.PDF)))
+        assertNotNull(registry.get(ParserKey("POPULAR", ProductoTipo.CUENTA, FileFormat.CSV)))
+        assertNotNull(registry.get(ParserKey("QIK", ProductoTipo.TARJETA, FileFormat.PDF)))
+        assertNotNull(registry.get(ParserKey("CIBAO", ProductoTipo.TARJETA, FileFormat.XLS)))
+        assertNotNull(registry.get(ParserKey("BHD", ProductoTipo.CUENTA, FileFormat.PDF)))
     }
 }

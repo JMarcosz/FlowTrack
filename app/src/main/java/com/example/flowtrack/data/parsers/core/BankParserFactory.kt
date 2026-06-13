@@ -6,9 +6,6 @@ import com.example.flowtrack.domain.model.ProductoTipo
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Bancos que existen en la UI pero no tienen parser todavía. */
-private val BANCOS_PROXIMAMENTE = setOf("BHD")
-
 /**
  * Fachada que resuelve el [BankStatementParser] correcto para una combinación de
  * banco + producto + formato. El banco siempre es elegido por el usuario antes de
@@ -31,10 +28,9 @@ class BankParserFactory @Inject constructor(
         return if (parser != null) {
             Result.success(parser)
         } else {
-            val proximamente = bancoCodigo.uppercase() in BANCOS_PROXIMAMENTE
             Result.failure(
                 ParserNoDisponibleException(
-                    ErrorApp.ParserNoDisponible(bancoCodigo, proximamente)
+                    ErrorApp.ParserNoDisponible(bancoCodigo)
                 )
             )
         }
@@ -43,6 +39,5 @@ class BankParserFactory @Inject constructor(
 
 class ParserNoDisponibleException(val error: ErrorApp.ParserNoDisponible) :
     Exception(
-        if (error.proximamente) "${error.bancoCodigo} estará disponible próximamente."
-        else "No hay parser disponible para ${error.bancoCodigo}."
+        "No hay parser disponible para ${error.bancoCodigo}."
     )
