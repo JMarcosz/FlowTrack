@@ -1,6 +1,6 @@
 package com.example.flowtrack.data.firestore.repositories
 
-import com.example.flowtrack.core.firestore.asListFlow
+import com.example.flowtrack.data.local.OfflineStore
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
 import com.example.flowtrack.data.firestore.dto.CargaDto
@@ -11,7 +11,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,81 +19,80 @@ import javax.inject.Singleton
 @Singleton
 class HistorialRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
+    private val offlineStore: OfflineStore,
 ) {
     private fun colRef(uid: String) = firestore
         .collection("usuarios").document(uid).collection("cargas")
 
-    /** Flow reactivo: actualiza automáticamente cuando se importa o elimina una carga. */
+    /** Flow reactivo: actualiza automÃ¡ticamente cuando se importa o elimina una carga. */
     fun observarCargas(uid: String, limite: Int = 20): Flow<List<Carga>> =
-        colRef(uid)
-            .orderBy("procesadoEn", Query.Direction.DESCENDING)
-            .limit(limite.toLong())
-            .asListFlow(CargaDto::class.java)
-            .map { dtos -> dtos.mapNotNull { it.toDomain() } }
+        offlineStore.observeCargas(uid, limite)
+            .onStart {
+                if (!offlineStore.hasRecords("CARGA", uid)) {
+                    syncRemote(uid, limite)
+                }
+            }
 
     suspend fun obtenerCargas(uid: String, limite: Int = 50): AppResult<List<Carga>> {
         return try {
-            val snapshot = firestore
-                .collection("usuarios").document(uid)
-                .collection("cargas")
-                .orderBy("procesadoEn", Query.Direction.DESCENDING)
-                .limit(limite.toLong())
-                .get()
-                .await()
-
-            val cargas = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(CargaDto::class.java)?.toDomain()
+            val local = offlineStore.getCargas(uid, limite)
+            if (local.isNotEmpty()) {
+                return AppResult.Success(local)
             }
-            AppResult.Success(cargas)
+
+            syncRemote(uid, limite)
+            AppResult.Success(offlineStore.getCargas(uid, limite))
         } catch (e: Exception) {
             AppResult.Error(ErrorApp.FirestoreError("Error al cargar historial: ${e.message}", e))
         }
     }
 
     /**
-     * Soft-delete de una carga: borra físicamente las subcollecciones (transacciones,
-     * movimientos, estados), limpia el documento de cuenta/tarjeta si no quedan más datos,
-     * y marca la carga como ELIMINADO (preserva auditoría).
+     * Soft-delete de una carga: borra fÃ­sicamente las subcollecciones (transacciones,
+     * movimientos, estados), limpia el documento de cuenta/tarjeta si no quedan mÃ¡s datos,
+     * y marca la carga como ELIMINADO (preserva auditorÃ­a).
      */
     suspend fun eliminarTransaccionesDeCarga(uid: String, cargaId: String): AppResult<Unit> {
         return try {
             val refUsuario = firestore.collection("usuarios").document(uid)
 
-            // Leer la carga para saber qué cuenta/tarjeta limpiar después
             val cargaDoc = refUsuario.collection("cargas").document(cargaId).get().await()
             val cuentaId = cargaDoc.getString("cuentaId")
             val tarjetaId = cargaDoc.getString("tarjetaId")
 
-            // Borrar datos reales de todas las subcollecciones
             borrarColeccionPorCargaId(refUsuario.collection("transacciones"), cargaId)
             borrarColeccionPorCargaId(refUsuario.collection("movimientosTarjeta"), cargaId)
             borrarColeccionPorCargaId(refUsuario.collection("estadosTarjeta"), cargaId)
 
-            // Si no quedan transacciones para la cuenta, eliminar el documento de cuenta
+            offlineStore.deleteByCargaId("TRANSACCION", uid, cargaId)
+            offlineStore.deleteByCargaId("MOVIMIENTO_TARJETA", uid, cargaId)
+            offlineStore.deleteByCargaId("ESTADO_TARJETA", uid, cargaId)
+
             if (!cuentaId.isNullOrBlank()) {
                 val restantes = refUsuario.collection("transacciones")
                     .whereEqualTo("cuentaId", cuentaId).limit(1).get().await()
                 if (restantes.isEmpty) {
                     refUsuario.collection("cuentas").document(cuentaId).delete().await()
+                    offlineStore.deleteById("CUENTA", uid, cuentaId)
                 }
             }
 
-            // Si no quedan movimientos para la tarjeta, eliminar el documento de tarjeta
             if (!tarjetaId.isNullOrBlank()) {
                 val restantes = refUsuario.collection("movimientosTarjeta")
                     .whereEqualTo("tarjetaId", tarjetaId).limit(1).get().await()
                 if (restantes.isEmpty) {
                     refUsuario.collection("tarjetas").document(tarjetaId).delete().await()
+                    offlineStore.deleteById("TARJETA", uid, tarjetaId)
                 }
             }
 
-            // Soft-delete del documento de carga (queda visible en auditoría)
             refUsuario.collection("cargas").document(cargaId).update(
                 mapOf(
                     "estado" to EstadoCarga.ELIMINADO.name,
                     "eliminadoEn" to Timestamp.now(),
                 )
             ).await()
+            offlineStore.deleteById("CARGA", uid, cargaId)
 
             AppResult.Success(Unit)
         } catch (e: Exception) {
@@ -109,14 +108,12 @@ class HistorialRepository @Inject constructor(
         return try {
             val refUsuario = firestore.collection("usuarios").document(uid)
 
-            // Borrar físicamente todas las subcollecciones en bloque
             borrarColeccionCompleta(refUsuario.collection("transacciones"))
             borrarColeccionCompleta(refUsuario.collection("movimientosTarjeta"))
             borrarColeccionCompleta(refUsuario.collection("estadosTarjeta"))
             borrarColeccionCompleta(refUsuario.collection("cuentas"))
             borrarColeccionCompleta(refUsuario.collection("tarjetas"))
 
-            // Soft-delete de todas las cargas no eliminadas
             val snapshot = refUsuario.collection("cargas")
                 .whereNotEqualTo("estado", EstadoCarga.ELIMINADO.name)
                 .get().await()
@@ -130,6 +127,8 @@ class HistorialRepository @Inject constructor(
                 }
                 batch.commit().await()
             }
+
+            offlineStore.clearUser(uid)
 
             AppResult.Success(Unit)
         } catch (e: Exception) {
@@ -157,6 +156,23 @@ class HistorialRepository @Inject constructor(
             val batch = firestore.batch()
             chunk.forEach { doc -> batch.delete(doc.reference) }
             batch.commit().await()
+        }
+    }
+
+    private suspend fun syncRemote(uid: String, limite: Int) {
+        runCatching {
+            val snapshot = firestore
+                .collection("usuarios").document(uid)
+                .collection("cargas")
+                .orderBy("procesadoEn", Query.Direction.DESCENDING)
+                .limit(limite.toLong())
+                .get()
+                .await()
+
+            val cargas = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(CargaDto::class.java)?.toDomain()
+            }
+            if (cargas.isNotEmpty()) offlineStore.upsertCargas(cargas)
         }
     }
 }

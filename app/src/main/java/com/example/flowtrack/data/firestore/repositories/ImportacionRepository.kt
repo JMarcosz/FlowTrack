@@ -2,10 +2,7 @@ package com.example.flowtrack.data.firestore.repositories
 
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
-import com.example.flowtrack.data.firestore.dto.CargaDto
-import com.example.flowtrack.data.firestore.dto.CuentaDto
-import com.example.flowtrack.data.firestore.dto.TransaccionDto
-import com.example.flowtrack.data.firestore.mappers.toDomain
+import com.example.flowtrack.data.local.OfflineStore
 import com.example.flowtrack.data.firestore.mappers.toDto
 import com.example.flowtrack.domain.model.Carga
 import com.example.flowtrack.domain.model.Cuenta
@@ -14,6 +11,7 @@ import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.Tarjeta
 import com.example.flowtrack.domain.model.Transaccion
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 import java.time.Instant
@@ -28,6 +26,7 @@ import javax.inject.Singleton
 @Singleton
 class ImportacionRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
+    private val offlineStore: OfflineStore,
 ) {
 
     /**
@@ -47,6 +46,11 @@ class ImportacionRepository @Inject constructor(
         carga: Carga,
     ): AppResult<Unit> {
         return try {
+            val cuentaLocal = offlineStore.getCuentas(uid).firstOrNull { it.id == cuenta.id }
+            val cuentaAGuardar = construirCuentaParaImportacion(cuentaLocal, cuenta, carga)
+            offlineStore.upsertCuenta(cuentaAGuardar)
+            offlineStore.upsertCarga(carga)
+            offlineStore.upsertTransacciones(transacciones)
             val refUsuario = firestore.collection("usuarios").document(uid)
 
             transacciones.chunked(450).forEachIndexed { chunkIdx, chunk ->
@@ -54,18 +58,15 @@ class ImportacionRepository @Inject constructor(
 
                 if (chunkIdx == 0) {
                     val refCuenta = refUsuario.collection("cuentas").document(cuenta.id)
-                    val cuentaDto = construirDtoCuentaConBalanceProtegido(refCuenta, cuenta, carga)
-                    batch.set(refCuenta, cuentaDto, SetOptions.merge())
+                    batch.set(refCuenta, cuentaAGuardar.toDto(), SetOptions.merge())
 
                     val refCarga = refUsuario.collection("cargas").document(carga.id)
-                    if (!refCarga.get().await().exists()) {
-                        batch.set(refCarga, carga.toDto())
-                    }
+                    batch.set(refCarga, carga.toDto(), SetOptions.merge())
                 }
 
                 chunk.forEach { tx ->
                     val ref = refUsuario.collection("transacciones").document(tx.id)
-                    batch.set(ref, tx.toDto())
+                    batch.set(ref, tx.toDto(), SetOptions.merge())
                 }
 
                 batch.commit().await()
@@ -75,20 +76,20 @@ class ImportacionRepository @Inject constructor(
             if (transacciones.isEmpty()) {
                 val batch = firestore.batch()
                 val refCuenta = refUsuario.collection("cuentas").document(cuenta.id)
-                val cuentaDto = construirDtoCuentaConBalanceProtegido(refCuenta, cuenta, carga)
-                batch.set(refCuenta, cuentaDto, SetOptions.merge())
+                batch.set(refCuenta, cuentaAGuardar.toDto(), SetOptions.merge())
                 val refCarga = refUsuario.collection("cargas").document(carga.id)
-                if (!refCarga.get().await().exists()) {
-                    batch.set(refCarga, carga.toDto())
-                }
+                batch.set(refCarga, carga.toDto(), SetOptions.merge())
                 batch.commit().await()
             }
 
             AppResult.Success(Unit)
         } catch (e: Exception) {
+            if (e.esOfflineFirestore()) {
+                return AppResult.Success(Unit)
+            }
             AppResult.Error(
                 ErrorApp.FirestoreError(
-                    mensaje = "Error al guardar en Firestore: ${e.message}",
+                    mensaje = e.mensajeImportacionFirestore("guardar el estado de cuenta"),
                     causa = e,
                 )
             )
@@ -100,16 +101,11 @@ class ImportacionRepository @Inject constructor(
      * solo lo incluye en el merge si la nueva carga es más reciente que
      * el último corte ya guardado en Firestore.
      */
-    private suspend fun construirDtoCuentaConBalanceProtegido(
-        refCuenta: com.google.firebase.firestore.DocumentReference,
+    private fun construirCuentaParaImportacion(
+        cuentaExistente: Cuenta?,
         nuevaCuenta: Cuenta,
         nuevaCarga: Carga,
-    ): CuentaDto {
-        val snap = refCuenta.get().await()
-        val cuentaExistente: Cuenta? = if (snap.exists()) {
-            runCatching { snap.toObject(CuentaDto::class.java)?.toDomain() }.getOrNull()
-        } else null
-
+    ): Cuenta {
         val nuevoPeriodoFin: Instant? = nuevaCarga.periodoFin
         val ultimoCorte: Instant? = cuentaExistente?.fechaUltimoCorte
 
@@ -117,16 +113,12 @@ class ImportacionRepository @Inject constructor(
         val esImportacionMasReciente = nuevoPeriodoFin != null &&
             (ultimoCorte == null || !nuevoPeriodoFin.isBefore(ultimoCorte))
 
-        return if (esImportacionMasReciente) {
-            nuevaCuenta.toDto()
-        } else {
-            // Merge sin tocar balanceActual ni fechaUltimoCorte — solo sincronización
-            nuevaCuenta.toDto().copy(
-                balanceActual = cuentaExistente?.balanceActual?.toDouble(),
-                fechaUltimoCorte = cuentaExistente?.fechaUltimoCorte
-                    ?.let { com.google.firebase.Timestamp(it.epochSecond, it.nano) },
-            )
-        }
+        return if (esImportacionMasReciente || cuentaExistente == null) nuevaCuenta
+        else nuevaCuenta.copy(
+            balanceActual = cuentaExistente.balanceActual,
+            fechaUltimoCorte = cuentaExistente.fechaUltimoCorte,
+            alias = cuentaExistente.alias.ifBlank { nuevaCuenta.alias },
+        )
     }
 
     /**
@@ -144,6 +136,46 @@ class ImportacionRepository @Inject constructor(
         carga: Carga,
     ): AppResult<Unit> {
         return try {
+            val tarjetaExistenteLocal = offlineStore.getTarjetas(uid).firstOrNull { it.id == tarjeta.id }
+            val tarjetaAGuardar = tarjetaExistenteLocal?.copy(
+                alias = tarjetaExistenteLocal.alias.ifBlank { tarjeta.alias },
+                tipoRed = tarjeta.tipoRed ?: tarjetaExistenteLocal.tipoRed,
+                limiteCredito = tarjeta.limiteCredito,
+                moneda = tarjeta.moneda,
+                diaCorte = tarjeta.diaCorte,
+                diaPago = tarjeta.diaPago,
+                tasaInteresAnual = tarjeta.tasaInteresAnual,
+                tasaInteresOrigen = tarjeta.tasaInteresOrigen,
+                estado = tarjeta.estado,
+                titular = tarjeta.titular.ifBlank { tarjetaExistenteLocal.titular },
+                activa = tarjeta.activa || tarjetaExistenteLocal.activa,
+                ultimaSincronizacion = tarjeta.ultimaSincronizacion ?: tarjetaExistenteLocal.ultimaSincronizacion,
+                creadoEn = tarjetaExistenteLocal.creadoEn,
+            ) ?: tarjeta
+
+            val estadoExistenteLocal = offlineStore.getEstadosTarjeta(uid, tarjeta.id).firstOrNull { it.id == estadoTarjeta.id }
+            val estadoAGuardar = estadoExistenteLocal?.copy(
+                fechaCorte = estadoTarjeta.fechaCorte,
+                fechaLimitePago = estadoTarjeta.fechaLimitePago,
+                periodoInicio = estadoTarjeta.periodoInicio,
+                periodoFin = estadoTarjeta.periodoFin,
+                balanceAlCorte = estadoTarjeta.balanceAlCorte,
+                balanceAnterior = estadoTarjeta.balanceAnterior ?: estadoExistenteLocal.balanceAnterior,
+                pagoMinimo = estadoTarjeta.pagoMinimo,
+                pagoTotal = estadoTarjeta.pagoTotal,
+                montoVencido = estadoTarjeta.montoVencido,
+                balancePromedioDiario = estadoTarjeta.balancePromedioDiario ?: estadoExistenteLocal.balancePromedioDiario,
+                interesFinanciamiento = estadoTarjeta.interesFinanciamiento ?: estadoExistenteLocal.interesFinanciamiento,
+                cashbackGanado = estadoTarjeta.cashbackGanado ?: estadoExistenteLocal.cashbackGanado,
+                moneda = estadoTarjeta.moneda,
+                cargaId = estadoTarjeta.cargaId.ifBlank { estadoExistenteLocal.cargaId },
+                creadoEn = estadoExistenteLocal.creadoEn,
+            ) ?: estadoTarjeta
+
+            offlineStore.upsertTarjeta(tarjetaAGuardar)
+            offlineStore.upsertEstadoTarjeta(estadoAGuardar)
+            offlineStore.upsertMovimientosTarjeta(movimientos)
+            offlineStore.upsertCarga(carga)
             val refUsuario = firestore.collection("usuarios").document(uid)
 
             movimientos.chunked(448).forEachIndexed { chunkIdx, chunk ->
@@ -151,21 +183,18 @@ class ImportacionRepository @Inject constructor(
 
                 if (chunkIdx == 0) {
                     val refTarjeta = refUsuario.collection("tarjetas").document(tarjeta.id)
-                    batch.set(refTarjeta, tarjeta.toDto(), SetOptions.merge())
+                    batch.set(refTarjeta, tarjetaAGuardar.toDto(), SetOptions.merge())
 
                     val refEstado = refUsuario.collection("estadosTarjeta").document(estadoTarjeta.id)
-                    batch.set(refEstado, estadoTarjeta.toDto())
+                    batch.set(refEstado, estadoAGuardar.toDto(), SetOptions.merge())
 
-                    // Cargas son inmutables en Firestore; solo escribir si no existe aún
                     val refCarga = refUsuario.collection("cargas").document(carga.id)
-                    if (!refCarga.get().await().exists()) {
-                        batch.set(refCarga, carga.toDto())
-                    }
+                    batch.set(refCarga, carga.toDto(), SetOptions.merge())
                 }
 
                 chunk.forEach { mov ->
                     val ref = refUsuario.collection("movimientosTarjeta").document(mov.id)
-                    batch.set(ref, mov.toDto())
+                    batch.set(ref, mov.toDto(), SetOptions.merge())
                 }
 
                 batch.commit().await()
@@ -174,20 +203,24 @@ class ImportacionRepository @Inject constructor(
             // Si no hay movimientos, el bucle no se ejecuta — persistir de todas formas
             if (movimientos.isEmpty()) {
                 val batch = firestore.batch()
-                batch.set(refUsuario.collection("tarjetas").document(tarjeta.id), tarjeta.toDto(), SetOptions.merge())
-                batch.set(refUsuario.collection("estadosTarjeta").document(estadoTarjeta.id), estadoTarjeta.toDto())
+                val refTarjeta = refUsuario.collection("tarjetas").document(tarjeta.id)
+                batch.set(refTarjeta, tarjetaAGuardar.toDto(), SetOptions.merge())
+
+                val refEstado = refUsuario.collection("estadosTarjeta").document(estadoTarjeta.id)
+                batch.set(refEstado, estadoAGuardar.toDto(), SetOptions.merge())
                 val refCarga = refUsuario.collection("cargas").document(carga.id)
-                if (!refCarga.get().await().exists()) {
-                    batch.set(refCarga, carga.toDto())
-                }
+                batch.set(refCarga, carga.toDto(), SetOptions.merge())
                 batch.commit().await()
             }
 
             AppResult.Success(Unit)
         } catch (e: Exception) {
+            if (e.esOfflineFirestore()) {
+                return AppResult.Success(Unit)
+            }
             AppResult.Error(
                 ErrorApp.FirestoreError(
-                    mensaje = "Error al guardar tarjeta en Firestore: ${e.message}",
+                    mensaje = e.mensajeImportacionFirestore("guardar el estado de tarjeta"),
                     causa = e,
                 )
             )
@@ -216,4 +249,20 @@ class ImportacionRepository @Inject constructor(
             0 // Si falla, asumir 0 duplicados (lo peor que pasa es sobreescritura idempotente)
         }
     }
+}
+
+private fun Throwable.esOfflineFirestore(): Boolean {
+    if (this is FirebaseFirestoreException && code == FirebaseFirestoreException.Code.UNAVAILABLE) return true
+    val message = message?.lowercase().orEmpty()
+    return message.contains("client is offline") || message.contains("unavailable")
+}
+
+private fun Throwable.mensajeImportacionFirestore(operacion: String): String {
+    if (this is FirebaseFirestoreException &&
+        code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+    ) {
+        return "Firestore rechazó la importación. Verifica que la sesión siga activa y que " +
+            "firestore.rules esté desplegado en el proyecto flowtrack-bfd4b."
+    }
+    return "Error al $operacion en Firestore: ${message.orEmpty()}"
 }

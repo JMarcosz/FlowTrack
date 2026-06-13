@@ -2,6 +2,7 @@ package com.example.flowtrack.data.firestore.repositories
 
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
+import com.example.flowtrack.data.local.OfflineStore
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -24,6 +25,7 @@ private val COLECCIONES_USUARIO = listOf(
 @Singleton
 class LimpiezaRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
+    private val offlineStore: OfflineStore,
 ) {
     /**
      * Borra todos los documentos de las subcolecciones financieras del usuario.
@@ -38,6 +40,8 @@ class LimpiezaRepository @Inject constructor(
             for (coleccion in COLECCIONES_USUARIO) {
                 totalEliminados += eliminarColeccion(refUsuario.collection(coleccion))
             }
+
+            offlineStore.clearUser(uid)
 
             AppResult.Success(totalEliminados)
         } catch (e: Exception) {
