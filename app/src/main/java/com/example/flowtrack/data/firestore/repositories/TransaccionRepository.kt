@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.tasks.await
 import java.time.Instant
 import javax.inject.Inject
@@ -43,6 +44,15 @@ class TransaccionRepository @Inject constructor(
         fin: Instant,
         limite: Int,
     ): Flow<List<Transaccion>> = offlineStore.observeTransacciones(uid, inicio, fin, limite)
+        .onStart {
+            if (!offlineStore.hasRecords("TRANSACCION", uid)) {
+                try {
+                    syncRemote(uid, inicio, fin, limite)
+                } catch (e: Exception) {
+                    android.util.Log.e("TransaccionRepo", "Error syncing transacciones", e)
+                }
+            }
+        }
 
     override suspend fun obtenerTransaccionesPage(
         uid: String,
@@ -52,6 +62,9 @@ class TransaccionRepository @Inject constructor(
         fin: Instant?
     ): AppResult<TransaccionesPage> {
         return try {
+            if (!offlineStore.hasRecords("TRANSACCION", uid) && lastVisible == null) {
+                syncRemote(uid, inicio, fin, 0)
+            }
             val (localPage, localCursor) = offlineStore.getTransaccionesPage(
                 uid = uid,
                 inicio = inicio,
@@ -73,10 +86,42 @@ class TransaccionRepository @Inject constructor(
     ): AppResult<List<Transaccion>> {
         return try {
             val local = offlineStore.getTransacciones(uid, inicio, fin, limite)
-            AppResult.Success(local)
+            if (local.isNotEmpty()) {
+                return AppResult.Success(local)
+            }
+
+            syncRemote(uid, inicio, fin, limite)
+            AppResult.Success(offlineStore.getTransacciones(uid, inicio, fin, limite))
         } catch (e: Exception) {
             AppResult.Error(ErrorApp.FirestoreError("Error al cargar transacciones: ${e.message}", e))
         }
+    }
+
+    private suspend fun syncRemote(
+        uid: String,
+        inicio: Instant?,
+        fin: Instant?,
+        limite: Int = 0
+    ) {
+        var query = colRef(uid).orderBy("fecha", Query.Direction.DESCENDING)
+
+        if (inicio != null) {
+            query = query.whereGreaterThanOrEqualTo("fecha", com.google.firebase.Timestamp(inicio.epochSecond, inicio.nano))
+        }
+
+        if (fin != null) {
+            query = query.whereLessThanOrEqualTo("fecha", com.google.firebase.Timestamp(fin.epochSecond, fin.nano))
+        }
+
+        if (limite > 0) {
+            query = query.limit(limite.toLong())
+        }
+
+        val snapshot = query.get().await()
+        val transacciones = snapshot.documents.mapNotNull { doc -> 
+            runCatching { doc.toObject(TransaccionDto::class.java)?.toDomain() }.getOrNull()
+        }
+        if (transacciones.isNotEmpty()) offlineStore.upsertTransacciones(transacciones)
     }
 
     override suspend fun obtenerDerivadas(uid: String, padreId: String): AppResult<List<Transaccion>> {

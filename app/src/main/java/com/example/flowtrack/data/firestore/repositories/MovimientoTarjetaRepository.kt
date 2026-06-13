@@ -32,7 +32,11 @@ class MovimientoTarjetaRepository @Inject constructor(
     ): Flow<List<MovimientoTarjeta>> = offlineStore.observeMovimientosTarjeta(uid, inicio, fin, limite)
         .onStart {
             if (!offlineStore.hasRecords("MOVIMIENTO_TARJETA", uid)) {
-                syncRemote(uid, inicio, fin, limite)
+                try {
+                    syncRemote(uid, inicio, fin, limite)
+                } catch (e: Exception) {
+                    android.util.Log.e("MovimientoRepository", "Error syncing movimientos in background", e)
+                }
             }
         }
 
@@ -61,23 +65,21 @@ class MovimientoTarjetaRepository @Inject constructor(
         fin: Instant?,
         limite: Int,
     ) {
-        runCatching {
-            var query = colRef(uid)
-                .whereGreaterThanOrEqualTo("fechaTransaccion", com.google.firebase.Timestamp(inicio.epochSecond, inicio.nano))
-                .orderBy("fechaTransaccion", Query.Direction.ASCENDING)
+        var query = colRef(uid)
+            .whereGreaterThanOrEqualTo("fechaTransaccion", com.google.firebase.Timestamp(inicio.epochSecond, inicio.nano))
+            .orderBy("fechaTransaccion", Query.Direction.ASCENDING)
 
-            if (fin != null) {
-                query = query.whereLessThanOrEqualTo("fechaTransaccion", com.google.firebase.Timestamp(fin.epochSecond, fin.nano))
-            }
-
-            if (limite > 0) {
-                query = query.limit(limite.toLong())
-            }
-
-            val snapshot = query.get().await()
-            val movimientos = snapshot.documents.mapNotNull { doc -> doc.toMovimientoCompat() }
-            if (movimientos.isNotEmpty()) offlineStore.upsertMovimientosTarjeta(movimientos)
+        if (fin != null) {
+            query = query.whereLessThanOrEqualTo("fechaTransaccion", com.google.firebase.Timestamp(fin.epochSecond, fin.nano))
         }
+
+        if (limite > 0) {
+            query = query.limit(limite.toLong())
+        }
+
+        val snapshot = query.get().await()
+        val movimientos = snapshot.documents.mapNotNull { doc -> doc.toMovimientoCompat() }
+        if (movimientos.isNotEmpty()) offlineStore.upsertMovimientosTarjeta(movimientos)
     }
 }
 

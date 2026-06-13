@@ -31,7 +31,11 @@ class CuentaRepository @Inject constructor(
         offlineStore.observeCuentas(uid)
             .onStart {
                 if (!offlineStore.hasRecords("CUENTA", uid)) {
-                    syncRemote(uid)
+                    try {
+                        syncRemote(uid)
+                    } catch (e: Exception) {
+                        android.util.Log.e("CuentaRepository", "Error syncing cuentas in background", e)
+                    }
                 }
             }
 
@@ -95,14 +99,12 @@ class CuentaRepository @Inject constructor(
     }
 
     private suspend fun syncRemote(uid: String) {
-        runCatching {
-            val snapshot = colRef(uid)
-                .orderBy("creadoEn", Query.Direction.ASCENDING)
-                .get()
-                .await()
-            val cuentas = snapshot.documents.mapNotNull { doc -> doc.toCuentaCompat(uid) }
-            if (cuentas.isNotEmpty()) offlineStore.upsertCuentas(cuentas)
-        }
+        val snapshot = colRef(uid)
+            .orderBy("creadoEn", Query.Direction.ASCENDING)
+            .get()
+            .await()
+        val cuentas = snapshot.documents.mapNotNull { doc -> doc.toCuentaCompat(uid) }
+        if (cuentas.isNotEmpty()) offlineStore.upsertCuentas(cuentas)
     }
 }
 

@@ -33,7 +33,11 @@ class TarjetaRepository @Inject constructor(
         offlineStore.observeTarjetas(uid)
             .onStart {
                 if (!offlineStore.hasRecords("TARJETA", uid)) {
-                    syncTarjetas(uid)
+                    try {
+                        syncTarjetas(uid)
+                    } catch (e: Exception) {
+                        android.util.Log.e("TarjetaRepository", "Error syncing tarjetas in background", e)
+                    }
                 }
             }
 
@@ -132,51 +136,47 @@ class TarjetaRepository @Inject constructor(
     }
 
     private suspend fun syncTarjetas(uid: String) {
-        runCatching {
-            val snapshot = firestore
-                .collection("usuarios").document(uid)
-                .collection("tarjetas")
-                .orderBy("creadoEn", Query.Direction.ASCENDING)
-                .get()
-                .await()
-            val tarjetas = snapshot.documents.mapNotNull { doc -> mapDocToTarjeta(doc, uid) }
-            if (tarjetas.isNotEmpty()) offlineStore.upsertTarjetas(tarjetas)
-        }
+        val snapshot = firestore
+            .collection("usuarios").document(uid)
+            .collection("tarjetas")
+            .orderBy("creadoEn", Query.Direction.ASCENDING)
+            .get()
+            .await()
+        val tarjetas = snapshot.documents.mapNotNull { doc -> mapDocToTarjeta(doc, uid) }
+        if (tarjetas.isNotEmpty()) offlineStore.upsertTarjetas(tarjetas)
     }
 
     private suspend fun syncEstados(uid: String, tarjetaId: String) {
-        runCatching {
-            val snapshot = firestore
-                .collection("usuarios").document(uid)
-                .collection("estadosTarjeta")
-                .whereEqualTo("tarjetaId", tarjetaId)
-                .orderBy("fechaCorte", Query.Direction.DESCENDING)
-                .get()
-                .await()
-            val estados = snapshot.documents.mapNotNull { doc ->
-                val monedaStr = doc.getString("moneda") ?: "DOP"
-                EstadoTarjetaSnap(
-                    id = doc.id,
-                    uidUsuario = doc.getString("uidUsuario") ?: uid,
-                    tarjetaId = doc.getString("tarjetaId") ?: tarjetaId,
-                    fechaCorte = doc.getTimestamp("fechaCorte")?.toDate()?.toInstant() ?: Instant.now(),
-                    fechaLimitePago = doc.getTimestamp("fechaLimitePago")?.toDate()?.toInstant() ?: Instant.now(),
-                    periodoInicio = doc.getTimestamp("periodoInicio")?.toDate()?.toInstant() ?: Instant.now(),
-                    periodoFin = doc.getTimestamp("periodoFin")?.toDate()?.toInstant() ?: Instant.now(),
-                    balanceAlCorte = doc.money("balanceAlCorte") ?: BigDecimal.ZERO.setScale(2),
-                    balanceAnterior = doc.money("balanceAnterior"),
-                    pagoMinimo = doc.money("pagoMinimo") ?: BigDecimal.ZERO.setScale(2),
-                    pagoTotal = doc.money("pagoTotal") ?: BigDecimal.ZERO.setScale(2),
-                    montoVencido = doc.money("montoVencido") ?: BigDecimal.ZERO.setScale(2),
-                    balancePromedioDiario = doc.money("balancePromedioDiario"),
-                    interesFinanciamiento = doc.money("interesFinanciamiento"),
-                    cashbackGanado = doc.money("cashbackGanado"),
-                    moneda = Moneda.valueOf(monedaStr),
-                    cargaId = doc.getString("cargaId") ?: "",
-                    creadoEn = doc.getTimestamp("creadoEn")?.toDate()?.toInstant() ?: Instant.now()
-                )
-            }
-            if (estados.isNotEmpty()) offlineStore.upsertEstadosTarjeta(estados)
+        val snapshot = firestore
+            .collection("usuarios").document(uid)
+            .collection("estadosTarjeta")
+            .whereEqualTo("tarjetaId", tarjetaId)
+            .orderBy("fechaCorte", Query.Direction.DESCENDING)
+            .get()
+            .await()
+        val estados = snapshot.documents.mapNotNull { doc ->
+            val monedaStr = doc.getString("moneda") ?: "DOP"
+            EstadoTarjetaSnap(
+                id = doc.id,
+                uidUsuario = doc.getString("uidUsuario") ?: uid,
+                tarjetaId = doc.getString("tarjetaId") ?: tarjetaId,
+                fechaCorte = doc.getTimestamp("fechaCorte")?.toDate()?.toInstant() ?: Instant.now(),
+                fechaLimitePago = doc.getTimestamp("fechaLimitePago")?.toDate()?.toInstant() ?: Instant.now(),
+                periodoInicio = doc.getTimestamp("periodoInicio")?.toDate()?.toInstant() ?: Instant.now(),
+                periodoFin = doc.getTimestamp("periodoFin")?.toDate()?.toInstant() ?: Instant.now(),
+                balanceAlCorte = doc.money("balanceAlCorte") ?: BigDecimal.ZERO.setScale(2),
+                balanceAnterior = doc.money("balanceAnterior"),
+                pagoMinimo = doc.money("pagoMinimo") ?: BigDecimal.ZERO.setScale(2),
+                pagoTotal = doc.money("pagoTotal") ?: BigDecimal.ZERO.setScale(2),
+                montoVencido = doc.money("montoVencido") ?: BigDecimal.ZERO.setScale(2),
+                balancePromedioDiario = doc.money("balancePromedioDiario"),
+                interesFinanciamiento = doc.money("interesFinanciamiento"),
+                cashbackGanado = doc.money("cashbackGanado"),
+                moneda = Moneda.valueOf(monedaStr),
+                cargaId = doc.getString("cargaId") ?: "",
+                creadoEn = doc.getTimestamp("creadoEn")?.toDate()?.toInstant() ?: Instant.now()
+            )
         }
+        if (estados.isNotEmpty()) offlineStore.upsertEstadosTarjeta(estados)
     }
 }

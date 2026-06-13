@@ -39,6 +39,21 @@ service cloud.firestore {
     match /usuarios/{uid} {
       allow read, write: if isOwner(uid);
 
+      match /cuentas/{docId} { allow read, write: if isOwner(uid); }
+      match /tarjetas/{docId} { allow read, write: if isOwner(uid); }
+      match /estadosTarjeta/{docId} { allow read, write: if isOwner(uid); }
+      match /movimientosTarjeta/{docId} { allow read, write: if isOwner(uid); }
+      match /transacciones/{docId} { allow read, write: if isOwner(uid); }
+      match /presupuestos/{docId} { allow read, write: if isOwner(uid); }
+      match /metas/{docId} { allow read, write: if isOwner(uid); }
+      match /cargas/{docId} { allow read, write: if isOwner(uid); }
+      match /dispositivos/{docId} { allow read, write: if isOwner(uid); }
+      match /configuracion/{docId} { allow read, write: if isOwner(uid); }
+      match /notificacionConfig/{docId} { allow read, write: if isOwner(uid); }
+      match /reglasCategorias/{docId} { allow read, write: if isOwner(uid); }
+      match /reglasSugeridas/{docId} { allow read, write: if isOwner(uid); }
+      match /categoriasPersonales/{docId} { allow read, write: if isOwner(uid); }
+
       match /{coleccion}/{docId} {
         allow read, write: if isOwner(uid);
       }
