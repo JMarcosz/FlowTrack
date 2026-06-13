@@ -1,18 +1,18 @@
 package com.example.flowtrack.data.firestore.repositories
 
-import com.example.flowtrack.core.firestore.asListFlow
+import com.example.flowtrack.data.local.OfflineStore
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
-import com.example.flowtrack.data.firestore.dto.CuentaDto
-import com.example.flowtrack.data.firestore.mappers.toDomain
+import com.example.flowtrack.data.firestore.mappers.money
 import com.example.flowtrack.data.firestore.mappers.toDto
 import com.example.flowtrack.domain.model.Cuenta
-import com.google.firebase.Timestamp
+import com.example.flowtrack.domain.repository.ICuentaRepository
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.tasks.await
 import java.time.Instant
 import javax.inject.Inject
@@ -21,35 +21,37 @@ import javax.inject.Singleton
 @Singleton
 class CuentaRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-) {
+    private val offlineStore: OfflineStore,
+) : ICuentaRepository {
     private fun colRef(uid: String) = firestore
         .collection("usuarios").document(uid).collection("cuentas")
 
     /** Flow reactivo: emite desde cache local inmediatamente, luego actualiza si hay cambios. */
-    fun observarCuentas(uid: String): Flow<List<Cuenta>> =
-        colRef(uid)
-            .orderBy("creadoEn", Query.Direction.ASCENDING)
-            .asListFlow(CuentaDto::class.java)
-            .map { dtos -> dtos.mapNotNull { it.toDomain() } }
-
-    suspend fun obtenerCuentas(uid: String): AppResult<List<Cuenta>> {
-        return try {
-            val snapshot = colRef(uid)
-                .orderBy("creadoEn", Query.Direction.ASCENDING)
-                .get()
-                .await()
-
-            val cuentas = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(CuentaDto::class.java)?.toDomain()
+    override fun observarCuentas(uid: String): Flow<List<Cuenta>> =
+        offlineStore.observeCuentas(uid)
+            .onStart {
+                if (!offlineStore.hasRecords("CUENTA", uid)) {
+                    syncRemote(uid)
+                }
             }
-            AppResult.Success(cuentas)
+
+    override suspend fun obtenerCuentas(uid: String): AppResult<List<Cuenta>> {
+        return try {
+            val local = offlineStore.getCuentas(uid)
+            if (local.isNotEmpty()) {
+                return AppResult.Success(local)
+            }
+
+            syncRemote(uid)
+            AppResult.Success(offlineStore.getCuentas(uid))
         } catch (e: Exception) {
             AppResult.Error(ErrorApp.FirestoreError("Error al cargar cuentas: ${e.message}", e))
         }
     }
 
-    suspend fun guardarCuenta(cuenta: Cuenta): AppResult<Unit> {
+    override suspend fun guardarCuenta(cuenta: Cuenta): AppResult<Unit> {
         return try {
+            offlineStore.upsertCuenta(cuenta)
             firestore.collection("usuarios").document(cuenta.uidUsuario)
                 .collection("cuentas").document(cuenta.id)
                 .set(cuenta.toDto())
@@ -60,8 +62,9 @@ class CuentaRepository @Inject constructor(
         }
     }
 
-    suspend fun actualizarCuenta(cuenta: Cuenta): AppResult<Unit> {
+    override suspend fun actualizarCuenta(cuenta: Cuenta): AppResult<Unit> {
         return try {
+            offlineStore.upsertCuenta(cuenta)
             firestore.collection("usuarios").document(cuenta.uidUsuario)
                 .collection("cuentas").document(cuenta.id)
                 .set(cuenta.toDto(), SetOptions.merge())
@@ -73,8 +76,9 @@ class CuentaRepository @Inject constructor(
     }
 
     /** Soft-delete: marca como inactiva y oculta en dashboard. */
-    suspend fun eliminarCuenta(uid: String, cuentaId: String): AppResult<Unit> {
+    override suspend fun eliminarCuenta(uid: String, cuentaId: String): AppResult<Unit> {
         return try {
+            offlineStore.deactivateCuenta(uid, cuentaId)
             firestore.collection("usuarios").document(uid)
                 .collection("cuentas").document(cuentaId)
                 .update(
@@ -89,4 +93,36 @@ class CuentaRepository @Inject constructor(
             AppResult.Error(ErrorApp.FirestoreError("Error al eliminar cuenta: ${e.message}", e))
         }
     }
+
+    private suspend fun syncRemote(uid: String) {
+        runCatching {
+            val snapshot = colRef(uid)
+                .orderBy("creadoEn", Query.Direction.ASCENDING)
+                .get()
+                .await()
+            val cuentas = snapshot.documents.mapNotNull { doc -> doc.toCuentaCompat(uid) }
+            if (cuentas.isNotEmpty()) offlineStore.upsertCuentas(cuentas)
+        }
+    }
 }
+
+private fun DocumentSnapshot.toCuentaCompat(uidFallback: String): Cuenta? = runCatching {
+    Cuenta(
+        id = id,
+        uidUsuario = getString("uidUsuario") ?: uidFallback,
+        bancoCodigo = getString("bancoCodigo") ?: "",
+        numeroCuenta = getString("numeroCuenta") ?: "",
+        numeroCuentaCompleto = getString("numeroCuentaCompleto"),
+        alias = getString("alias") ?: "",
+        tipoCuenta = com.example.flowtrack.domain.model.TipoCuenta.valueOf(getString("tipoCuenta") ?: return null),
+        moneda = com.example.flowtrack.domain.model.Moneda.valueOf(getString("moneda") ?: return null),
+        balanceActual = money("balanceActual"),
+        balanceAlCorte = money("balanceAlCorte"),
+        fechaUltimoCorte = getTimestamp("fechaUltimoCorte")?.toDate()?.toInstant(),
+        titular = getString("titular") ?: "",
+        activa = getBoolean("activa") ?: true,
+        mostrarEnDashboard = getBoolean("mostrarEnDashboard") ?: true,
+        ultimaSincronizacion = getTimestamp("ultimaSincronizacion")?.toDate()?.toInstant(),
+        creadoEn = getTimestamp("creadoEn")?.toDate()?.toInstant() ?: Instant.now(),
+    )
+}.getOrNull()

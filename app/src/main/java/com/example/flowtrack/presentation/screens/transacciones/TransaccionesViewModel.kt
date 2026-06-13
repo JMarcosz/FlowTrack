@@ -8,11 +8,11 @@ import com.example.flowtrack.core.extensions.normalizarDescripcion
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.ReglaCategoriaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
+import com.example.flowtrack.data.local.TransaccionesCursor
 import com.example.flowtrack.domain.model.TipoMatch
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentSnapshot
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.time.Instant
@@ -79,7 +79,7 @@ class TransaccionesViewModel @Inject constructor(
     val state: StateFlow<TransaccionesState> = _state.asStateFlow()
 
     private var allTransacciones: List<Transaccion> = emptyList()
-    private var lastVisible: DocumentSnapshot? = null
+    private var lastVisible: TransaccionesCursor? = null
     private var loadJob: Job? = null
     private var filterJob: Job? = null
     private val searchQueryFlow = MutableStateFlow(_state.value.searchQuery)
