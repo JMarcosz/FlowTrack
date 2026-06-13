@@ -19,6 +19,25 @@ val Line2         = Color(0xFFEEF1F5)   // bordes suaves, hover
 val BgScreen      = Color(0xFFF4F6FA)   // background de pantalla
 val BgCard        = Color.White         // background de cards
 val BgDark        = Color(0xFF0B1220)   // login, tarjetas oscuras
+val SurfaceContainer = Color(0xFFF1F5F9) // nivel intermedio
+val OutlineCustom = Color(0xFFCBD5E1)    // bordes inputs
+val ScrimCustom   = Color(0x66000000)    // overlay dialogos
+
+// ── Paleta Modo Oscuro (Propuesta Ajustada) ──────────────────────────────────
+val PrimaryDark          = Color(0xFF7AA0FF)
+val PrimaryContainerDark = Color(0xFF1E293B)
+val OnPrimaryDark        = Color.White
+val BackgroundDark       = Color(0xFF0B0F19)
+val SurfaceDark          = Color(0xFF111827)
+val SurfaceContainerDark = Color(0xFF172033)
+val OnBackgroundDark     = Color(0xFFF1F5F9)
+val LineDark             = Color(0xFF334155) // surfaceVariant
+val MutedDark            = Color(0xFF94A3B8) // onSurfaceVariant
+val OutlineDark          = Color(0xFF475569)
+val ErrorDark            = Color(0xFFFF7070)
+val SuccessDark          = Color(0xFF34D399)
+val WarningDark          = Color(0xFFFBBF24)
+val ScrimDark            = Color(0xCC000000)
 
 // ── Semánticos (DS §1.3) ──────────────────────────────────────────────────────
 val Income        = Color(0xFF16A34A)
