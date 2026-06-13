@@ -4,63 +4,104 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.flowtrack.R
+import androidx.core.net.toUri
 
 /**
  * Centraliza la creación de canales y el envío de notificaciones locales.
- * Las notificaciones se disparan desde los Workers (WorkManager).
  */
 object NotificationHelper {
 
     const val CANAL_PAGOS = "recordatorios_pago"
     const val CANAL_RESUMENES = "resumenes"
     const val CANAL_ALERTAS = "alertas"
+    const val CANAL_PUSH = "push"
 
     /** Crea los canales de notificación (idempotente). Se llama en Application.onCreate. */
     fun crearCanales(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         val canales = listOf(
             NotificationChannel(CANAL_PAGOS, "Recordatorios de pago", NotificationManager.IMPORTANCE_HIGH)
                 .apply { description = "Avisos antes de la fecha límite de pago de tus tarjetas" },
             NotificationChannel(CANAL_RESUMENES, "Resúmenes", NotificationManager.IMPORTANCE_DEFAULT)
                 .apply { description = "Resumen mensual de tus finanzas" },
-            NotificationChannel(CANAL_ALERTAS, "Alertas de gasto", NotificationManager.IMPORTANCE_DEFAULT)
+            NotificationChannel(CANAL_ALERTAS, "Alertas de gasto", NotificationManager.IMPORTANCE_HIGH)
                 .apply { description = "Alertas cuando un gasto supera tu umbral" },
+            NotificationChannel(CANAL_PUSH, "Notificaciones en tiempo real", NotificationManager.IMPORTANCE_HIGH)
+                .apply { description = "Eventos sincronizados desde Firebase" },
         )
         manager.createNotificationChannels(canales)
     }
 
     /** True si la app puede publicar notificaciones (permiso runtime en Android 13+). */
     fun puedeNotificar(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            return NotificationManagerCompat.from(context).areNotificationsEnabled()
-        }
         return ContextCompat.checkSelfPermission(
             context, Manifest.permission.POST_NOTIFICATIONS,
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    /** Publica una notificación. No-op silencioso si falta el permiso. */
-    fun notificar(context: Context, canalId: String, notifId: Int, titulo: String, texto: String) {
-        if (!puedeNotificar(context)) return
-        val notif = NotificationCompat.Builder(context, canalId)
+    fun canalHabilitado(context: Context, canalId: String): Boolean {
+        if (!puedeNotificar(context)) return false
+
+        val channel = context.getSystemService(NotificationManager::class.java)
+            ?.getNotificationChannel(canalId)
+            ?: return false
+        return channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    /**
+     * Publica una notificación local.
+     */
+    fun notificar(
+        context: Context,
+        canalId: String,
+        notifId: Int,
+        titulo: String,
+        texto: String,
+        contentIntent: android.app.PendingIntent? = null,
+    ): NotificationDeliveryResult {
+        if (!puedeNotificar(context)) return NotificationDeliveryResult.SinPermiso
+        if (!canalHabilitado(context, canalId)) return NotificationDeliveryResult.CanalBloqueado
+
+        val builder = NotificationCompat.Builder(context, canalId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(titulo)
             .setContentText(texto)
             .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
-        try {
-            NotificationManagerCompat.from(context).notify(notifId, notif)
-        } catch (_: SecurityException) {
-            // El permiso pudo revocarse entre el check y el notify; ignorar.
+
+        if (contentIntent != null) {
+            builder.setContentIntent(contentIntent)
+        }
+
+        return try {
+            NotificationManagerCompat.from(context).notify(notifId, builder.build())
+            NotificationDeliveryResult.Enviada
+        } catch (e: SecurityException) {
+            NotificationDeliveryResult.Error(e.message ?: "SecurityException")
+        } catch (e: Exception) {
+            NotificationDeliveryResult.Error(e.message ?: "Error publicando notificación")
         }
     }
+
+    fun intentAjustesApp(context: Context): Intent =
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+    fun intentAjustesAlarmasExactas(context: Context): Intent =
+        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+            data = "package:${context.packageName}".toUri()
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
 }

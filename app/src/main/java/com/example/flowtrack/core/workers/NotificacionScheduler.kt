@@ -4,19 +4,23 @@ import android.content.Context
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.flowtrack.core.notifications.NotificationHelper
 import com.example.flowtrack.domain.model.NotificacionConfig
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 /**
- * Programa o cancela los workers de notificación según [NotificacionConfig].
- * Ambos workers corren a diario; cada uno decide internamente si hay algo que notificar.
+ * Programa o cancela los workers de notificación cuando no están disponibles
+ * las alarmas exactas o como respaldo operativo.
  */
 object NotificacionScheduler {
 
     private const val WORK_RECORDATORIO_PAGO = "recordatorio_pago"
     private const val WORK_RESUMEN_MENSUAL = "resumen_mensual"
 
-    fun aplicar(context: Context, config: NotificacionConfig) {
+    fun aplicarFallback(context: Context, config: NotificacionConfig) {
         val wm = WorkManager.getInstance(context)
 
         val recordatoriosActivos = config.activa &&
@@ -25,7 +29,9 @@ object NotificacionScheduler {
             wm.enqueueUniquePeriodicWork(
                 WORK_RECORDATORIO_PAGO,
                 ExistingPeriodicWorkPolicy.UPDATE,
-                PeriodicWorkRequestBuilder<RecordatorioPagoWorker>(1, TimeUnit.DAYS).build(),
+                PeriodicWorkRequestBuilder<RecordatorioPagoWorker>(1, TimeUnit.DAYS)
+                    .setInitialDelay(delayHastaSiguienteEjecucion(config, soloDiaUno = false), TimeUnit.MILLISECONDS)
+                    .build(),
             )
         } else {
             wm.cancelUniqueWork(WORK_RECORDATORIO_PAGO)
@@ -35,17 +41,46 @@ object NotificacionScheduler {
             wm.enqueueUniquePeriodicWork(
                 WORK_RESUMEN_MENSUAL,
                 ExistingPeriodicWorkPolicy.UPDATE,
-                PeriodicWorkRequestBuilder<ResumenMensualWorker>(1, TimeUnit.DAYS).build(),
+                PeriodicWorkRequestBuilder<ResumenMensualWorker>(1, TimeUnit.DAYS)
+                    .setInitialDelay(delayHastaSiguienteEjecucion(config, soloDiaUno = true), TimeUnit.MILLISECONDS)
+                    .build(),
             )
         } else {
             wm.cancelUniqueWork(WORK_RESUMEN_MENSUAL)
         }
     }
 
-    /** Dispara una verificación inmediata de recordatorios (para probar en el dispositivo). */
+    fun cancelarFallback(context: Context) {
+        val wm = WorkManager.getInstance(context)
+        wm.cancelUniqueWork(WORK_RECORDATORIO_PAGO)
+        wm.cancelUniqueWork(WORK_RESUMEN_MENSUAL)
+    }
+
+    /** Dispara una notificación sintética inmediata para verificar permisos y canales. */
     fun dispararPruebaInmediata(context: Context) {
-        WorkManager.getInstance(context).enqueue(
-            androidx.work.OneTimeWorkRequestBuilder<RecordatorioPagoWorker>().build()
+        NotificationHelper.notificar(
+            context = context,
+            canalId = NotificationHelper.CANAL_ALERTAS,
+            notifId = 9_001,
+            titulo = "Prueba de notificación",
+            texto = "FlowTrack puede mostrar notificaciones locales correctamente.",
         )
+    }
+
+    private fun delayHastaSiguienteEjecucion(config: NotificacionConfig, soloDiaUno: Boolean): Long {
+        val zona = runCatching { ZoneId.of(config.zonaHoraria) }.getOrDefault(ZoneId.of("America/Santo_Domingo"))
+        val ahora = Instant.now()
+        var candidate = ZonedDateTime.now(zona)
+            .withHour(config.horaNotificacion.hour)
+            .withMinute(config.horaNotificacion.minute)
+            .withSecond(0)
+            .withNano(0)
+            .let { base ->
+                if (soloDiaUno) base.withDayOfMonth(1) else base
+            }
+        while (candidate.toInstant().isBefore(ahora)) {
+            candidate = if (soloDiaUno) candidate.plusMonths(1).withDayOfMonth(1) else candidate.plusDays(1)
+        }
+        return java.time.Duration.between(ahora, candidate.toInstant()).toMillis().coerceAtLeast(0L)
     }
 }

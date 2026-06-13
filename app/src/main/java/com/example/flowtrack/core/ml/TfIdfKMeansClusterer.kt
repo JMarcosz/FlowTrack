@@ -13,7 +13,25 @@ class TfIdfKMeansClusterer {
 
     data class Documento(val id: String, val tokens: List<String>)
     
-    data class Cluster(val centroid: DoubleArray, val docIds: MutableList<String>)
+    data class Cluster(val centroid: DoubleArray, val docIds: MutableList<String>) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Cluster
+
+            if (!centroid.contentEquals(other.centroid)) return false
+            if (docIds != other.docIds) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = centroid.contentHashCode()
+            result = 31 * result + docIds.hashCode()
+            return result
+        }
+    }
 
     fun agrupar(textos: Map<String, String>, numClusters: Int = 5, maxIters: Int = 10): Map<Int, List<String>> {
         if (textos.isEmpty()) return emptyMap()

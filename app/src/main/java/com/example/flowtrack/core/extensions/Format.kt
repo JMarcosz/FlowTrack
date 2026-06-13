@@ -35,13 +35,13 @@ fun String.normalizarDescripcion(): String {
 
 fun formatMoney(
     amount: BigDecimal,
-    moneda: com.example.flowtrack.domain.model.Moneda = com.example.flowtrack.domain.model.Moneda.DOP,
+    moneda: Moneda = Moneda.DOP,
     withSign: Boolean = false,
     decimals: Int = 2,
 ): String {
     val prefix = when (moneda) {
-        com.example.flowtrack.domain.model.Moneda.DOP -> "RD$"
-        com.example.flowtrack.domain.model.Moneda.USD -> "US$"
+        Moneda.DOP -> "RD$"
+        Moneda.USD -> "US$"
     }
     val abs = amount.abs()
     val formatted = NumberFormat.getNumberInstance(Locale("es", "DO")).apply {
@@ -68,9 +68,9 @@ fun formatDate(date: LocalDate): String {
 
 fun formatDateRelative(date: LocalDate): String {
     val today = LocalDate.now(ZoneId.of("America/Santo_Domingo"))
-    return when {
-        date == today -> "Hoy"
-        date == today.minusDays(1) -> "Ayer"
+    return when (date) {
+        today -> "Hoy"
+        today.minusDays(1) -> "Ayer"
         else -> formatDate(date)
     }
 }

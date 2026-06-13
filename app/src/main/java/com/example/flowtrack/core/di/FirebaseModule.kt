@@ -2,6 +2,7 @@ package com.example.flowtrack.core.di
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,7 +19,7 @@ object FirebaseModule {
     @Provides @Singleton
     fun provideFirestore(): FirebaseFirestore {
         val firestore = FirebaseFirestore.getInstance()
-        val settings = com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+        val settings = FirebaseFirestoreSettings.Builder()
             .setLocalCacheSettings(
                 com.google.firebase.firestore.PersistentCacheSettings.newBuilder()
                     .setSizeBytes(100L * 1024L * 1024L) // 100 MB cache para transacciones offline

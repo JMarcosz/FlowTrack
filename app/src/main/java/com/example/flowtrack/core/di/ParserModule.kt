@@ -1,9 +1,11 @@
 package com.example.flowtrack.core.di
 
 import com.example.flowtrack.data.parsers.banreservas.BanReservasPdfParser
+import com.example.flowtrack.data.parsers.bhd.BhdPdfParser
 import com.example.flowtrack.data.parsers.cibao.CibaoXlsParser
 import com.example.flowtrack.data.parsers.core.BankStatementParser
 import com.example.flowtrack.data.parsers.popular.PopularCsvParser
+import com.example.flowtrack.data.parsers.popular.PopularPdfParser
 import com.example.flowtrack.data.parsers.qik.QikPdfParser
 import dagger.Binds
 import dagger.Module
@@ -23,7 +25,13 @@ abstract class ParserModule {
     abstract fun bindBanReservas(impl: BanReservasPdfParser): BankStatementParser
 
     @Binds @IntoSet
+    abstract fun bindBhd(impl: BhdPdfParser): BankStatementParser
+
+    @Binds @IntoSet
     abstract fun bindPopular(impl: PopularCsvParser): BankStatementParser
+
+    @Binds @IntoSet
+    abstract fun bindPopularPdf(impl: PopularPdfParser): BankStatementParser
 
     @Binds @IntoSet
     abstract fun bindQik(impl: QikPdfParser): BankStatementParser
