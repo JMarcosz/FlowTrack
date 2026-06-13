@@ -61,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -80,11 +81,8 @@ import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.presentation.components.bankBadge
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
@@ -135,20 +133,20 @@ fun TarjetasScreen(
                     onClick = onMenuClick,
                     modifier = Modifier.size(36.dp),
                 ) {
-                    Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = Ink)
+                    Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 Column {
                     Text(
                         "Tarjetas",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Ink,
+                        color = MaterialTheme.colorScheme.onSurface,
                         letterSpacing = (-0.5).sp,
                     )
                     Text(
                         "Crédito y pagos",
                         fontSize = 13.sp,
-                        color = Muted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Normal,
                     )
                 }
@@ -305,7 +303,7 @@ fun TarjetasScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("Historial de estados", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+                                Text("Historial de estados", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
 
@@ -314,7 +312,7 @@ fun TarjetasScreen(
                                 Text(
                                     "No hay cortes registrados.",
                                     fontSize = 14.sp,
-                                    color = Muted,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = Spacing.xxl),
                                 )
                             }
@@ -388,14 +386,14 @@ fun WhiteCreditCard(
                         tarjeta.alias.ifBlank { banco.nombre },
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Ink,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         "•••• ${tarjeta.ultimos4}",
                         fontSize = 13.sp,
-                        color = Muted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 0.8.sp,
                     )
                 }
@@ -409,7 +407,7 @@ fun WhiteCreditCard(
                             onClick = { menuExpandido = true },
                             modifier = Modifier.size(32.dp),
                         ) {
-                            Icon(Icons.Outlined.MoreVert, null, tint = Muted2, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Outlined.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                         }
                         DropdownMenu(expanded = menuExpandido, onDismissRequest = { menuExpandido = false }) {
                             DropdownMenuItem(
@@ -437,7 +435,7 @@ fun WhiteCreditCard(
             // ── Balance row ───────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-                    Text("Pago total pendiente", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text("Pago total pendiente", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(3.dp))
                     Text(
                         formatMoney(pagoPendiente, tarjeta.moneda),
@@ -449,13 +447,13 @@ fun WhiteCreditCard(
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Pago mínimo", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text("Pago mínimo", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(3.dp))
                     Text(
                         formatMoney(pagoMinimo, tarjeta.moneda),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Ink,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = TabularNumber,
                     )
                 }
@@ -468,8 +466,8 @@ fun WhiteCreditCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("Utilización", fontSize = 12.sp, color = Muted)
-                Text("${"%.0f".format(utilizacionFrac * 100)}%", fontSize = 12.sp, color = Muted)
+                Text("Utilización", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${"%.0f".format(utilizacionFrac * 100)}%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(6.dp))
             Box(
@@ -489,12 +487,12 @@ fun WhiteCreditCard(
             }
             Spacer(Modifier.height(Spacing.sm))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Límite disponible", fontSize = 11.sp, color = Muted)
+                Text("Límite disponible", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     formatMoney(limiteDisponible, tarjeta.moneda),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Ink,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = TabularNumber,
                 )
             }
@@ -541,14 +539,14 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
                 tarjeta.alias.ifBlank { banco.nombre },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 "Vence ${formatDate(fechaLocal)} • $diasRestantes día${if (diasRestantes == 1) "" else "s"}",
                 fontSize = 12.sp,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Column(horizontalAlignment = Alignment.End) {
@@ -601,24 +599,24 @@ private fun OtraTarjetaRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap?) {
                 tarjeta.alias.ifBlank { banco.nombre },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 "•••• ${tarjeta.ultimos4} · Corte día ${tarjeta.diaCorte}",
                 fontSize = 12.sp,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
             formatMoney(pagoPendiente, tarjeta.moneda),
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Ink,
+            color = MaterialTheme.colorScheme.onSurface,
             style = TabularNumber,
         )
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Muted2, modifier = Modifier.size(16.dp))
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
     }
 }
 
@@ -637,7 +635,7 @@ private fun HistorialRow(snap: EstadoTarjetaSnap) {
             formatDate(snap.fechaCorte.atZone(ZONA).toLocalDate()),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            color = Ink,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
         Text(
@@ -686,9 +684,9 @@ fun StatusBadge(label: String) {
 @Composable
 private fun CardInfoItem(label: String, value: String) {
     Column {
-        Text(label, fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(2.dp))
-        Text(value, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -699,7 +697,7 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
         fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 0.5.sp,
-        color = Muted,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier,
     )
 }
@@ -745,7 +743,7 @@ private fun NuevaTarjetaSheet(
             .padding(bottom = Spacing.xxl),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Text("Nueva tarjeta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text("Nueva tarjeta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
 
         Box(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(

@@ -72,11 +72,8 @@ import com.example.flowtrack.domain.usecase.PresupuestoConGasto
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.ui.theme.CatSinCategorizar
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.TextBody
@@ -125,12 +122,12 @@ fun PresupuestosScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Outlined.Savings, null, tint = Muted2, modifier = Modifier.size(56.dp))
+                    Icon(Icons.Outlined.Savings, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(56.dp))
                     Text("Sin presupuestos", fontWeight = FontWeight.SemiBold, color = TextBody)
                     Text(
                         "Crea un presupuesto para controlar tus gastos por categoría",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Muted2,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 32.dp),
                     )
@@ -146,7 +143,7 @@ fun PresupuestosScreen(
                     Text(
                         "${state.presupuestos.size} presupuesto${if (state.presupuestos.size == 1) "" else "s"} activo${if (state.presupuestos.size == 1) "" else "s"}",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Muted2,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 4.dp),
                     )
                 }
@@ -225,15 +222,15 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(cat?.nombre ?: "Sin categorizar", fontWeight = FontWeight.SemiBold, color = Ink, fontSize = 14.sp)
+                    Text(cat?.nombre ?: "Sin categorizar", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                     Text(
                         pg.presupuesto.periodo.name.lowercase().replaceFirstChar { it.uppercase() },
                         fontSize = 11.sp,
-                        color = Muted2,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(onClick = { confirmarEliminar = true }, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Outlined.DeleteOutline, null, tint = Muted2, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.DeleteOutline, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -258,7 +255,7 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
                 Text(
                     "de ${formatMoney(pg.presupuesto.montoLimite)}",
                     fontSize = 13.sp,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -294,7 +291,7 @@ private fun NuevoPresupuestoSheet(
             .padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Nuevo presupuesto", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+        Text("Nuevo presupuesto", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
 
         // Selector de categoría
         ExposedDropdownMenuBox(

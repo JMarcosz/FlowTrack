@@ -48,7 +48,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.flowtrack.domain.model.TasaCambio
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.Success
@@ -260,12 +259,12 @@ private fun TasaHistoricoChart(historico: List<TasaCambio>) {
                 Text(
                     historico.first().fecha.toString(),
                     fontSize = 10.sp,
-                    color = Muted2
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     historico.last().fecha.toString(),
                     fontSize = 10.sp,
-                    color = Muted2
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

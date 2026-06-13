@@ -59,11 +59,8 @@ import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Income50
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.TabularNumber
@@ -138,7 +135,7 @@ private fun LoadingContent(modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CircularProgressIndicator(color = Primary)
-            Text("Analizando archivo...", color = Muted)
+            Text("Analizando archivo...", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -186,7 +183,7 @@ private fun RevisionContent(
                 "Transacciones (${estado.transacciones.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
@@ -213,8 +210,8 @@ private fun ResumenCargaCard(estado: RevisionEstado.Listo) {
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Outlined.Description, null, tint = Primary, modifier = Modifier.size(20.dp)) }
                 Column {
-                    Text(estado.nombreArchivo, fontWeight = FontWeight.SemiBold, color = Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(estado.banco, style = MaterialTheme.typography.bodySmall, color = Muted)
+                    Text(estado.nombreArchivo, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(estado.banco, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             HorizontalDivider(color = Line)
@@ -224,7 +221,7 @@ private fun ResumenCargaCard(estado: RevisionEstado.Listo) {
                 StatMini("Créditos", formatMoney(estado.totalCreditos))
             }
             if (estado.periodo.isNotBlank()) {
-                Text(estado.periodo, style = MaterialTheme.typography.bodySmall, color = Muted)
+                Text(estado.periodo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -233,8 +230,8 @@ private fun ResumenCargaCard(estado: RevisionEstado.Listo) {
 @Composable
 private fun StatMini(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.Bold, color = Ink, fontSize = 13.sp, style = TabularNumber)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = Muted2, fontSize = 10.sp)
+        Text(value, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, style = TabularNumber)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
     }
 }
 
@@ -258,10 +255,10 @@ private fun DuplicadosAlertCard(duplicados: Int, onVer: () -> Unit) {
 
 @Composable
 private fun AdvertenciasCard(advertencias: List<String>) {
-    Surface(shape = RoundedCornerShape(12.dp), color = Line2) {
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Advertencias del parser", fontWeight = FontWeight.SemiBold, color = Muted, fontSize = 12.sp)
-            advertencias.forEach { adv -> Text("• $adv", style = MaterialTheme.typography.bodySmall, color = Muted2) }
+            Text("Advertencias del parser", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            advertencias.forEach { adv -> Text("• $adv", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
@@ -290,8 +287,8 @@ private fun TransaccionRevisionRow(tx: TransaccionNormalizada) {
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text(tx.descripcionCorta, fontWeight = FontWeight.Medium, color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(tx.fecha.toString(), style = MaterialTheme.typography.bodySmall, color = Muted2)
+                Text(tx.descripcionCorta, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(tx.fecha.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text("$signo ${formatMoney(tx.monto)}", fontWeight = FontWeight.SemiBold, color = colorMonto, fontSize = 13.sp, style = TabularNumber)
         }

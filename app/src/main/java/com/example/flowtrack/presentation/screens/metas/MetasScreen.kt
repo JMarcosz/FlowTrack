@@ -78,7 +78,7 @@ fun MetasScreen(
                     Text(
                         "Crea tu primera meta de ahorro",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Muted2,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -179,12 +179,12 @@ private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(meta.nombre, fontWeight = FontWeight.SemiBold, color = Ink, fontSize = 15.sp)
+                Text(meta.nombre, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "${formatMoney(meta.montoActual)} / ${formatMoney(meta.montoObjetivo)}",
                     fontSize = 12.sp,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (meta.completada) {
                     Spacer(Modifier.height(4.dp))
@@ -194,7 +194,7 @@ private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit
                     Text(
                         "${"%.0f".format(meta.porcentaje * 100)}% completado",
                         fontSize = 11.sp,
-                        color = Muted2,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -206,7 +206,7 @@ private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit
                     }
                 }
                 IconButton(onClick = { confirmar = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.DeleteOutline, "Eliminar", tint = Muted2, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.DeleteOutline, "Eliminar", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -232,7 +232,7 @@ private fun DepositoSheet(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("Agregar a \"${meta.nombre}\"", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+            Text("Agregar a \"${meta.nombre}\"", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             OutlinedTextField(
                 value = monto,
                 onValueChange = { monto = it },
@@ -267,7 +267,7 @@ private fun NuevaMetaSheet(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Nueva meta de ahorro", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+        Text("Nueva meta de ahorro", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
 
         OutlinedTextField(
             value = nombre,
@@ -290,7 +290,7 @@ private fun NuevaMetaSheet(
             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Primary, unfocusedBorderColor = Line),
         )
 
-        Text("Elige un emoji", fontSize = 13.sp, color = Muted, fontWeight = FontWeight.Medium)
+        Text("Elige un emoji", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(EMOJIS) { emoji ->
                 Box(

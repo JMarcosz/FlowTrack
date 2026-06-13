@@ -62,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -76,10 +77,8 @@ import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
@@ -203,7 +202,7 @@ private fun DocumentoProtegidoDialog(
             Text(
                 text = "Documento protegido",
                 fontWeight = FontWeight.SemiBold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         },
         text = {
@@ -211,7 +210,7 @@ private fun DocumentoProtegidoDialog(
                 Text(
                     text = "Este archivo está cifrado. Ingresa la clave para continuar con la importación.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedTextField(
                     value = clave,
@@ -263,7 +262,7 @@ private fun DocumentoProtegidoDialog(
                         Text(
                             text = "Desbloqueando...",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Muted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -320,7 +319,7 @@ private fun UploadFormContent(
             "1. Selecciona tu banco",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = Ink,
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         BANCOS_DISPONIBLES.forEach { banco ->
@@ -350,7 +349,7 @@ private fun UploadFormContent(
             "$pasoArchivo. Selecciona el archivo",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = Ink,
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Box(
@@ -374,7 +373,7 @@ private fun UploadFormContent(
                 Icon(
                     Icons.Outlined.CloudUpload,
                     contentDescription = null,
-                    tint = if (bancoSeleccionado != null) Primary else Muted,
+                    tint = if (bancoSeleccionado != null) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(32.dp),
                 )
                 Text(
@@ -383,14 +382,14 @@ private fun UploadFormContent(
                     else
                         "Selecciona un banco primero",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (bancoSeleccionado != null) Primary else Muted,
+                    color = if (bancoSeleccionado != null) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
                 if (bancoSeleccionado != null) {
                     Text(
                         "Máx. 10 MB",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Muted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -431,12 +430,12 @@ private fun TarjetaFechasSection(
             "2. Información de la tarjeta (opcional)",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = Ink,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             "Si el estado de cuenta no incluye estas fechas, ingrésalas manualmente.",
             style = MaterialTheme.typography.bodySmall,
-            color = Muted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         OutlinedTextField(
@@ -446,7 +445,7 @@ private fun TarjetaFechasSection(
                 onFechaCorteChange(parseFecha(v))
             },
             label = { Text("Fecha de corte") },
-            placeholder = { Text("dd/mm/aaaa", color = Muted) },
+            placeholder = { Text("dd/mm/aaaa", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = fechaCorteText.isNotBlank() && parseFecha(fechaCorteText) == null,
@@ -465,7 +464,7 @@ private fun TarjetaFechasSection(
                 onFechaLimitePagoChange(parseFecha(v))
             },
             label = { Text("Fecha límite de pago") },
-            placeholder = { Text("dd/mm/aaaa", color = Muted) },
+            placeholder = { Text("dd/mm/aaaa", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = fechaLimitePagoText.isNotBlank() && parseFecha(fechaLimitePagoText) == null,
@@ -523,12 +522,12 @@ private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> 
                 banco.nombre,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = if (disponible) Ink else Muted,
+                color = if (disponible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 if (disponible) banco.formatoLabel else "Próximamente",
                 style = MaterialTheme.typography.bodySmall,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         if (seleccionado) {
@@ -567,7 +566,7 @@ private fun UploadExitoContent(
         ) {
             Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = Success, modifier = Modifier.size(36.dp))
         }
-        Text("¡Importación exitosa!", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Ink, textAlign = TextAlign.Center)
+        Text("¡Importación exitosa!", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Text("$transaccionesInsertadas transacciones importadas desde $banco", style = MaterialTheme.typography.bodyLarge, color = TextBody, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Button(onClick = onVerHistorial, colors = ButtonDefaults.buttonColors(containerColor = Primary), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {

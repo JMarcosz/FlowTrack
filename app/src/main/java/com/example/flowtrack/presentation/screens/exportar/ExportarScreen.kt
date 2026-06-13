@@ -56,10 +56,7 @@ import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.components.MerchantLogo
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
@@ -139,11 +136,11 @@ fun ExportarScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        Text("Exporta con filtros por rango y origen", fontWeight = FontWeight.SemiBold, color = Ink)
+                        Text("Exporta con filtros por rango y origen", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                         Text(
                             "Selecciona formato, fechas, cuentas y tarjetas. XLSX permite secciones adicionales.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Muted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -184,7 +181,7 @@ fun ExportarScreen(
             item {
                 SectionTitle("Cuentas")
                 if (state.cuentas.isEmpty()) {
-                    Text("No hay cuentas activas", color = Muted2, style = MaterialTheme.typography.bodySmall)
+                    Text("No hay cuentas activas", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 } else {
                     SelectionCard {
                         state.cuentas.forEachIndexed { index, cuenta ->
@@ -204,7 +201,7 @@ fun ExportarScreen(
             item {
                 SectionTitle("Tarjetas")
                 if (state.tarjetas.isEmpty()) {
-                    Text("No hay tarjetas activas", color = Muted2, style = MaterialTheme.typography.bodySmall)
+                    Text("No hay tarjetas activas", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 } else {
                     SelectionCard {
                         state.tarjetas.forEachIndexed { index, tarjeta ->
@@ -281,7 +278,7 @@ fun ExportarScreen(
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(text, fontWeight = FontWeight.SemiBold, color = Ink, fontSize = 15.sp)
+    Text(text, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
 }
 
 @Composable
@@ -313,9 +310,9 @@ private fun SelectionRow(
     ) {
         if (leading != null) leading()
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Medium, color = Ink)
+            Text(title, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
             if (!subtitle.isNullOrBlank()) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Muted)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Checkbox(checked = selected, onCheckedChange = { onToggle() })
@@ -340,10 +337,10 @@ private fun RowScope.DateButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Icon(Icons.Outlined.CalendarMonth, null, tint = Muted2)
+            Icon(Icons.Outlined.CalendarMonth, null, tint = MaterialTheme.colorScheme.outline)
             Column {
-                Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)
-                Text(value, fontWeight = FontWeight.Medium, color = Ink)
+                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }

@@ -20,7 +20,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.core.notifications.NotificationHelper
 import com.example.flowtrack.presentation.components.FinanzasSwitch
-import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,8 +142,8 @@ private fun NotifRow(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = Spacing.md)) {
-            Text(titulo, style = MaterialTheme.typography.bodyLarge)
-            if (subtitulo != null) Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = Muted)
+            Text(titulo, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            if (subtitulo != null) Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         FinanzasSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }

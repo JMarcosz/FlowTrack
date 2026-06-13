@@ -45,8 +45,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Ink
-import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Spacing
@@ -119,12 +117,12 @@ fun PerfilScreen(navController: NavController) {
                 text = user?.displayName ?: "Usuario",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = user?.email ?: "",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(Modifier.height(32.dp))
@@ -166,7 +164,7 @@ private fun InfoRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = Muted)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
     }
 }

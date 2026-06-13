@@ -28,10 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
@@ -67,7 +64,7 @@ fun FlowTrackDrawer(
                 text = "FlowTrack",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xxl, bottom = Spacing.md),
             )
             
@@ -112,7 +109,7 @@ private fun SectionLabel(label: String) {
         text = label,
         fontSize = 11.sp,
         fontWeight = FontWeight.SemiBold,
-        color = Muted,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         letterSpacing = 0.6.sp,
         modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = 2.dp),
     )
@@ -124,8 +121,8 @@ private fun DrawerRow(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    val iconColor = if (isSelected) Primary else Muted
-    val labelColor = if (isSelected) Primary else Ink
+    val iconColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val labelColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
     
     Row(
         modifier = Modifier
@@ -144,6 +141,6 @@ private fun DrawerRow(
             color = labelColor,
             modifier = Modifier.weight(1f)
         )
-        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = if (isSelected) Primary else Muted2)
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
     }
 }

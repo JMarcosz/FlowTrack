@@ -80,11 +80,8 @@ import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Income50
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.TabularNumber
@@ -192,15 +189,15 @@ private fun DashboardContent(
             ) {
 
                 IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = Ink)
+                    Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 Text(
                     "Dashboard",
                     fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.3).sp, color = Ink,
+                    letterSpacing = (-0.3).sp, color = MaterialTheme.colorScheme.onSurface,
                 )
                 IconButton(onClick = { navController?.navigate(Screen.Notificaciones.route) }) {
-                    Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = Ink)
+                    Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -220,12 +217,12 @@ private fun DashboardContent(
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = (-0.6).sp,
-                        color = Ink,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "Aquí está tu resumen financiero",
                         fontSize = 13.sp,
-                        color = Muted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp),
                     )
                 }
@@ -307,7 +304,7 @@ private fun DashboardContent(
                     Text(
                         "Gastos por categoría",
                         fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                        letterSpacing = (-0.2).sp, color = Ink,
+                        letterSpacing = (-0.2).sp, color = MaterialTheme.colorScheme.onSurface,
                     )
                     TextButton(
                         onClick = { navController?.navigate(Screen.Resumen.route) },
@@ -315,11 +312,11 @@ private fun DashboardContent(
                     ) {
                         Text(
                             "Ver detalle",
-                            fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Muted,
+                            fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Icon(
                             Icons.Outlined.ChevronRight, contentDescription = null,
-                            tint = Muted2, modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(14.dp),
                         )
                     }
                 }
@@ -334,7 +331,7 @@ private fun DashboardContent(
                     if (slices.isEmpty()) {
                         Text(
                             "Sin gastos en este período",
-                            fontSize = 14.sp, color = Muted,
+                            fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(16.dp),
                         )
                     } else {
@@ -375,7 +372,7 @@ private fun DashboardContent(
                                         Text(
                                             formatMoney(dc.monto),
                                             fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                                            color = Ink,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             style = TabularNumber,
                                         )
                                     }
@@ -393,11 +390,11 @@ private fun DashboardContent(
                 Text(
                     "Por banco",
                     fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.2).sp, color = Ink,
+                    letterSpacing = (-0.2).sp, color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 10.dp),
                 )
                 if (resumen.gastosPorBanco.isEmpty()) {
-                    Text("Sin actividad bancaria en este período", fontSize = 14.sp, color = Muted)
+                    Text("Sin actividad bancaria en este período", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     Card(
                         shape     = RoundedCornerShape(16.dp),
@@ -468,7 +465,7 @@ private fun DashStatCard(
             ) {
                 Text(
                     text     = label,
-                    fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Muted,
+                    fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
@@ -495,7 +492,7 @@ private fun DashStatCard(
                 fontSize      = 19.sp,
                 fontWeight    = FontWeight.Bold,
                 letterSpacing = (-0.6).sp,
-                color         = Ink,
+                color         = MaterialTheme.colorScheme.onSurface,
                 maxLines      = 1,
                 overflow      = TextOverflow.Ellipsis,
                 style        = TabularNumber,
@@ -564,7 +561,7 @@ private fun BalanceNetoCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(bottom = 4.dp),
                 ) {
-                    Text("Balance neto", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Muted)
+                    Text("Balance neto", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Box(
                         modifier = Modifier
                             .size(22.dp)
@@ -585,7 +582,7 @@ private fun BalanceNetoCard(
                     fontSize      = 22.sp,
                     fontWeight    = FontWeight.Bold,
                     letterSpacing = (-0.6).sp,
-                    color         = Ink,
+                    color         = MaterialTheme.colorScheme.onSurface,
                     style         = TabularNumber,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -634,15 +631,15 @@ private fun DeltaBadge(
             if (coverageWarning) {
                 Icon(
                     Icons.Outlined.Warning, contentDescription = null,
-                    tint = Muted2, modifier = Modifier.size(11.dp),
+                    tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(11.dp),
                 )
             }
-            Text("—", fontSize = 12.sp, color = Muted2)
+            Text("—", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
     if (porcentaje == null) {
-        Text("—", fontSize = 12.sp, color = Muted2)
+        Text("—", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
     val good   = if (inverse) !esIncremento else esIncremento
@@ -676,11 +673,11 @@ private fun CoverageWarningBanner(modifier: Modifier = Modifier) {
     ) {
         Icon(
             Icons.Outlined.Warning, contentDescription = null,
-            tint = Muted, modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp),
         )
         Text(
             "Sin datos suficientes del período anterior para calcular la variación",
-            fontSize = 12.sp, color = Muted,
+            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -715,7 +712,7 @@ private fun BancoRow(banco: BancoUI, datos: DatosBancoResumen) {
         Text(
             banco.nombre,
             modifier = Modifier.weight(1f),
-            fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Ink,
+            fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
         )
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -762,7 +759,7 @@ private fun PeriodoDropdown(
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 Icons.Outlined.KeyboardArrowDown, contentDescription = null,
-                tint = Muted, modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp),
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -777,6 +774,7 @@ private fun PeriodoDropdown(
                             Text(
                                 opt, fontSize = 14.sp,
                                 fontWeight = if (opt == selected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             if (opt == selected) {
                                 Icon(

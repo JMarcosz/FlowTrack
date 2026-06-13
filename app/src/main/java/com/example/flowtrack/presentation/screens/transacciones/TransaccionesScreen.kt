@@ -131,7 +131,7 @@ fun TransaccionesScreen(
                         modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Ink,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Row(
                         modifier = Modifier
@@ -170,7 +170,7 @@ fun TransaccionesScreen(
                                 cat.nombre,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = Ink,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f),
                             )
                             if (txForSheet.categoriaId == cat.id) {
@@ -188,8 +188,8 @@ fun TransaccionesScreen(
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
                 containerColor = MaterialTheme.colorScheme.surface,
-                title = { Text("Eliminar transacción", fontWeight = FontWeight.SemiBold, color = Ink) },
-                text = { Text("Esta acción no se puede deshacer.", color = Muted, fontSize = 14.sp) },
+                title = { Text("Eliminar transacción", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface) },
+                text = { Text("Esta acción no se puede deshacer.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.eliminarTransaccion(txForDel)
@@ -201,7 +201,7 @@ fun TransaccionesScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Cancelar", color = Muted)
+                        Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
             )
@@ -243,7 +243,7 @@ private fun TransaccionesLista(
         ) {
             Box(modifier = Modifier.width(56.dp)) {
                 IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Outlined.Menu, contentDescription = null, tint = Ink)
+                    Icon(Icons.Outlined.Menu, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
             Text(
@@ -253,11 +253,11 @@ private fun TransaccionesLista(
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.3).sp,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Box(modifier = Modifier.width(56.dp), contentAlignment = Alignment.CenterEnd) {
                 IconButton(onClick = onImport) {
-                    Icon(Icons.Outlined.Upload, contentDescription = "Importar", tint = Ink)
+                    Icon(Icons.Outlined.Upload, contentDescription = "Importar", tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -274,7 +274,7 @@ private fun TransaccionesLista(
             Text(
                 "Período",
                 fontSize = 13.sp,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.Medium,
             )
             PeriodoDropdown(
@@ -296,7 +296,7 @@ private fun TransaccionesLista(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Icon(Icons.Outlined.Search, contentDescription = null, tint = Muted, modifier = Modifier.size(18.dp))
+            Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             BasicTextField(
                 value = state.searchQuery,
                 onValueChange = onSearchChange,
@@ -304,10 +304,10 @@ private fun TransaccionesLista(
                 singleLine = true,
                 cursorBrush = SolidColor(Primary),
                 keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
-                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, color = Ink),
+                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface),
                 decorationBox = { inner ->
                     if (state.searchQuery.isEmpty()) {
-                        Text("Buscar transacciones", fontSize = 14.sp, color = Muted2)
+                        Text("Buscar transacciones", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     inner()
                 },
@@ -317,7 +317,7 @@ private fun TransaccionesLista(
                     onClick = { onSearchChange("") },
                     modifier = Modifier.size(22.dp),
                 ) {
-                    Icon(Icons.Outlined.Close, contentDescription = "Limpiar", tint = Muted, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Outlined.Close, contentDescription = "Limpiar", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                 }
             }
         }
@@ -387,14 +387,14 @@ private fun TransaccionesLista(
                         Icon(
                             Icons.AutoMirrored.Outlined.ReceiptLong,
                             contentDescription = null,
-                            tint = Muted2,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(40.dp),
                         )
                         Spacer(Modifier.height(Spacing.md))
                         Text(
                             state.error,
                             fontSize = 14.sp,
-                            color = Muted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
                         Spacer(Modifier.height(Spacing.md))
@@ -410,11 +410,11 @@ private fun TransaccionesLista(
                         Icon(
                             Icons.AutoMirrored.Outlined.ReceiptLong,
                             contentDescription = null,
-                            tint = Muted2,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(40.dp),
                         )
                         Spacer(Modifier.height(Spacing.md))
-                        Text("Sin resultados", fontSize = 14.sp, color = Muted)
+                        Text("Sin resultados", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -457,7 +457,7 @@ private fun TransaccionesLista(
                                 text = formatDateRelative(fecha),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Muted,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = Spacing.xl, bottom = Spacing.sm, start = Spacing.xxs),
                             )
                         }
@@ -554,14 +554,14 @@ private fun TransaccionFila(
                     text = tx.descripcionCorta.ifBlank { tx.descripcionOriginal }.take(40),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Ink,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = cat?.nombre ?: "Sin categorizar",
                     fontSize = 13.sp,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
@@ -576,7 +576,7 @@ private fun TransaccionFila(
             Icon(
                 Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
-                tint = Muted2,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp),
             )
         }
@@ -592,11 +592,11 @@ private fun TransaccionFila(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    Icon(Icons.Outlined.AccountBalance, null, tint = Muted2, modifier = Modifier.size(12.dp))
+                    Icon(Icons.Outlined.AccountBalance, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
                     Text(
                         text = derivada.descripcionCorta.ifBlank { "Retención DGII" },
                         fontSize = 12.sp,
-                        color = Muted2,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
@@ -641,7 +641,7 @@ private fun TransaccionDetalle(
         ) {
             Box(modifier = Modifier.width(56.dp)) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver", tint = Ink)
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver", tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
             Text(
@@ -651,11 +651,11 @@ private fun TransaccionDetalle(
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.3).sp,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Box(modifier = Modifier.width(56.dp), contentAlignment = Alignment.CenterEnd) {
                 IconButton(onClick = {}) {
-                    Icon(Icons.Outlined.MoreVert, null, tint = Ink)
+                    Icon(Icons.Outlined.MoreVert, null, tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -685,14 +685,14 @@ private fun TransaccionDetalle(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = (-0.3).sp,
-                            color = Ink,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             text = cat?.nombre ?: "Sin categorizar",
                             fontSize = 14.sp,
-                            color = Muted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp),
                         )
                         Text(
@@ -739,7 +739,7 @@ private fun TransaccionDetalle(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Categoría", fontSize = 14.sp, color = Muted)
+                        Text("Categoría", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         val catColor = cat?.color ?: CatSinCategorizar
                         Box(
                             modifier = Modifier
@@ -809,7 +809,7 @@ private fun TransaccionDetalle(
                 Text(
                     "Esta acción eliminará la transacción permanentemente.",
                     fontSize = 12.sp,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     lineHeight = 18.sp,
                     modifier = Modifier
@@ -850,7 +850,7 @@ private fun FiltrosSheet(
                 "Filtros avanzados",
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f),
             )
             TextButton(onClick = onLimpiar) {
@@ -872,7 +872,7 @@ private fun FiltrosSheet(
                 modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             BancoFiltroRow(
                 nombre = "Todos los bancos",
@@ -897,7 +897,7 @@ private fun FiltrosSheet(
                 modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(
                 modifier = Modifier
@@ -942,7 +942,7 @@ private fun FiltrosSheet(
                 modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             FlowRow(
                 modifier = Modifier
@@ -984,8 +984,8 @@ private fun FiltrosSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Solo sin categorizar", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Ink)
-                    Text("Mostrar solo transacciones sin categoría asignada", fontSize = 12.sp, color = Muted2)
+                    Text("Solo sin categorizar", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Mostrar solo transacciones sin categoría asignada", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(
                     checked = draftSoloSinCat,
@@ -1027,7 +1027,7 @@ private fun FiltrosSheet(
 private fun DetalleRow(
     label: String,
     value: String,
-    valueColor: Color = Ink,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Row(
         modifier = Modifier
@@ -1036,7 +1036,7 @@ private fun DetalleRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, fontSize = 14.sp, color = Muted)
+        Text(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             value,
             fontSize = 14.sp,
@@ -1071,16 +1071,16 @@ private fun PeriodoDropdown(
         OutlinedButton(
             onClick = { expanded = true },
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = Ink),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
             border = BorderStroke(1.dp, Line),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
             modifier = Modifier.height(36.dp),
         ) {
-            Text(selected, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Ink)
+            Text(selected, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.width(4.dp))
             Icon(
                 Icons.Outlined.KeyboardArrowDown, contentDescription = null,
-                tint = Muted, modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp),
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -1095,6 +1095,7 @@ private fun PeriodoDropdown(
                             Text(
                                 opt, fontSize = 14.sp,
                                 fontWeight = if (opt == selected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             if (opt == selected) {
                                 Icon(
@@ -1141,7 +1142,7 @@ private fun DesignPill(
 private fun BancoFiltroRow(
     nombre: String,
     seleccionado: Boolean,
-    bancoColor: Color = Muted2,
+    bancoColor: Color = MaterialTheme.colorScheme.outline,
     onClick: () -> Unit,
 ) {
     Row(
@@ -1156,9 +1157,9 @@ private fun BancoFiltroRow(
             modifier = Modifier
                 .size(10.dp)
                 .background(if (seleccionado) bancoColor else Color.Transparent, CircleShape)
-                .border(1.5.dp, if (seleccionado) bancoColor else Muted2, CircleShape),
+                .border(1.5.dp, if (seleccionado) bancoColor else MaterialTheme.colorScheme.outline, CircleShape),
         )
-        Text(nombre, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Ink, modifier = Modifier.weight(1f))
+        Text(nombre, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         if (seleccionado) {
             Icon(Icons.Outlined.Check, null, tint = Primary, modifier = Modifier.size(18.dp))
         }

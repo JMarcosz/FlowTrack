@@ -26,8 +26,6 @@ import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.TipoCuenta
 import com.example.flowtrack.presentation.components.BankLogo
-import com.example.flowtrack.ui.theme.Ink
-import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.TabularNumber
@@ -108,11 +106,11 @@ fun BancosYCuentasScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text("Sin cuentas vinculadas", fontWeight = FontWeight.SemiBold, color = Ink)
+                    Text("Sin cuentas vinculadas", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     Text(
                         "Importa un estado de cuenta o agrega una cuenta manual",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Muted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -239,24 +237,24 @@ private fun CuentaCard(cuenta: Cuenta, onEliminar: () -> Unit) {
         ) {
             BankLogo(bancoCodigo = cuenta.bancoCodigo)
             Column(Modifier.weight(1f)) {
-                Text(cuenta.alias, fontWeight = FontWeight.SemiBold, color = Ink)
+                Text(cuenta.alias, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                 Text(
                     if (cuenta.numeroCuenta == "MANUAL") "Manual" else "****${cuenta.numeroCuenta.takeLast(4)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             cuenta.balanceActual?.let { balance ->
                 Text(
                     text = formatMoney(balance),
                     fontWeight = FontWeight.Bold,
-                    color = Ink,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = TabularNumber,
                 )
             }
             Box {
                 IconButton(onClick = { menuExpandido = true }) {
-                    Icon(Icons.Outlined.MoreVert, "Opciones")
+                    Icon(Icons.Outlined.MoreVert, "Opciones", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 DropdownMenu(expanded = menuExpandido, onDismissRequest = { menuExpandido = false }) {
                     DropdownMenuItem(

@@ -64,7 +64,7 @@ fun ResumenPeriodoScreen(
                 state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
 
                 state.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Text(state.error ?: "", color = Expense)
+                    Text(state.error ?: "", color = MaterialTheme.colorScheme.error)
                 }
 
                 resumen == null || resumen.buckets.isEmpty() -> EmptyState(
@@ -107,7 +107,7 @@ private fun TotalCard(titulo: String, monto: BigDecimal, color: androidx.compose
         shape = Radii.md,
     ) {
         Column(Modifier.padding(Spacing.md)) {
-            Text(titulo, style = MaterialTheme.typography.bodySmall, color = Muted)
+            Text(titulo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 formatMoney(monto, withSign = false),
                 style = MaterialTheme.typography.titleMedium.merge(TabularNumber),
@@ -130,13 +130,13 @@ private fun BucketRow(bucket: BucketResumen) {
             modifier = Modifier.fillMaxWidth().padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(bucket.etiqueta, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(bucket.etiqueta, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
             Column(horizontalAlignment = Alignment.End) {
                 Text(formatMoney(bucket.balance, withSign = true),
                     style = MaterialTheme.typography.bodyLarge.merge(TabularNumber), fontWeight = FontWeight.SemiBold,
                     color = if (bucket.balance >= BigDecimal.ZERO) Income else Expense)
                 Text("+${formatMoney(bucket.ingresos)} · -${formatMoney(bucket.gastos)}",
-                    style = MaterialTheme.typography.bodySmall.merge(TabularNumber), color = Muted)
+                    style = MaterialTheme.typography.bodySmall.merge(TabularNumber), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

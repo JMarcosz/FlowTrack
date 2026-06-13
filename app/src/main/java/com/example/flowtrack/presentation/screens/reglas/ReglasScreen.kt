@@ -63,9 +63,6 @@ import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.domain.model.TipoMatch
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Ink
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Spacing
 
@@ -143,6 +140,7 @@ fun ReglasScreen(
                     "Categoría para '${showCategorySheetFor!!.patronDetectado}'",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
                 LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
@@ -160,7 +158,7 @@ fun ReglasScreen(
                             ) {
                                 Box(modifier = Modifier.size(16.dp).background(cat.color, CircleShape))
                                 Spacer(Modifier.width(Spacing.md))
-                                Text(cat.nombre, style = MaterialTheme.typography.bodyLarge)
+                                Text(cat.nombre, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -175,8 +173,8 @@ private fun MisReglasTab(reglas: List<ReglaCategoria>, onEliminar: (String) -> U
     if (reglas.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Sin reglas creadas", fontWeight = FontWeight.SemiBold, color = Ink)
-                Text("Las reglas se crean al cambiar categorías en tus transacciones.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                Text("Sin reglas creadas", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text("Las reglas se crean al cambiar categorías en tus transacciones.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         return
@@ -209,14 +207,14 @@ private fun ReglaCard(regla: ReglaCategoria, onEliminar: () -> Unit) {
                 Box(Modifier.size(12.dp).background(catInfo.color, CircleShape))
             }
             Column(Modifier.weight(1f)) {
-                Text(regla.patron, fontWeight = FontWeight.Medium, color = Ink)
+                Text(regla.patron, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                 Text(
                     "${tipoMatchLabel(regla.tipoMatch)} · ${catInfo?.nombre ?: regla.categoriaId}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text("${regla.confianza}×", style = MaterialTheme.typography.bodySmall, color = Muted2)
+            Text("${regla.confianza}×", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             IconButton(onClick = onEliminar, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Delete, null, tint = Expense, modifier = Modifier.size(16.dp))
             }
@@ -234,8 +232,8 @@ private fun SugeridasTab(
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Default.AutoAwesome, null, tint = Primary, modifier = Modifier.size(48.dp))
-                Text("¡Todo al día!", fontWeight = FontWeight.SemiBold, color = Ink)
-                Text("No hay sugerencias pendientes de revisión.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                Text("¡Todo al día!", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text("No hay sugerencias pendientes de revisión.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         return
@@ -264,13 +262,13 @@ private fun SugerenciaCard(
         Column(modifier = Modifier.padding(Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Icon(Icons.Default.AutoAwesome, null, tint = Primary)
-                Text(sugerencia.patronDetectado, fontWeight = FontWeight.Bold, color = Ink)
+                Text(sugerencia.patronDetectado, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             }
             Spacer(Modifier.height(Spacing.xs))
             Text(
                 "${sugerencia.muestras.size} transacción(es) · confianza ${"%.0f".format(sugerencia.confianzaCluster)}%",
                 style = MaterialTheme.typography.bodySmall,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(Spacing.sm))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {

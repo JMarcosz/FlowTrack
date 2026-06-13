@@ -43,10 +43,7 @@ import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.TextBody
 import com.example.flowtrack.ui.theme.Warning50
 import com.example.flowtrack.ui.theme.Warning700
@@ -91,8 +88,8 @@ fun DuplicadosScreen(
 private fun EmptyDuplicados(modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Outlined.Info, null, tint = Muted2, modifier = Modifier.size(48.dp))
-            Text("No hay duplicados detectados", color = Muted, textAlign = TextAlign.Center)
+            Icon(Icons.Outlined.Info, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(48.dp))
+            Text("No hay duplicados detectados", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }
 }
@@ -125,7 +122,7 @@ private fun DuplicadosContent(pares: List<ParDuplicado>, modifier: Modifier) {
 private fun DuplicadoCard(par: ParDuplicado) {
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 1.dp) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Par duplicado", fontWeight = FontWeight.SemiBold, color = Ink, fontSize = 12.sp)
+            Text("Par duplicado", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp)
             HorizontalDivider(color = Line2)
 
             TransaccionMiniRow("Nueva", par.nueva)
@@ -140,10 +137,10 @@ private fun TransaccionMiniRow(etiqueta: String, tx: Transaccion) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.background(Line2, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
-        ) { Text(etiqueta, fontSize = 10.sp, color = Muted, fontWeight = FontWeight.SemiBold) }
+        ) { Text(etiqueta, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold) }
         Column(Modifier.weight(1f)) {
             Text(tx.descripcionCorta, fontSize = 12.sp, color = TextBody, fontWeight = FontWeight.Medium)
-            Text(tx.fecha.toString(), fontSize = 10.sp, color = Muted2)
+            Text(tx.fecha.toString(), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val esCredito = tx.tipo == TipoTransaccion.CREDITO
         Text(

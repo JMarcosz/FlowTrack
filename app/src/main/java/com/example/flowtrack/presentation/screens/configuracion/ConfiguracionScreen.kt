@@ -72,10 +72,7 @@ import com.example.flowtrack.core.extensions.formatearMoneda
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Primary50
 import com.example.flowtrack.ui.theme.Radii
@@ -117,7 +114,7 @@ fun ConfiguracionScreen(
                 title = { Text("Configuración", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
-                        Icon(Icons.Outlined.Menu, contentDescription = "Menú")
+                        Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -160,10 +157,10 @@ fun ConfiguracionScreen(
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(displayName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ink)
-                        Text(email, fontSize = 13.sp, color = Muted)
+                        Text(displayName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(email, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Muted2)
+                    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
                 }
             }
 
@@ -244,7 +241,7 @@ fun ConfiguracionScreen(
                         modifier = Modifier.padding(horizontal = Spacing.xl),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Ink,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(Modifier.height(Spacing.sm))
                     Surface(
@@ -261,11 +258,12 @@ fun ConfiguracionScreen(
                                 formatearMoneda(state.balanceNeto, config.monedaPredeterminada, config.formatoMoneda),
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 formatearFecha(LocalDate.now(), config.formatoFecha),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Muted,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -315,7 +313,7 @@ fun ConfiguracionScreen(
             Text(
                 "FlowTrack v1.0.0",
                 fontSize = 12.sp,
-                color = Muted2,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = Spacing.xxl),
@@ -396,7 +394,7 @@ private fun SectionLabel(label: String) {
         label.uppercase(),
         fontSize = 11.sp,
         fontWeight = FontWeight.SemiBold,
-        color = Muted,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         letterSpacing = 0.6.sp,
         modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = 2.dp),
     )
@@ -422,8 +420,8 @@ private fun SettingsRow(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
-    labelColor: Color = Ink,
-    iconColor: Color = Muted,
+    labelColor: Color = MaterialTheme.colorScheme.onSurface,
+    iconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     showChevron: Boolean = true,
     trailing: (@Composable () -> Unit)? = null,
 ) {
@@ -440,7 +438,7 @@ private fun SettingsRow(
         if (trailing != null) {
             trailing()
         } else if (showChevron) {
-            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = Muted2)
+            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
         }
     }
 }
@@ -460,8 +458,8 @@ private fun SettingsSwitchRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Icon(icon, contentDescription = null, tint = Muted, modifier = Modifier.size(20.dp))
-        Text(label, fontSize = 15.sp, color = Ink, modifier = Modifier.weight(1f))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Text(label, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -480,7 +478,7 @@ private fun PrefRow(titulo: String, valor: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(titulo, style = MaterialTheme.typography.bodyLarge)
+        Text(titulo, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
         Text(valor, style = MaterialTheme.typography.bodyMedium, color = Primary, fontWeight = FontWeight.Medium)
     }
 }
@@ -496,7 +494,7 @@ private fun SeleccionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(titulo) },
+        title = { Text(titulo, color = MaterialTheme.colorScheme.onSurface) },
         text = {
             Column {
                 opciones.forEach { opcion ->
@@ -509,7 +507,7 @@ private fun SeleccionDialog(
                     ) {
                         RadioButton(selected = opcion == seleccionActual, onClick = { onSeleccion(opcion) })
                         Spacer(Modifier.width(Spacing.sm))
-                        Text(etiqueta(opcion))
+                        Text(etiqueta(opcion), color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }

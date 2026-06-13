@@ -71,10 +71,7 @@ import com.example.flowtrack.domain.model.EstadoCarga
 import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Expense50
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
-import com.example.flowtrack.ui.theme.Muted2
 import com.example.flowtrack.ui.theme.Neutral100
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Success
@@ -175,9 +172,9 @@ private fun LoadingHistorial(modifier: Modifier) {
 private fun EmptyHistorial(navController: NavController, modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Icons.Outlined.Inbox, null, tint = Muted2, modifier = Modifier.size(56.dp))
+            Icon(Icons.Outlined.Inbox, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(56.dp))
             Text("Sin importaciones aún", fontWeight = FontWeight.SemiBold, color = TextBody)
-            Text("Importa tu primer estado de cuenta para empezar", style = MaterialTheme.typography.bodySmall, color = Muted2, textAlign = TextAlign.Center)
+            Text("Importa tu primer estado de cuenta para empezar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             Button(
                 onClick = { navController.navigate(Screen.Upload.route) },
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
@@ -209,7 +206,7 @@ private fun HistorialContent(
             Text(
                 "${cargas.size} importación(es)",
                 style = MaterialTheme.typography.labelMedium,
-                color = Muted2,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 4.dp),
             )
         }
@@ -254,11 +251,11 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                 BankLogo(bancoCodigo = carga.bancoCodigo)
 
                 Column(Modifier.weight(1f)) {
-                    Text(carga.nombreArchivo, fontWeight = FontWeight.SemiBold, color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(carga.nombreArchivo, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
                         carga.procesadoEn.atZone(ZONA).format(FMT_FECHA),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Muted2,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -266,7 +263,7 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                 Icon(
                     if (expandido) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                     null,
-                    tint = Muted2,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -318,8 +315,8 @@ private fun EstadoBadge(estado: EstadoCarga) {
     val (bgColor, textColor, texto) = when (estado) {
         EstadoCarga.EXITOSO  -> Triple(Success50, Success, "Exitoso")
         EstadoCarga.PARCIAL  -> Triple(Warning50, Warning, "Parcial")
-        EstadoCarga.FALLIDO  -> Triple(Expense50, Expense, "Fallido")
-        EstadoCarga.ELIMINADO -> Triple(Neutral100, Muted2, "Eliminado")
+        EstadoCarga.FALLIDO  -> Triple(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.error, "Fallido")
+        EstadoCarga.ELIMINADO -> Triple(Neutral100, MaterialTheme.colorScheme.onSurfaceVariant, "Eliminado")
     }
     Box(
         Modifier.clip(RoundedCornerShape(20.dp)).background(bgColor).padding(horizontal = 8.dp, vertical = 3.dp),
@@ -330,7 +327,6 @@ private fun EstadoBadge(estado: EstadoCarga) {
 private fun InfoMini(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextBody)
-        Text(label, fontSize = 9.sp, color = Muted2)
+        Text(label, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
-

@@ -57,10 +57,8 @@ import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Line2
-import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Primary
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
@@ -96,18 +94,18 @@ fun ResumenScreen(
             ) {
                 Box(modifier = Modifier.width(56.dp)) {
                     IconButton(onClick = onMenuClick) {
-                        Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = Ink)
+                        Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
                 Text(
                     text = tabLabel,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Ink,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = onVerPorPeriodo) {
-                    Icon(Icons.Outlined.BarChart, contentDescription = "Resumen por período", tint = Primary)
+                    Icon(Icons.Outlined.BarChart, contentDescription = "Resumen por período", tint = MaterialTheme.colorScheme.primary)
                 }
             }
 
@@ -169,7 +167,7 @@ fun ResumenScreen(
             // ── Content ──────────────────────────────────────────
             if (state.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Primary)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (state.resumen == null) {
                 EmptyState(
@@ -205,7 +203,7 @@ private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () ->
         label = "tab_bg",
     )
     val textColor by animateColorAsState(
-        targetValue = if (active) Ink else Muted,
+        targetValue = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(160),
         label = "tab_text",
     )
@@ -227,7 +225,7 @@ private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () ->
 @Composable
 private fun PeriodPill(label: String, active: Boolean, onClick: () -> Unit) {
     val bg  = if (active) MaterialTheme.colorScheme.primary   else MaterialTheme.colorScheme.surface
-    val fg  = if (active) Color.White else Muted
+    val fg  = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     val border = if (active) MaterialTheme.colorScheme.primary else Line
     Box(
         modifier = Modifier
@@ -293,7 +291,7 @@ private fun BancoCard(b: ResumenBanco) {
                     )
                 }
                 Spacer(Modifier.width(Spacing.md))
-                Text(banco.nombre, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+                Text(banco.nombre, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             }
 
             Spacer(Modifier.height(Spacing.md))
@@ -325,7 +323,7 @@ private fun BancoStat(
     align: Alignment.Horizontal = Alignment.Start,
 ) {
     Column(horizontalAlignment = align) {
-        Text(label, fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(2.dp))
         Text(
             text = "$prefix$value",
@@ -427,7 +425,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
                     "Balance del período",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     (if (positivo) "" else "-") + formatMoney(balance.abs()),
@@ -445,7 +443,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
             Row(modifier = Modifier.fillMaxWidth()) {
                 // Ingresos
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Ingresos", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text("Ingresos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
                     Text(formatMoney(ingresos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Income, style = TabularNumber)
                 }
@@ -461,7 +459,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
 
                 // Gastos
                 Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text("Gastos", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text("Gastos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
                     Text(formatMoney(gastos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense, style = TabularNumber)
                 }
@@ -483,13 +481,13 @@ private fun CategoriaRow(nombre: String, color: Color, monto: String, pct: Float
                 .background(color),
         )
         Spacer(Modifier.width(Spacing.md))
-        Text(nombre, fontSize = 14.sp, color = Ink, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-        Text(monto, fontSize = 14.sp, color = Ink, fontWeight = FontWeight.SemiBold, style = TabularNumber)
+        Text(nombre, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        Text(monto, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, style = TabularNumber)
         Spacer(Modifier.width(Spacing.md))
         Text(
             "${"%.1f".format(pct)}%",
             fontSize = 13.sp,
-            color = Muted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.width(36.dp),
         )
