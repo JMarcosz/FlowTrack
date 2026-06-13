@@ -59,8 +59,6 @@ import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Income50
-import com.example.flowtrack.ui.theme.Line
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.TabularNumber
 import com.example.flowtrack.ui.theme.Warning
 import com.example.flowtrack.ui.theme.Warning50
@@ -212,7 +210,7 @@ private fun ResumenCargaCard(estado: RevisionEstado.Listo) {
                     Text(estado.banco, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            HorizontalDivider(color = Line)
+            HorizontalDivider()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 StatMini("Transacciones", "${estado.transacciones.size}")
                 StatMini("Débitos", formatMoney(estado.totalDebitos))

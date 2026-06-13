@@ -71,7 +71,6 @@ import com.example.flowtrack.domain.model.EstadoCarga
 import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Line
 import com.example.flowtrack.ui.theme.Neutral100
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.Success50
@@ -270,7 +269,7 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
             // Detalle expandible
             AnimatedVisibility(visible = expandido, enter = expandVertically(), exit = shrinkVertically()) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    HorizontalDivider(color = Line)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         InfoMini("Insertadas", "${carga.transaccionesInsertadas}")

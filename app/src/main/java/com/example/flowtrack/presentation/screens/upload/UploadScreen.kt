@@ -77,8 +77,6 @@ import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
-import com.example.flowtrack.ui.theme.Line
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.Success
@@ -355,10 +353,10 @@ private fun UploadFormContent(
                 .fillMaxWidth()
                 .height(120.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (bancoSeleccionado != null) MaterialTheme.colorScheme.primaryContainer else Line2)
+                .background(if (bancoSeleccionado != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
                 .border(
                     width = 2.dp,
-                    color = if (bancoSeleccionado != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else Line,
+                    color = if (bancoSeleccionado != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(16.dp),
                 )
                 .clickable(enabled = bancoSeleccionado != null, onClick = onSeleccionarArchivo),
@@ -481,8 +479,8 @@ private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> 
     val disponible = banco.disponible
     val borderColor = when {
         seleccionado -> MaterialTheme.colorScheme.primary
-        disponible   -> Line
-        else         -> Line.copy(alpha = 0.5f)
+        disponible   -> MaterialTheme.colorScheme.outline
+        else         -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
     }
     val bgColor = when {
         seleccionado -> MaterialTheme.colorScheme.primaryContainer

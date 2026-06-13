@@ -17,16 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,7 +34,6 @@ import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.TextBody
 import com.example.flowtrack.ui.theme.Warning50
 import com.example.flowtrack.ui.theme.Warning700
@@ -123,10 +113,10 @@ private fun DuplicadoCard(par: ParDuplicado) {
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 1.dp) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Par duplicado", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp)
-            HorizontalDivider(color = Line2)
+            HorizontalDivider()
 
             TransaccionMiniRow("Nueva", par.nueva)
-            HorizontalDivider(color = Line2, thickness = 0.5.dp)
+            HorizontalDivider(thickness = 0.5.dp)
             TransaccionMiniRow("Existente", par.existente)
         }
     }
@@ -136,7 +126,7 @@ private fun DuplicadoCard(par: ParDuplicado) {
 private fun TransaccionMiniRow(etiqueta: String, tx: Transaccion) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.background(Line2, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
+            Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
         ) { Text(etiqueta, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold) }
         Column(Modifier.weight(1f)) {
             Text(tx.descripcionCorta, fontSize = 12.sp, color = TextBody, fontWeight = FontWeight.Medium)

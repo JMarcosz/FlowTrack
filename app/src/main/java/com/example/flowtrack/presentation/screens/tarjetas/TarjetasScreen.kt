@@ -62,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -81,8 +82,6 @@ import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.presentation.components.bankBadge
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Line
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.Success
@@ -221,7 +220,7 @@ fun TarjetasScreen(
                                         modifier = Modifier
                                             .padding(horizontal = 3.dp)
                                             .clip(RoundedCornerShape(3.dp))
-                                            .background(if (isActive) MaterialTheme.colorScheme.primary else Line)
+                                            .background(if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
                                             .size(width = width, height = 6.dp),
                                     )
                                 }
@@ -255,7 +254,7 @@ fun TarjetasScreen(
                                 ) {
                                     pagosProximos.forEachIndexed { idx, (tarjeta, snap) ->
                                         PagoProximoRow(tarjeta = tarjeta, snap = snap, ahora = ahora)
-                                        if (idx < pagosProximos.lastIndex) HorizontalDivider(color = Line2)
+                                        if (idx < pagosProximos.lastIndex) HorizontalDivider()
                                     }
                                 }
                             }
@@ -283,7 +282,7 @@ fun TarjetasScreen(
                                         val snap2 = (state.estadosPorTarjeta[t.id] ?: emptyList())
                                             .maxByOrNull { it.fechaCorte }
                                         OtraTarjetaRow(tarjeta = t, snap = snap2)
-                                        if (idx < otras.lastIndex) HorizontalDivider(color = Line2)
+                                        if (idx < otras.lastIndex) HorizontalDivider()
                                     }
                                 }
                             }
@@ -323,7 +322,7 @@ fun TarjetasScreen(
                                 ) {
                                     historial.forEachIndexed { idx, snap ->
                                         HistorialRow(snap)
-                                        if (idx < historial.lastIndex) HorizontalDivider(color = Line2)
+                                        if (idx < historial.lastIndex) HorizontalDivider()
                                     }
                                 }
                             }
@@ -427,7 +426,7 @@ fun WhiteCreditCard(
             }
 
             Spacer(Modifier.height(Spacing.lg))
-            HorizontalDivider(color = Line2)
+            HorizontalDivider()
             Spacer(Modifier.height(Spacing.lg))
 
             // ── Balance row ───────────────────────────────────────
@@ -473,7 +472,7 @@ fun WhiteCreditCard(
                     .fillMaxWidth()
                     .height(4.dp)
                     .clip(Radii.pill)
-                    .background(Line2),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
                 Box(
                     modifier = Modifier
@@ -711,7 +710,7 @@ fun WhiteCard(
             .shadow(elevation, Radii.lg, ambientColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f), spotColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
             .clip(Radii.lg)
             .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, Line2, Radii.lg),
+            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
         content = content,
     )
 }

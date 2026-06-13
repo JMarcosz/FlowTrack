@@ -38,7 +38,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.TasaCambio
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.Success
 import java.text.NumberFormat
@@ -159,7 +158,7 @@ private fun TasaHistoricoChart(historico: List<TasaCambio>) {
     val maxVal = ventas.max()
     val rango = (maxVal - minVal).takeIf { it > 0f } ?: 1f
     val lineColor = MaterialTheme.colorScheme.primary
-    val gridColor = Line2
+    val gridColor = MaterialTheme.colorScheme.surfaceVariant
 
     Card(
         modifier = Modifier.fillMaxWidth(),

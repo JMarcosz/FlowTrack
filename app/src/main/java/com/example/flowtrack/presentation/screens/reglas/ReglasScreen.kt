@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -215,7 +216,7 @@ private fun ReglaCard(regla: ReglaCategoria, onEliminar: () -> Unit) {
             }
             Text("${regla.confianza}×", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             IconButton(onClick = onEliminar, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Delete, null, tint = Expense, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
             }
         }
     }

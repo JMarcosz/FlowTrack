@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 
@@ -81,7 +80,7 @@ fun FlowTrackDrawer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.xl)
-                    .border(1.dp, Line2, Radii.lg),
+                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
             ) {
                 Column {
                     drawerItems.forEachIndexed { index, item ->
@@ -91,7 +90,7 @@ fun FlowTrackDrawer(
                             onClick = { onNavigate(item.route) }
                         )
                         if (index < drawerItems.size - 1) {
-                            HorizontalDivider(color = Line2)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         }
                     }
                 }

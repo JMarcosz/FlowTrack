@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -15,9 +16,9 @@ import androidx.compose.ui.unit.dp
 
 fun Modifier.shimmerEffect(): Modifier = composed {
     val shimmerColors = listOf(
-        Color.LightGray.copy(alpha = 0.6f),
-        Color.LightGray.copy(alpha = 0.2f),
-        Color.LightGray.copy(alpha = 0.6f),
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
     )
 
     val transition = rememberInfiniteTransition(label = "shimmer_transition")

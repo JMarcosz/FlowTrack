@@ -80,16 +80,12 @@ import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Expense50
 import com.example.flowtrack.ui.theme.Income
 import com.example.flowtrack.ui.theme.Income50
-import com.example.flowtrack.ui.theme.Line
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.TabularNumber
 import com.example.flowtrack.ui.theme.TextBody
 import java.math.BigDecimal
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Entry point
-// ─────────────────────────────────────────────────────────────────────────────
+// ── PERIODOS ─────────────────────────────────────────────────────────────────
 
 @Composable
 fun DashboardScreen(
@@ -123,10 +119,6 @@ fun DashboardScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Loading skeleton
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun LoadingContent() {
     Column(
@@ -144,10 +136,6 @@ private fun LoadingContent() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main content
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun DashboardContent(
     estado: DashboardEstado.Exito,
@@ -157,13 +145,10 @@ private fun DashboardContent(
     onMenuClick: () -> Unit,
 ) {
     val resumen = estado.resumen
-
-    // Sparkline data — Float solo para renderizado, cálculo queda en BigDecimal en el UseCase
     val trendGasto   = remember(resumen.serie) { resumen.serie.map { it.gasto.toFloat() } }
     val trendIngreso = remember(resumen.serie) { resumen.serie.map { it.ingreso.toFloat() } }
     val trendBalance = remember(resumen.serie) { resumen.serie.map { it.balanceAcumulado.toFloat() } }
 
-    // DonutChart slices desde el breakdown de categorías del UseCase
     val slices = remember(resumen.gastosPorCategoria) {
         resumen.gastosPorCategoria.map { dc ->
             val cat = categoriaPorId(dc.categoriaId)
@@ -175,18 +160,16 @@ private fun DashboardContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
     ) {
-        // ── TopBar ────────────────────────────────────────────────────────────
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets(0, 0, 0, 0)) // No duplicar insets si NavHost ya los tiene
+                    .windowInsetsPadding(WindowInsets(0, 0, 0, 0))
                     .padding(horizontal = 8.dp)
                     .height(56.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-
                 IconButton(onClick = onMenuClick) {
                     Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
                 }
@@ -201,7 +184,6 @@ private fun DashboardContent(
             }
         }
 
-        // ── Saludo + selector de período ─────────────────────────────────────
         item {
             Row(
                 modifier = Modifier
@@ -235,7 +217,6 @@ private fun DashboardContent(
             }
         }
 
-        // ── Stat cards ────────────────────────────────────────────────────────
         item {
             Row(
                 modifier = Modifier
@@ -274,12 +255,10 @@ private fun DashboardContent(
             }
         }
 
-        // ── Aviso de cobertura insuficiente ───────────────────────────────────
         if (resumen.comparacion.coverageWarning) {
             item { CoverageWarningBanner(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) }
         }
 
-        // ── Balance neto ─────────────────────────────────────────────────────
         item {
             BalanceNetoCard(
                 resumen  = resumen,
@@ -290,7 +269,6 @@ private fun DashboardContent(
             )
         }
 
-        // ── Gastos por categoría ─────────────────────────────────────────────
         item {
             Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
                 Row(
@@ -324,7 +302,7 @@ private fun DashboardContent(
                     shape     = RoundedCornerShape(16.dp),
                     colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(0.dp),
-                    border    = BorderStroke(1.dp, Line2),
+                    border    = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
                     modifier  = Modifier.fillMaxWidth(),
                 ) {
                     if (slices.isEmpty()) {
@@ -383,7 +361,6 @@ private fun DashboardContent(
             }
         }
 
-        // ── Por banco ────────────────────────────────────────────────────────
         item {
             Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp)) {
                 Text(
@@ -399,7 +376,7 @@ private fun DashboardContent(
                         shape     = RoundedCornerShape(16.dp),
                         colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(0.dp),
-                        border    = BorderStroke(1.dp, Line2),
+                        border    = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
                         modifier  = Modifier.fillMaxWidth(),
                     ) {
                         resumen.gastosPorBanco.forEachIndexed { i, datos ->
@@ -407,7 +384,7 @@ private fun DashboardContent(
                             if (i < resumen.gastosPorBanco.size - 1) {
                                 HorizontalDivider(
                                     modifier  = Modifier.padding(horizontal = 16.dp),
-                                    color     = Line2,
+                                    color     = MaterialTheme.colorScheme.surfaceVariant,
                                     thickness = 1.dp,
                                 )
                             }
@@ -420,10 +397,6 @@ private fun DashboardContent(
         item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Stat card
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun DashStatCard(
@@ -454,7 +427,6 @@ private fun DashStatCard(
             .padding(14.dp),
     ) {
         Column {
-            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -485,7 +457,6 @@ private fun DashStatCard(
                 }
             }
 
-            // Valor
             Text(
                 text          = value,
                 fontSize      = 19.sp,
@@ -497,7 +468,6 @@ private fun DashStatCard(
                 style        = TabularNumber,
             )
 
-            // Footer: delta % + sparkline
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -526,10 +496,6 @@ private fun DashStatCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Balance neto card
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun BalanceNetoCard(
     resumen: ResumenDashboard,
@@ -544,7 +510,7 @@ private fun BalanceNetoCard(
         shape     = RoundedCornerShape(16.dp),
         colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(0.dp),
-        border    = BorderStroke(1.dp, Line2),
+        border    = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
         modifier  = modifier,
     ) {
         Row(
@@ -610,10 +576,6 @@ private fun BalanceNetoCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DeltaBadge — muestra % con flecha, "—" o icono de advertencia de cobertura
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun DeltaBadge(
     porcentaje: BigDecimal?,
@@ -655,10 +617,6 @@ private fun DeltaBadge(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Banner de cobertura insuficiente
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun CoverageWarningBanner(modifier: Modifier = Modifier) {
     Row(
@@ -680,10 +638,6 @@ private fun CoverageWarningBanner(modifier: Modifier = Modifier) {
         )
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Fila de banco
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun BancoRow(banco: BancoUI, datos: DatosBancoResumen) {
@@ -733,10 +687,6 @@ private fun BancoRow(banco: BancoUI, datos: DatosBancoResumen) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Período dropdown
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun PeriodoDropdown(
     selected: String,
@@ -750,7 +700,7 @@ private fun PeriodoDropdown(
             onClick = { expanded = true },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
-            border = BorderStroke(1.dp, Line),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
             modifier = Modifier.height(36.dp),
         ) {
@@ -789,10 +739,6 @@ private fun PeriodoDropdown(
         }
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mini flecha para deltas
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun MiniArrow(up: Boolean, color: Color, size: Dp = 10.dp) {

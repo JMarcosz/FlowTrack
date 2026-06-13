@@ -29,6 +29,7 @@ fun DonutChart(
     strokeWidth: Float = 40f
 ) {
     val total = slices.sumOf { it.value.toDouble() }.toFloat().coerceAtLeast(1f)
+    val emptyColor = MaterialTheme.colorScheme.surfaceVariant
     
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -36,7 +37,7 @@ fun DonutChart(
             
             if (slices.isEmpty()) {
                 drawArc(
-                    color = Color.LightGray.copy(alpha = 0.3f),
+                    color = emptyColor,
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,

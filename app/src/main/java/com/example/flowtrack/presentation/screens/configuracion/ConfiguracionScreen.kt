@@ -72,7 +72,6 @@ import com.example.flowtrack.core.extensions.formatearMoneda
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.google.firebase.auth.FirebaseAuth
@@ -133,7 +132,7 @@ fun ConfiguracionScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.xl)
-                    .border(1.dp, Line2, Radii.lg),
+                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
             ) {
                 Row(
                     modifier = Modifier.padding(Spacing.xl),
@@ -204,7 +203,7 @@ fun ConfiguracionScreen(
                     label = "Categorías",
                     onClick = { navController.navigate(Screen.Categorias.route) },
                 )
-                HorizontalDivider(color = Line2)
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 SettingsRow(
                     icon = Icons.Outlined.History,
                     label = "Historial",
@@ -221,14 +220,14 @@ fun ConfiguracionScreen(
                     label = "Notificaciones",
                     onClick = { navController.navigate(Screen.Notificaciones.route) },
                 )
-                HorizontalDivider(color = Line2)
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 SettingsSwitchRow(
                     icon = Icons.Filled.DarkMode,
                     label = "Modo oscuro",
                     checked = config.temaOscuro,
                     onCheckedChange = { viewModel.toggleTema(it) },
                 )
-                HorizontalDivider(color = Line2)
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -267,12 +266,12 @@ fun ConfiguracionScreen(
                     }
                     Spacer(Modifier.height(Spacing.sm))
                     PrefRow("Moneda base", config.monedaPredeterminada.name) { dialogo = Dialogo.MonedaBase }
-                    HorizontalDivider(color = Line2, modifier = Modifier.padding(horizontal = Spacing.xl))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = Spacing.xl))
                     PrefRow("Formato de fecha", config.formatoFecha) { dialogo = Dialogo.FormatoFecha }
-                    HorizontalDivider(color = Line2, modifier = Modifier.padding(horizontal = Spacing.xl))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = Spacing.xl))
                     PrefRow("Formato de moneda", config.formatoMoneda) { dialogo = Dialogo.FormatoMoneda }
                 }
-                HorizontalDivider(color = Line2)
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 SettingsRow(
                     icon = Icons.Filled.FileDownload,
                     label = "Exportar estados",
@@ -291,7 +290,7 @@ fun ConfiguracionScreen(
                     iconColor = Expense,
                     onClick = { confirmarBorrado = true },
                 )
-                HorizontalDivider(color = Line2)
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 SettingsRow(
                     icon = Icons.AutoMirrored.Outlined.Logout,
                     label = "Cerrar sesión",
@@ -407,7 +406,7 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.xl)
-            .border(1.dp, Line2, Radii.lg),
+            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
     ) {
         Column(content = content)
     }

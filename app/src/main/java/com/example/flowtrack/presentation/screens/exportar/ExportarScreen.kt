@@ -55,7 +55,6 @@ import androidx.navigation.NavController
 import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.components.MerchantLogo
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.domain.usecase.FormatoExportacion
@@ -189,7 +188,7 @@ fun ExportarScreen(
                                 onToggle = { viewModel.toggleCuenta(cuenta.id) },
                                 leading = { BankLogo(bancoCodigo = cuenta.bancoCodigo) },
                             )
-                            if (index < state.cuentas.lastIndex) HorizontalDivider(color = Line2)
+                            if (index < state.cuentas.lastIndex) HorizontalDivider()
                         }
                     }
                 }
@@ -209,7 +208,7 @@ fun ExportarScreen(
                                 onToggle = { viewModel.toggleTarjeta(tarjeta.id) },
                                 leading = { MerchantLogo(descripcionNormalizada = tarjeta.alias.ifBlank { tarjeta.bancoCodigo }, size = 34.dp, fontSize = 12) },
                             )
-                            if (index < state.tarjetas.lastIndex) HorizontalDivider(color = Line2)
+                            if (index < state.tarjetas.lastIndex) HorizontalDivider()
                         }
                     }
                 }
@@ -234,7 +233,7 @@ fun ExportarScreen(
                                 selected = seccion in state.seccionesXlsx,
                                 onToggle = { viewModel.toggleSeccion(seccion) },
                             )
-                            if (index < SeccionExportacionXlsx.entries.lastIndex) HorizontalDivider(color = Line2)
+                            if (index < SeccionExportacionXlsx.entries.lastIndex) HorizontalDivider()
                         }
                     }
                 }

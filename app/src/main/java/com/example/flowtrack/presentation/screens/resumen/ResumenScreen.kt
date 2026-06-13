@@ -57,8 +57,6 @@ import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Line
-import com.example.flowtrack.ui.theme.Line2
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.TabularNumber
@@ -117,7 +115,7 @@ fun ResumenScreen(
                         .padding(bottom = Spacing.md)
                         .height(80.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Line2),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 )
             } else if (state.resumen != null) {
                 BalancePeriodoCard(
@@ -135,7 +133,7 @@ fun ResumenScreen(
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.xl)
                     .clip(Radii.md)
-                    .background(Line2)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(4.dp),
             ) {
                 Row {
@@ -224,8 +222,8 @@ private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () ->
 @Composable
 private fun PeriodPill(label: String, active: Boolean, onClick: () -> Unit) {
     val bg  = if (active) MaterialTheme.colorScheme.primary   else MaterialTheme.colorScheme.surface
-    val fg  = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-    val border = if (active) MaterialTheme.colorScheme.primary else Line
+    val fg  = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    val border = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     Box(
         modifier = Modifier
             .clip(Radii.pill)
@@ -271,7 +269,7 @@ private fun BancoCard(b: ResumenBanco) {
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Line2, Radii.lg),
+            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
     ) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -364,7 +362,7 @@ private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier 
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, Line2, Radii.lg),
+                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
             ) {
                 Column(modifier = Modifier.padding(Spacing.xl)) {
                     Box(
@@ -412,7 +410,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, Line2, RoundedCornerShape(16.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp)),
     ) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
             Row(
@@ -436,7 +434,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
             }
 
             Spacer(Modifier.height(Spacing.md))
-            HorizontalDivider(color = Line2)
+            HorizontalDivider()
             Spacer(Modifier.height(Spacing.md))
 
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -452,7 +450,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
                     modifier = Modifier
                         .width(1.dp)
                         .height(48.dp)
-                        .background(Line2)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .align(Alignment.CenterVertically),
                 )
 

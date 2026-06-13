@@ -152,7 +152,7 @@ fun TransaccionesScreen(
                             color = TextBody,
                         )
                     }
-                    HorizontalDivider(color = Line2, modifier = Modifier.padding(vertical = Spacing.xxs))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.xxs))
                     categoriaRegistry.values.forEach { cat ->
                         Row(
                             modifier = Modifier
@@ -291,7 +291,7 @@ private fun TransaccionesLista(
                 .padding(horizontal = Spacing.xl)
                 .padding(bottom = Spacing.md)
                 .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-                .border(1.dp, Line2, RoundedCornerShape(12.dp))
+                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -482,7 +482,7 @@ private fun TransaccionesLista(
                                     .fillMaxWidth()
                                     .clip(shape)
                                     .background(MaterialTheme.colorScheme.surface)
-                                    .border(1.dp, Line2, shape),
+                                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, shape),
                             ) {
                                 TransaccionFila(
                                     tx = tx,
@@ -491,7 +491,7 @@ private fun TransaccionesLista(
                                 )
                                 if (index < txs.lastIndex) {
                                     HorizontalDivider(
-                                        color = Line2,
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
                                         modifier = Modifier.padding(start = 68.dp),
                                     )
                                 }
@@ -587,7 +587,7 @@ private fun TransaccionFila(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Line2.copy(alpha = 0.5f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         .padding(start = 68.dp, end = Spacing.xl, top = Spacing.xxs, bottom = Spacing.xxs),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -673,7 +673,7 @@ private fun TransaccionDetalle(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, Line2, RoundedCornerShape(16.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
                         .padding(Spacing.xxl),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
@@ -714,23 +714,23 @@ private fun TransaccionDetalle(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, Line2, RoundedCornerShape(16.dp)),
+                        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp)),
                 ) {
                     DetalleRow("Fecha", formatDate(fechaLocal))
                     tx.fechaPosteo?.let { posteo ->
                         val fechaPosteoLocal = posteo.atZone(zona).toLocalDate()
                         if (fechaPosteoLocal != fechaLocal) {
-                            HorizontalDivider(color = Line2)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                             DetalleRow("Fecha contable", formatDate(fechaPosteoLocal))
                         }
                     }
-                    HorizontalDivider(color = Line2)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                     DetalleRow("Banco", banco.nombre)
                     if (tx.referencia != null) {
-                        HorizontalDivider(color = Line2)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         DetalleRow("Referencia", tx.referencia)
                     }
-                    HorizontalDivider(color = Line2)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                     // Categoría como pill coloreada
                     Row(
                         modifier = Modifier
@@ -755,12 +755,12 @@ private fun TransaccionDetalle(
                         }
                     }
                     if (tx.balanceDespues != null) {
-                        HorizontalDivider(color = Line2)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         DetalleRow("Balance posterior", "RD$ ${tx.balanceDespues.toPlainString()}")
                     }
                     if (derivadas.isNotEmpty()) {
                         derivadas.forEach { d ->
-                            HorizontalDivider(color = Line2)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                             DetalleRow(
                                 label = d.descripcionCorta.ifBlank { "Retención DGII" },
                                 value = "- ${formatMoney(d.monto)}",
@@ -857,7 +857,7 @@ private fun FiltrosSheet(
                 Text("Limpiar todo", color = Expense, fontSize = 13.sp)
             }
         }
-        HorizontalDivider(color = Line2)
+        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
         // Contenido scrollable
         Column(
@@ -880,7 +880,7 @@ private fun FiltrosSheet(
                 onClick = { draftBanco = null },
             )
             state.bancosDisponibles.forEach { banco ->
-                HorizontalDivider(color = Line2, modifier = Modifier.padding(start = Spacing.xl))
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(start = Spacing.xl))
                 BancoFiltroRow(
                     nombre = bancoPorCodigo(banco).nombre,
                     seleccionado = draftBanco == banco,
@@ -889,7 +889,7 @@ private fun FiltrosSheet(
                 )
             }
 
-            HorizontalDivider(color = Line2, modifier = Modifier.padding(top = Spacing.sm))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(top = Spacing.sm))
 
             // ── Monto ─────────────────────────────────────────────────────────
             Text(
@@ -916,7 +916,7 @@ private fun FiltrosSheet(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Line,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                     ),
                 )
                 OutlinedTextField(
@@ -929,12 +929,12 @@ private fun FiltrosSheet(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Line,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                     ),
                 )
             }
 
-            HorizontalDivider(color = Line2)
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
             // ── Categorías ────────────────────────────────────────────────────
             Text(
@@ -973,7 +973,7 @@ private fun FiltrosSheet(
                 }
             }
 
-            HorizontalDivider(color = Line2)
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
             // ── Solo sin categorizar ──────────────────────────────────────────
             Row(
@@ -990,7 +990,7 @@ private fun FiltrosSheet(
                 Switch(
                     checked = draftSoloSinCat,
                     onCheckedChange = { draftSoloSinCat = it; if (it) draftCategorias = emptySet() },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = MaterialTheme.colorScheme.primary),
+                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.onPrimary, checkedTrackColor = MaterialTheme.colorScheme.primary),
                 )
             }
 
@@ -998,7 +998,7 @@ private fun FiltrosSheet(
         }
 
         // Botón Aplicar (fuera del scroll)
-        HorizontalDivider(color = Line2)
+        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
         Button(
             onClick = {
                 onAplicar(
@@ -1072,7 +1072,7 @@ private fun PeriodoDropdown(
             onClick = { expanded = true },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
-            border = BorderStroke(1.dp, Line),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
             modifier = Modifier.height(36.dp),
         ) {
@@ -1120,11 +1120,11 @@ private fun DesignPill(
     closeIcon: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val contentColor = if (active) Color.White else TextBody
+    val contentColor = if (active) MaterialTheme.colorScheme.onPrimary else TextBody
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(if (active) MaterialTheme.colorScheme.primary else Line2)
+            .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
             .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,

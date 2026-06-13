@@ -24,37 +24,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Savings
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,8 +43,8 @@ import com.example.flowtrack.domain.usecase.PresupuestoConGasto
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.ui.theme.CatSinCategorizar
 import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Line
-import com.example.flowtrack.ui.theme.Line2
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
 import com.example.flowtrack.ui.theme.Success
 import com.example.flowtrack.ui.theme.TextBody
 import com.example.flowtrack.ui.theme.Warning
@@ -106,7 +77,7 @@ fun PresupuestosScreen(
             FloatingActionButton(
                 onClick = { mostrarSheet = true },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) { Icon(Icons.Outlined.Add, "Nuevo presupuesto") }
         },
     ) { padding ->
@@ -305,7 +276,7 @@ private fun NuevoPresupuestoSheet(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = catExpandido) },
                 modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
                 shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline),
             )
             ExposedDropdownMenu(expanded = catExpandido, onDismissRequest = { catExpandido = false }) {
                 categorias.forEach { cat ->
@@ -326,7 +297,7 @@ private fun NuevoPresupuestoSheet(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline),
         )
 
         // Período
@@ -336,7 +307,7 @@ private fun NuevoPresupuestoSheet(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (sel) MaterialTheme.colorScheme.primary else Line2)
+                        .background(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                         .clickable { periodo = p }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                 ) {
@@ -344,7 +315,7 @@ private fun NuevoPresupuestoSheet(
                         p.name.lowercase().replaceFirstChar { it.uppercase() },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = if (sel) Color.White else TextBody,
+                        color = if (sel) MaterialTheme.colorScheme.onPrimary else TextBody,
                     )
                 }
             }
