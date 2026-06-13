@@ -9,9 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.flowtrack"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.flowtrack"
@@ -105,6 +103,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.ui.text.google.fonts)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons)
 
@@ -145,6 +144,10 @@ dependencies {
     implementation(libs.hilt.work)
     ksp(libs.hilt.androidx.compiler)
 
+    // ── Paging 3 ─────────────────────────────────────────────────────────────
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
+
     // ── Glance (widgets home screen) ──────────────────────────────────────────
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
@@ -153,6 +156,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.messaging)
     // Crashlytics requiere su Gradle plugin — se agrega en Sprint 9 (release)
     // implementation(libs.firebase.crashlytics)
     // firebase-analytics eliminado — no se llama logEvent en ningún lugar
@@ -162,7 +166,11 @@ dependencies {
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.core.ktx)
+    androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.junit.ktx)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
