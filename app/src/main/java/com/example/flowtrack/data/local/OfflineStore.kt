@@ -38,7 +38,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val DB_NAME = "flowtrack_offline.db"
-private const val DB_VERSION = 2
+private const val DB_VERSION = 3
 
 private const val TABLE_RECORDS = "records"
 
