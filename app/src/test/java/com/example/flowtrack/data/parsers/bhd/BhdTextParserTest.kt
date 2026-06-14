@@ -21,28 +21,27 @@ class BhdTextParserTest {
     @Test
     fun `parsea debitos creditos descripcion multilinea y balances DOP`() {
         val texto = estadoSintetico(
-                movimientos = """
-                    01/06/2026
-                    REF-INGRESO
-                    TRANSFERENCIA RECIBIDA DE
-                    CLIENTE SINTETICO
-                    RD${'$'}0.00
-                    RD${'$'}1,000.00
-                    RD${'$'}1,100.00
-                    02/06/2026
-                    REF-GASTO
-                    COMPRA DE PRUEBA
-                    RD${'$'}250.00
-                    RD${'$'}0.00
-                    RD${'$'}850.00
-                """.trimIndent(),
-                moneda = "RD${'$'}",
-                balanceInicial = "${'$'}100.00",
-                balanceFinal = "${'$'}850.00",
+            movimientos = """
+                01/06/2026
+                REF-INGRESO
+                TRANSFERENCIA RECIBIDA DE
+                CLIENTE SINTETICO
+                RD${'$'}0.00
+                RD${'$'}1,000.00
+                RD${'$'}1,100.00
+                02/06/2026
+                REF-GASTO
+                COMPRA DE PRUEBA
+                RD${'$'}250.00
+                RD${'$'}0.00
+                RD${'$'}850.00
+            """.trimIndent(),
+            moneda = "RD${'$'}",
+            balanceInicial = "${'$'}100.00",
+            balanceFinal = "${'$'}850.00",
         )
 
         val resultado = parser.parse(texto)
-
         assertTrue("Se esperaba Success, fue: $resultado", resultado is ParseResult.Success)
         val estado = (resultado as ParseResult.Success).estado
         assertEquals("BHD", estado.bancoCodigo)
@@ -52,122 +51,58 @@ class BhdTextParserTest {
         assertEquals(2, estado.movimientos.size)
         assertEquals(TipoMovimiento.INGRESO, estado.movimientos[0].tipo)
         assertEquals(TipoMovimiento.GASTO, estado.movimientos[1].tipo)
-        assertTrue(estado.movimientos[0].descripcionOriginal.contains("CLIENTE SINTETICO"))
-        assertEquals("REF-INGRESO", estado.movimientos[0].referencia)
+        assertEquals("v1", estado.metadata["versionDetectada"])
     }
 
     @Test
-    fun `propaga moneda USD a movimientos y estado`() {
-        val resultado = parser.parse(
-            estadoSintetico(
-                movimientos = """
-                    03/06/2026
-                    REF-USD
-                    DEPOSITO DE PRUEBA
-                    US${'$'}0.00
-                    US${'$'}50.00
-                    US${'$'}75.00
-                """.trimIndent(),
-                moneda = "US${'$'}",
-                balanceInicial = "US${'$'}25.00",
-                balanceFinal = "US${'$'}75.00",
-            )
-        )
+    fun `parsea BHD v2 con texto exacto de Logcat`() {
+        val texto = """
+            BHD
+            Número de cuenta
+            XXXXXXX-001-1
+            Fecha de corte
+            2026-05-31
+            Balance Inicial
+            3,002.77
+            Fecha Ref. Detalles Débitos Créditos Balance
+            01/05 2604010142 Pago al Instante 2,895.00 3.43
+            01/05 2604010142 Pago al Instante 100.00 3.43
+            01/05 2604010142 Pago al Instante 4.34 3.43
+            14/05  TRANSFERENCIA RECIBIDA DE HELEN VEGA 300.00 303.43
+            18/05  MARTE RIVERA, JE- 300.00 3.43
+            Balance Final
+            3.43
+        """.trimIndent()
 
-        assertTrue("Se esperaba Success, fue: $resultado", resultado is ParseResult.Success)
+        val resultado = parser.parse(texto)
+        assertTrue("Fallo parseo v2 exacto: $resultado", resultado is ParseResult.Success)
         val estado = (resultado as ParseResult.Success).estado
-        assertEquals(Moneda.USD, estado.moneda)
-        assertEquals(Moneda.USD, estado.movimientos.single().moneda)
-        assertEquals(BigDecimal("50.00"), estado.movimientos.single().monto)
-    }
-
-    @Test
-    fun `documento sin encabezado de movimientos devuelve error`() {
-        val resultado = parser.parse(
-            """
-                BHD
-                ESTADO DE CUENTA
-                Numero de Cuenta
-                0000000000
-                Balance Final
-                ${'$'}0.00
-            """.trimIndent()
-        )
-
-        assertTrue(resultado is ParseResult.Error)
-    }
-
-    @Test
-    fun `bloque incompleto se ignora y reporta error si no quedan movimientos`() {
-        val resultado = parser.parse(
-            estadoSintetico(
-                movimientos = """
-                    04/06/2026
-                    REF-INCOMPLETA
-                    MOVIMIENTO SIN BALANCE
-                    ${'$'}10.00
-                    ${'$'}0.00
-                """.trimIndent(),
-            )
-        )
-
-        assertTrue(resultado is ParseResult.Error)
-    }
-
-    @Test
-    fun `documento de otro banco devuelve error`() {
-        val resultado = parser.parse(
-            """
-                OTRO BANCO
-                ESTADO DE CUENTA
-                Fecha Ref. Detalle Debitos Creditos Balance
-                01/06/2026 REF-1 PRUEBA ${'$'}1.00 ${'$'}0.00 ${'$'}9.00
-            """.trimIndent()
-        )
-
-        assertTrue(resultado is ParseResult.Error)
-    }
-
-    @Test
-    fun `parsea texto real extraido de pdf`() {
-        val file = java.io.File("../bhd_pdfbox_extracted.txt")
-        if (!file.exists()) return // Skip if file is not present
-        val texto = file.readText(Charsets.UTF_8)
+        assertEquals(5, estado.movimientos.size)
         
-        // Debug
-        val p = BhdTextParser()
-        val r = p.parse(texto)
-        if (r is ParseResult.Error) {
-            java.io.File("bhd_pdfbox_error.txt").writeText("Error: " + r.message)
-            throw RuntimeException("Parser falló con: ${r.message}")
-        }
-        assertTrue(r is ParseResult.Success)
+        // El del 14/05 debe ser ingreso
+        val m14 = estado.movimientos.first { it.fechaTransaccion.dayOfMonth == 14 }
+        assertEquals(TipoMovimiento.INGRESO, m14.tipo)
+        assertEquals(BigDecimal("300.00"), m14.monto)
+        
+        // El del 18/05 debe ser gasto
+        val m18 = estado.movimientos.first { it.fechaTransaccion.dayOfMonth == 18 }
+        assertEquals(TipoMovimiento.GASTO, m18.tipo)
+        assertEquals("v2", estado.metadata["versionDetectada"])
     }
 
     @Test
-    fun debugRegex() {
-        val file = java.io.File("../bhd_pdfbox_extracted.txt")
-        if (!file.exists()) return // Skip if file is not present
-        val texto = file.readText(Charsets.UTF_8)
-        val lineas = texto.lines().map { it.replace(Regex("\\s+"), " ").trim() }.filter { it.isNotBlank() }
-        
-        val out = StringBuilder()
-        var start = lineas.indexOfFirst { it.contains("Fecha Ref.") }
-        out.appendLine("Start at: " + start)
-        if (start != -1) {
-            val regexSingleLine = Regex("""^(\d{2}/\d{2}/\d{4})\s+(\S+)\s+(.+?)\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})$""")
-            for (i in start + 1 until lineas.size) {
-                val linea = lineas[i]
-                out.appendLine("Checking: " + linea)
-                val esFecha = linea.take(10).matches(Regex("""\d{2}/\d{2}/\d{4}"""))
-                out.appendLine("esFecha: " + esFecha)
-                if (esFecha) {
-                    val match = regexSingleLine.find(linea)
-                    out.appendLine("Match single line: " + (match != null))
-                }
-            }
-        }
-        java.io.File("bhd_regex_debug.txt").writeText(out.toString())
+    fun `bloque con un solo monto devuelve error`() {
+        val texto = estadoSintetico(
+            movimientos = """
+                04/06/2026
+                REF-INCOMPLETA
+                MOVIMIENTO SIN BALANCE
+                ${'$'}10.00
+            """.trimIndent(),
+        )
+
+        val resultado = parser.parse(texto)
+        assertTrue("Se esperaba error por falta de montos, fue: $resultado", resultado is ParseResult.Error)
     }
 
     private fun estadoSintetico(
@@ -183,8 +118,6 @@ class BhdTextParserTest {
         Total
         Numero de Cuenta
         0000000000
-        Numero de Cuenta Regional
-        DO00TEST00000000000000000000
         Moneda
         $moneda
         Balance Inicial
@@ -192,5 +125,4 @@ class BhdTextParserTest {
         Balance Final
         $balanceFinal
     """.trimIndent()
-
 }

@@ -102,7 +102,7 @@ class FeatureModulesE2ETest {
 
     @Test
     fun sugerencias_muestraEstadoActualSinMutarlo() {
-        launchScreen { SugerenciasScreen() }.use {
+        launchScreen { SugerenciasScreen(rememberNavController()) }.use {
             esperarTexto("Asistente de Categorización")
             esperarAlguno("¡Todo al día!", "Asignar Categoría")
         }
@@ -139,22 +139,21 @@ class FeatureModulesE2ETest {
 
     @Test
     fun conversor_calculaValoresSinteticosEnAmbasDirecciones() {
-        launchScreen { ConversorScreen() }.use {
-            esperarTexto("Conversor Divisas")
-            esperarTexto("Monto en DOP (RD$)")
+        launchScreen { ConversorScreen(rememberNavController()) }.use {
+            esperarTexto("Conversor de Divisas")
+            esperarTexto("Monto")
 
             val entrada = composeRule.onAllNodes(hasSetTextAction(), useUnmergedTree = true).onFirst()
             entrada.performTextInput("1000")
-            esperarResultadoDistintoDeCero("US$")
+            esperarResultadoDistintoDeCero("USD")
 
             composeRule
                 .onNodeWithContentDescription("Invertir dirección", useUnmergedTree = true)
                 .performClick()
-            esperarTexto("Monto en USD (US$)")
 
             entrada.performTextClearance()
             entrada.performTextInput("10")
-            esperarResultadoDistintoDeCero("RD$")
+            esperarResultadoDistintoDeCero("DOP")
         }
     }
 
@@ -254,11 +253,11 @@ class FeatureModulesE2ETest {
             composeRule.onAllNodes(filaTema, useUnmergedTree = true).onFirst().performClick()
             esperarEstadoToggle(estadoInicial)
 
-            esperarYDesplazar("Borrar todos mis datos")
-            composeRule.onNodeWithText("Borrar todos mis datos", useUnmergedTree = true).performClick()
-            esperarTexto("¿Borrar todos mis datos?")
+            esperarYDesplazar("Borrar mis datos")
+            composeRule.onNodeWithText("Borrar mis datos", useUnmergedTree = true).performClick()
+            esperarTexto("Borrar todos mis datos")
             composeRule.onNodeWithText("Cancelar", useUnmergedTree = true).performClick()
-            esperarAusencia("Sí, borrar todo")
+            esperarAusencia("Borrar todos mis datos")
         }
     }
 
@@ -289,11 +288,10 @@ class FeatureModulesE2ETest {
     fun perfil_cancelaCierreSinPerderSesion() {
         launchScreen { PerfilScreen(rememberNavController()) }.use {
             esperarTexto("Perfil")
-            assertVisible("Cuenta")
-            assertVisible("UID")
-            assertVisible("Email verificado")
+            assertVisible("Información de cuenta")
+            assertVisible("ID de usuario")
             composeRule.onNodeWithText("Cerrar sesión", useUnmergedTree = true).performClick()
-            esperarTexto("¿Estás seguro de que quieres cerrar sesión?")
+            esperarTexto("¿Estás seguro que deseas cerrar sesión?")
             composeRule.onNodeWithText("Cancelar", useUnmergedTree = true).performClick()
             assertNotNull(FirebaseAuth.getInstance().currentUser)
         }

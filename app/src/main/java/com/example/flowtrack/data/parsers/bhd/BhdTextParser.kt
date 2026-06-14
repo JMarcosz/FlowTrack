@@ -15,21 +15,11 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Parser textual del estado de cuenta PDF de BHD.
- *
- * El layout del PDF real viene en bloques lineales:
- * Fecha
- * Ref.
- * Detalle
- * Debitos
- * Creditos
- * Balance
- *
- * Cada movimiento ocupa seis líneas y el resumen final trae el balance inicial/final
- * junto con los datos de cuenta.
+ * Soporta versiones v1 (año completo en movimientos) y v2 (año inferido del corte).
  */
 internal class BhdTextParser {
 
-    private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    private val dateFormatterV1 = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
     fun parse(texto: String): ParseResult {
         val lineas = normalizarLineas(texto)
@@ -49,6 +39,9 @@ internal class BhdTextParser {
         var ignorados = 0
         var index = encabezadoIndex + 1
 
+        // Para v2 necesitamos llevar el balance para inferir tipos si no hay columnas claras
+        var balanceRastreado = metadata.balanceInicial ?: BigDecimal.ZERO
+
         while (index < lineas.size) {
             val linea = lineas[index]
             val normalizada = linea.uppercase().normalizarDescripcion()
@@ -62,7 +55,7 @@ internal class BhdTextParser {
                 continue
             }
 
-            val parsed = parseMovimiento(lineas, index, metadata.moneda)
+            val parsed = parseMovimiento(lineas, index, metadata, balanceRastreado)
             if (parsed == null) {
                 ignorados++
                 index++
@@ -71,6 +64,11 @@ internal class BhdTextParser {
 
             movimientos += parsed.movimiento
             index = parsed.siguienteIndex
+            
+            // Actualizar balance rastreado si el movimiento tiene balance posterior
+            parsed.movimiento.balancePosterior?.let {
+                balanceRastreado = it
+            }
         }
 
         if (movimientos.isEmpty()) {
@@ -98,11 +96,12 @@ internal class BhdTextParser {
             metadata = mapOf(
                 "origen" to "BHD_PDF",
                 "numeroCuentaRegional" to (metadata.numeroCuentaRegional ?: ""),
+                "versionDetectada" to if (metadata.isV2) "v2" else "v1"
             ),
         )
 
         val report = ParseReport(
-            parserId = "BHD_PDF_v1",
+            parserId = if (metadata.isV2) "BHD_PDF_v2" else "BHD_PDF_v1",
             totalDetectado = movimientos.size + ignorados,
             totalImportado = movimientos.size,
             totalIgnorado = ignorados,
@@ -127,11 +126,10 @@ internal class BhdTextParser {
 
     private fun pareceBhd(lineas: List<String>): Boolean {
         val bloque = lineas.take(100).joinToString(" ").uppercase().normalizarDescripcion()
-        return bloque.contains("ESTADO DE CUENTA") &&
-            bloque.contains("BHD") &&
+        return (bloque.contains("ESTADO DE CUENTA") || bloque.contains("BHD")) &&
+            (bloque.contains("BHD") || bloque.contains("BANCO MULTIPLE")) &&
             bloque.contains("FECHA") &&
-            bloque.contains("REF") &&
-            bloque.contains("DETALLE") &&
+            (bloque.contains("DETALLE") || bloque.contains("DETALLES")) &&
             bloque.contains("BALANCE")
     }
 
@@ -141,9 +139,9 @@ internal class BhdTextParser {
             if (
                 linea.contains("FECHA") &&
                 linea.contains("REF") &&
-                linea.contains("DETALLE") &&
-                linea.contains("DEBITOS") &&
-                linea.contains("CREDITOS") &&
+                (linea.contains("DETALLE") || linea.contains("DETALLES")) &&
+                (linea.contains("DEBITO") || linea.contains("DEBITOS")) &&
+                (linea.contains("CREDITO") || linea.contains("CREDITOS")) &&
                 linea.contains("BALANCE")
             ) {
                 return index
@@ -155,109 +153,138 @@ internal class BhdTextParser {
     private fun parseMovimiento(
         lineas: List<String>,
         startIndex: Int,
-        moneda: Moneda,
+        metadata: MetadataBhd,
+        balanceAnterior: BigDecimal
     ): MovimientoParseado? {
         val linea = lineas.getOrNull(startIndex) ?: return null
 
-        // Try single-line format first (PDFBox output)
-        // Format: {fecha} {referencia} {detalle...} {debito} {credito} {balance}
-        val regexSingleLine = Regex("""^(\d{2}/\d{2}/\d{4})\s+(\S+)\s+(.+?)\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})$""")
-        val match = regexSingleLine.find(linea)
+        // --- Intento v1 (Single Line con Año) ---
+        val regexV1 = Regex("""^(\d{2}/\d{2}/\d{4})\s+(\S+)\s+(.+?)\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})\s+((?:\$|RD\$|US\$|)?[-0-9,]+\.\d{2})$""")
+        val matchV1 = regexV1.find(linea)
 
-        if (match != null) {
-            val (fechaStr, referencia, detalle, debitoStr, creditoStr, balanceStr) = match.destructured
-            val fecha = parseFecha(fechaStr) ?: return null
-            val debito = parseMonto(debitoStr) ?: return null
-            val credito = parseMonto(creditoStr) ?: return null
-            val balance = parseMonto(balanceStr) ?: return null
+        if (matchV1 != null) {
+            val (fechaStr, referencia, detalle, debitoStr, creditoStr, balanceStr) = matchV1.destructured
+            val fecha = parseFechaV1(fechaStr) ?: return null
+            val debito = parseMonto(debitoStr) ?: BigDecimal.ZERO
+            val credito = parseMonto(creditoStr) ?: BigDecimal.ZERO
+            val balance = parseMonto(balanceStr) ?: BigDecimal.ZERO
 
-            val monto = when {
-                credito > BigDecimal.ZERO && debito.compareTo(BigDecimal.ZERO) == 0 -> credito
-                debito > BigDecimal.ZERO && credito.compareTo(BigDecimal.ZERO) == 0 -> debito
-                credito > BigDecimal.ZERO && debito > BigDecimal.ZERO -> if (credito >= debito) credito else debito
-                else -> return null
-            }
-
+            val monto = if (credito > BigDecimal.ZERO) credito else debito
             val tipo = inferirTipo(detalle, debito, credito)
 
             return MovimientoParseado(
-                movimiento = MovimientoNormalizado(
-                    fechaTransaccion = fecha,
-                    fechaPosteo = null,
-                    descripcionOriginal = detalle,
-                    descripcionNormalizada = detalle.uppercase().normalizarDescripcion(),
-                    descripcionCorta = resumirDescripcion(detalle),
-                    monto = monto,
-                    tipo = tipo,
-                    moneda = moneda,
-                    balancePosterior = balance,
-                    referencia = referencia,
-                    metadata = mapOf(
-                        "origen" to "BHD_PDF",
-                        "debito" to debito.toPlainString(),
-                        "credito" to credito.toPlainString(),
-                    ),
-                ),
-                siguienteIndex = startIndex + 1,
+                movimiento = crearMovimiento(fecha, detalle, monto, tipo, metadata.moneda, balance, referencia, debito, credito),
+                siguienteIndex = startIndex + 1
             )
         }
 
-        // Fallback to multi-line format
-        val fechaStr = linea.take(10).trim()
-        val fecha = parseFecha(fechaStr) ?: return null
+        // --- Intento v2 (Single Line sin Año) ---
+        // Formato esperado: {dd/MM} {Ref} {Detalle...} {Monto} {Balance}
+        // O: {dd/MM} {Detalle...} {Monto} {Balance}
+        // Usamos una regex que busca los dos montos al final.
+        val regexV2 = Regex("""^(\d{2}/\d{2})\s+(.*?)\s+([-0-9,]+\.\d{2})\s+([-0-9,]+\.\d{2})$""")
+        val matchV2 = regexV2.find(linea)
 
+        if (matchV2 != null) {
+            val (fechaStr, resto, montoStr, balanceStr) = matchV2.destructured
+            val fecha = parseFechaV2(fechaStr, metadata.añoReferencia) ?: return null
+            val monto = parseMonto(montoStr) ?: BigDecimal.ZERO
+            val balance = parseMonto(balanceStr) ?: BigDecimal.ZERO
+            
+            // Separar referencia de detalle si existe (primera palabra si parece alfanumérica larga)
+            val partesResto = resto.split(Regex("\\s+"), 2)
+            val referencia = if (partesResto.size > 1 && partesResto[0].length >= 8 && partesResto[0].any { it.isDigit() }) partesResto[0] else ""
+            val detalle = if (referencia.isNotEmpty()) partesResto[1] else resto
+
+            // Inferencia de tipo por balance
+            val diff = balance - balanceAnterior
+            val tipo = when {
+                diff.compareTo(monto) == 0 -> TipoMovimiento.INGRESO
+                diff.compareTo(monto.negate()) == 0 -> TipoMovimiento.GASTO
+                else -> inferirTipo(detalle, if (diff < BigDecimal.ZERO) monto else BigDecimal.ZERO, if (diff > BigDecimal.ZERO) monto else BigDecimal.ZERO)
+            }
+
+            return MovimientoParseado(
+                movimiento = crearMovimiento(fecha, detalle, monto, tipo, metadata.moneda, balance, referencia),
+                siguienteIndex = startIndex + 1
+            )
+        }
+
+        // Fallback a multilinea
+        return parseMultilinea(lineas, startIndex, metadata, balanceAnterior)
+    }
+
+    private fun parseMultilinea(lineas: List<String>, startIndex: Int, metadata: MetadataBhd, balanceAnterior: BigDecimal): MovimientoParseado? {
+        val linea = lineas[startIndex]
+        val fecha = parseFechaV1(linea.take(10)) ?: parseFechaV2(linea.take(5), metadata.añoReferencia) ?: return null
+        
         val referencia = lineas.getOrNull(startIndex + 1)
             ?.takeIf { !esMoneyLine(it) && !esFecha(it) }
             ?.trim()
-            ?.takeIf { it.isNotBlank() }
-            ?: return null
+            ?: ""
 
-        val inicioDetalle = startIndex + 2
+        val inicioDetalle = startIndex + (if (referencia.isNotEmpty()) 2 else 1)
         val bloque = lineas.drop(inicioDetalle).take(MAX_LINEAS_POR_MOVIMIENTO)
         val inicioMontos = bloque.indexOfFirst { parseMonto(it) != null }
-        if (inicioMontos <= 0) return null
-        val detallePartes = bloque.take(inicioMontos)
+        if (inicioMontos == -1) return null
+        
+        val detalle = bloque.take(inicioMontos).joinToString(" ").trim()
         val lineasMonto = bloque.drop(inicioMontos).take(3)
-        if (lineasMonto.size != 3) return null
-        val montos = lineasMonto.map { parseMonto(it) ?: return null }
-        val siguienteIndex = inicioDetalle + inicioMontos + 3
-
-        val debito = montos[0]
-        val credito = montos[1]
-        val balance = montos[2]
-        val detalle = detallePartes.joinToString(" ").trim()
-        if (detalle.isBlank()) return null
-
-        val monto = when {
-            credito > BigDecimal.ZERO && debito.compareTo(BigDecimal.ZERO) == 0 -> credito
-            debito > BigDecimal.ZERO && credito.compareTo(BigDecimal.ZERO) == 0 -> debito
-            credito > BigDecimal.ZERO && debito > BigDecimal.ZERO -> if (credito >= debito) credito else debito
-            else -> return null
+        val montos = lineasMonto.mapNotNull { parseMonto(it) }
+        
+        if (montos.size < 2) return null
+        
+        val balance = montos.last()
+        var debito = BigDecimal.ZERO
+        var credito = BigDecimal.ZERO
+        
+        if (montos.size == 3) {
+            debito = montos[0]
+            credito = montos[1]
+        } else {
+            // Solo 2 montos: inferir cual es cual
+            val montoReal = montos[0]
+            val diff = balance - balanceAnterior
+            if (diff.compareTo(montoReal) == 0) credito = montoReal
+            else debito = montoReal
         }
-
+        
+        val monto = if (credito > BigDecimal.ZERO) credito else debito
         val tipo = inferirTipo(detalle, debito, credito)
 
         return MovimientoParseado(
-            movimiento = MovimientoNormalizado(
-                fechaTransaccion = fecha,
-                fechaPosteo = null,
-                descripcionOriginal = detalle,
-                descripcionNormalizada = detalle.uppercase().normalizarDescripcion(),
-                descripcionCorta = resumirDescripcion(detalle),
-                monto = monto,
-                tipo = tipo,
-                moneda = moneda,
-                balancePosterior = balance,
-                referencia = referencia,
-                metadata = mapOf(
-                    "origen" to "BHD_PDF",
-                    "debito" to debito.toPlainString(),
-                    "credito" to credito.toPlainString(),
-                ),
-            ),
-            siguienteIndex = siguienteIndex,
+            movimiento = crearMovimiento(fecha, detalle, monto, tipo, metadata.moneda, balance, referencia, debito, credito),
+            siguienteIndex = inicioDetalle + inicioMontos + lineasMonto.size
         )
     }
+
+    private fun crearMovimiento(
+        fecha: LocalDate,
+        detalle: String,
+        monto: BigDecimal,
+        tipo: TipoMovimiento,
+        moneda: Moneda,
+        balance: BigDecimal,
+        referencia: String,
+        debito: BigDecimal = BigDecimal.ZERO,
+        credito: BigDecimal = BigDecimal.ZERO
+    ) = MovimientoNormalizado(
+        fechaTransaccion = fecha,
+        fechaPosteo = null,
+        descripcionOriginal = detalle,
+        descripcionNormalizada = detalle.uppercase().normalizarDescripcion(),
+        descripcionCorta = resumirDescripcion(detalle),
+        monto = monto,
+        tipo = tipo,
+        moneda = moneda,
+        balancePosterior = balance,
+        referencia = referencia,
+        metadata = mapOf(
+            "origen" to "BHD_PDF",
+            "debito" to debito.toPlainString(),
+            "credito" to credito.toPlainString(),
+        ),
+    )
 
     private fun inferirTipo(
         detalle: String,
@@ -267,6 +294,8 @@ internal class BhdTextParser {
         val normalizada = detalle.uppercase().normalizarDescripcion()
         return when {
             credito > BigDecimal.ZERO -> TipoMovimiento.INGRESO
+            normalizada.contains("TRANSFERENCIA RECIBIDA") -> TipoMovimiento.INGRESO
+            normalizada.contains("DEPOSITO") -> TipoMovimiento.INGRESO
             normalizada.contains("PAGO") -> TipoMovimiento.PAGO_TARJETA
             normalizada.contains("TRANSFERENCIA") -> TipoMovimiento.TRANSFERENCIA
             normalizada.contains("COMISION") -> TipoMovimiento.COMISION
@@ -307,6 +336,17 @@ internal class BhdTextParser {
         val balanceInicial = extraerMontoDespuesDeEtiqueta(lineas, "Balance Inicial")
             ?: extraerMontoDespuesDeEtiqueta(lineas, "Balance al inicial")
         val balanceFinal = extraerMontoDespuesDeEtiqueta(lineas, "Balance Final")
+        
+        // Detectar año de corte (v2 usa yyyy-MM-dd)
+        val fechaCorteStr = extraerValorDespuesDeEtiqueta(lineas, "Fecha de corte")
+        val añoReferencia = if (fechaCorteStr?.matches(Regex("""\d{4}-\d{2}-\d{2}""")) == true) {
+            fechaCorteStr.take(4).toInt()
+        } else {
+            LocalDate.now().year
+        }
+
+        val isV2 = (fechaCorteStr?.matches(Regex("""\d{4}-\d{2}-\d{2}""")) == true) || 
+                   lineas.any { it.uppercase().contains("DETALLES") }
 
         return MetadataBhd(
             titular = titular,
@@ -315,6 +355,8 @@ internal class BhdTextParser {
             moneda = moneda,
             balanceInicial = balanceInicial,
             balanceFinal = balanceFinal,
+            añoReferencia = añoReferencia,
+            isV2 = isV2
         )
     }
 
@@ -323,21 +365,14 @@ internal class BhdTextParser {
             linea.uppercase().normalizarDescripcion() == "RNC"
         }
         if (idxRnc >= 0) {
-            return limpiarTitular(
-                lineas.getOrNull(idxRnc + 1)
-                    ?: "TITULAR"
-            )
+            return limpiarTitular(lineas.getOrNull(idxRnc + 1) ?: "TITULAR")
         }
 
         val idxDocumento = lineas.indexOfFirst { linea ->
             linea.uppercase().normalizarDescripcion().contains("DOCUMENTO EMITIDO POR EL")
         }
         if (idxDocumento > 0) {
-            return limpiarTitular(
-                lineas.getOrNull(idxDocumento - 6)
-                    ?: lineas.getOrNull(idxDocumento - 1)
-                    ?: "TITULAR"
-            )
+            return limpiarTitular(lineas.getOrNull(idxDocumento - 6) ?: lineas.getOrNull(idxDocumento - 1) ?: "TITULAR")
         }
 
         return "TITULAR"
@@ -356,9 +391,20 @@ internal class BhdTextParser {
     private fun extraerValorDespuesDeEtiqueta(lineas: List<String>, etiqueta: String): String? {
         val etiquetaNormalizada = etiqueta.uppercase().normalizarDescripcion()
         val idx = lineas.indexOfFirst { linea ->
-            linea.uppercase().normalizarDescripcion() == etiquetaNormalizada
+            linea.uppercase().normalizarDescripcion().contains(etiquetaNormalizada)
         }
         if (idx == -1) return null
+        
+        // En v2 la etiqueta y el valor pueden estar en la misma linea o el valor en la siguiente
+        val linea = lineas[idx]
+        if (linea.contains("|")) {
+             val partes = linea.split("|")
+             val labelIdx = partes.indexOfFirst { it.uppercase().normalizarDescripcion().contains(etiquetaNormalizada) }
+             if (labelIdx != -1 && labelIdx < partes.size - 1) {
+                 return partes[labelIdx + 1].trim()
+             }
+        }
+        
         return lineas.getOrNull(idx + 1)
             ?.trim()
             ?.takeIf { it.isNotBlank() }
@@ -376,23 +422,29 @@ internal class BhdTextParser {
             parseMonto(parteDespuesDeDosPuntos)?.let { return it }
         }
 
+        // En v2 el monto suele estar en la linea de abajo
         parseMonto(lineas[idx])?.let { return it }
 
         return lineas.drop(idx + 1)
+            .take(3)
             .firstNotNullOfOrNull { linea ->
                 parseMonto(linea)
             }
     }
 
-    private fun parseFecha(valor: String): LocalDate? =
-        runCatching { LocalDate.parse(valor, dateFormatter) }.getOrNull()
+    private fun parseFechaV1(valor: String): LocalDate? =
+        runCatching { LocalDate.parse(valor.trim().take(10), dateFormatterV1) }.getOrNull()
+
+    private fun parseFechaV2(valor: String, año: Int): LocalDate? =
+        runCatching { LocalDate.parse("${valor.trim().take(5)}/$año", dateFormatterV1) }.getOrNull()
 
     private fun parseMonto(valor: String): BigDecimal? =
-        valor.toBigDecimalSafe()
-            ?: valor.removePrefix("$").toBigDecimalSafe()
+        valor.trim().toBigDecimalSafe()
+            ?: valor.trim().removePrefix("$").toBigDecimalSafe()
+            ?: valor.trim().replace(",", "").toBigDecimalSafe()
 
     private fun esFecha(valor: String): Boolean =
-        valor.take(10).matches(Regex("""\d{2}/\d{2}/\d{4}"""))
+        valor.trim().matches(Regex("""\d{2}/\d{2}(/\d{4})?.*"""))
 
     private fun esMoneyLine(valor: String): Boolean =
         valor.matches(Regex("""^(?:(?:RD|US)\$|\$)[\d,]+\.\d{2}$""", RegexOption.IGNORE_CASE))
@@ -420,6 +472,8 @@ internal class BhdTextParser {
         val moneda: Moneda,
         val balanceInicial: BigDecimal?,
         val balanceFinal: BigDecimal?,
+        val añoReferencia: Int,
+        val isV2: Boolean
     )
 
     private companion object {
