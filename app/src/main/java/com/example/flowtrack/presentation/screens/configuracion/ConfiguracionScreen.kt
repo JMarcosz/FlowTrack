@@ -24,18 +24,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.BrightnessHigh
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.GTranslate
 import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Rule
-import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -160,6 +162,24 @@ fun ConfiguracionScreen(
                     icon = Icons.Outlined.Rule,
                     label = "Reglas de categorización",
                     onClick = { navController.navigate(Screen.Reglas.route) },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                ConfigItem(
+                    icon = Icons.Outlined.History,
+                    label = "Historial de importaciones",
+                    onClick = { navController.navigate(Screen.Historial.route) },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                ConfigItem(
+                    icon = Icons.Outlined.AutoAwesome,
+                    label = "Sugerencias de limpieza",
+                    onClick = { navController.navigate(Screen.Sugerencias.route) },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                ConfigItem(
+                    icon = Icons.Outlined.IosShare,
+                    label = "Exportar datos",
+                    onClick = { navController.navigate(Screen.Exportar.route) },
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 ConfigItem(

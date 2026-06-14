@@ -31,6 +31,10 @@ import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.IosShare
+
 private data class DrawerItem(
     val route: String,
     val label: String,
@@ -41,6 +45,9 @@ private val drawerItems = listOf(
     DrawerItem(Screen.Metas.route, "Metas de ahorro", Icons.Outlined.Flag),
     DrawerItem(Screen.Presupuestos.route, "Presupuestos", Icons.Outlined.Savings),
     DrawerItem(Screen.BancosYCuentas.route, "Bancos y cuentas", Icons.Outlined.AccountBalance),
+    DrawerItem(Screen.Historial.route, "Historial de importaciones", Icons.Outlined.History),
+    DrawerItem(Screen.Exportar.route, "Exportar estados", Icons.Outlined.IosShare),
+    DrawerItem(Screen.Sugerencias.route, "Sugerencias de limpieza", Icons.Outlined.AutoAwesome),
     DrawerItem(Screen.Conversor.route, "Tasas de cambio", Icons.Outlined.CurrencyExchange),
 )
 
