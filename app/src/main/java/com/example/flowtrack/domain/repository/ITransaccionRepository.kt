@@ -27,7 +27,8 @@ interface ITransaccionRepository {
         uid: String,
         inicio: Instant? = null,
         fin: Instant? = null,
-        limite: Int = 100
+        limite: Int = 100,
+        cuentaId: String? = null
     ): AppResult<List<Transaccion>>
 
     suspend fun obtenerDerivadas(

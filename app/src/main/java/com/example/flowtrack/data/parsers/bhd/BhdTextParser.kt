@@ -75,11 +75,19 @@ internal class BhdTextParser {
             return ParseResult.Error("No se encontraron movimientos válidos en el PDF de BHD.")
         }
 
-        val ordenados = movimientos.sortedBy { it.fechaTransaccion }
-        val balanceInicial = metadata.balanceInicial
-            ?: ordenados.firstOrNull()?.balancePosterior
-        val balanceFinal = metadata.balanceFinal
-            ?: ordenados.lastOrNull()?.balancePosterior
+        val ordenados = movimientos.sortedWith(compareBy({ it.fechaTransaccion }, { it.balancePosterior }))
+        
+        // Prioridad de balances segun el usuario:
+        // 1. Balance Inicial: metadata (fiel al resumen del banco)
+        // 2. Balance Final: El ultimo balance de la columna de movimientos (ignora resumen si es 0)
+        val balanceInicial = metadata.balanceInicial ?: ordenados.firstOrNull()?.let { first ->
+            // Revertir el primer movimiento si no tenemos balance inicial explicito
+            val m = first.metadata["debito"]?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+            val c = first.metadata["credito"]?.toBigDecimalOrNull() ?: BigDecimal.ZERO
+            first.balancePosterior?.subtract(c)?.add(m)
+        }
+        
+        val balanceFinal = ordenados.lastOrNull()?.balancePosterior ?: metadata.balanceFinal
 
         val estado = EstadoCuentaNormalizado(
             bancoCodigo = "BHD",
@@ -108,9 +116,6 @@ internal class BhdTextParser {
             warnings = buildList {
                 if (metadata.balanceInicial == null) {
                     add("No se pudo leer el balance inicial desde el resumen del PDF de BHD.")
-                }
-                if (metadata.balanceFinal == null) {
-                    add("No se pudo leer el balance final desde el resumen del PDF de BHD.")
                 }
             },
             errors = emptyList(),
@@ -179,9 +184,6 @@ internal class BhdTextParser {
         }
 
         // --- Intento v2 (Single Line sin Año) ---
-        // Formato esperado: {dd/MM} {Ref} {Detalle...} {Monto} {Balance}
-        // O: {dd/MM} {Detalle...} {Monto} {Balance}
-        // Usamos una regex que busca los dos montos al final.
         val regexV2 = Regex("""^(\d{2}/\d{2})\s+(.*?)\s+([-0-9,]+\.\d{2})\s+([-0-9,]+\.\d{2})$""")
         val matchV2 = regexV2.find(linea)
 
@@ -191,7 +193,6 @@ internal class BhdTextParser {
             val monto = parseMonto(montoStr) ?: BigDecimal.ZERO
             val balance = parseMonto(balanceStr) ?: BigDecimal.ZERO
             
-            // Separar referencia de detalle si existe (primera palabra si parece alfanumérica larga)
             val partesResto = resto.split(Regex("\\s+"), 2)
             val referencia = if (partesResto.size > 1 && partesResto[0].length >= 8 && partesResto[0].any { it.isDigit() }) partesResto[0] else ""
             val detalle = if (referencia.isNotEmpty()) partesResto[1] else resto
@@ -204,8 +205,11 @@ internal class BhdTextParser {
                 else -> inferirTipo(detalle, if (diff < BigDecimal.ZERO) monto else BigDecimal.ZERO, if (diff > BigDecimal.ZERO) monto else BigDecimal.ZERO)
             }
 
+            val debito = if (tipo == TipoMovimiento.GASTO) monto else BigDecimal.ZERO
+            val credito = if (tipo == TipoMovimiento.INGRESO) monto else BigDecimal.ZERO
+
             return MovimientoParseado(
-                movimiento = crearMovimiento(fecha, detalle, monto, tipo, metadata.moneda, balance, referencia),
+                movimiento = crearMovimiento(fecha, detalle, monto, tipo, metadata.moneda, balance, referencia, debito, credito),
                 siguienteIndex = startIndex + 1
             )
         }
@@ -242,7 +246,6 @@ internal class BhdTextParser {
             debito = montos[0]
             credito = montos[1]
         } else {
-            // Solo 2 montos: inferir cual es cual
             val montoReal = montos[0]
             val diff = balance - balanceAnterior
             if (diff.compareTo(montoReal) == 0) credito = montoReal
@@ -337,7 +340,6 @@ internal class BhdTextParser {
             ?: extraerMontoDespuesDeEtiqueta(lineas, "Balance al inicial")
         val balanceFinal = extraerMontoDespuesDeEtiqueta(lineas, "Balance Final")
         
-        // Detectar año de corte (v2 usa yyyy-MM-dd)
         val fechaCorteStr = extraerValorDespuesDeEtiqueta(lineas, "Fecha de corte")
         val añoReferencia = if (fechaCorteStr?.matches(Regex("""\d{4}-\d{2}-\d{2}""")) == true) {
             fechaCorteStr.take(4).toInt()
@@ -395,7 +397,6 @@ internal class BhdTextParser {
         }
         if (idx == -1) return null
         
-        // En v2 la etiqueta y el valor pueden estar en la misma linea o el valor en la siguiente
         val linea = lineas[idx]
         if (linea.contains("|")) {
              val partes = linea.split("|")
@@ -405,6 +406,11 @@ internal class BhdTextParser {
              }
         }
         
+        // v2: a veces el valor está en la misma linea separado por espacios
+        val regexMismaLinea = Regex("${etiqueta}\\s+([^\\$]+)", RegexOption.IGNORE_CASE)
+        val match = regexMismaLinea.find(linea)
+        if (match != null) return match.groupValues[1].trim()
+
         return lineas.getOrNull(idx + 1)
             ?.trim()
             ?.takeIf { it.isNotBlank() }
@@ -417,18 +423,20 @@ internal class BhdTextParser {
         }
         if (idx == -1) return null
 
-        val parteDespuesDeDosPuntos = lineas[idx].substringAfter(":", "").trim()
-        if (parteDespuesDeDosPuntos.isNotEmpty()) {
-            parseMonto(parteDespuesDeDosPuntos)?.let { return it }
+        val linea = lineas[idx]
+        
+        // Caso: etiqueta y monto en la misma linea (v1/v2)
+        val regexMismaLinea = Regex("${etiqueta}.*?((?:\\$|RD\\$|US\\$|)?[-0-9,]+\\.\\d{2})", RegexOption.IGNORE_CASE)
+        val match = regexMismaLinea.find(linea)
+        if (match != null) {
+            parseMonto(match.groupValues[1])?.let { return it }
         }
 
-        // En v2 el monto suele estar en la linea de abajo
-        parseMonto(lineas[idx])?.let { return it }
-
+        // Caso: etiqueta arriba, monto abajo
         return lineas.drop(idx + 1)
             .take(3)
-            .firstNotNullOfOrNull { linea ->
-                parseMonto(linea)
+            .firstNotNullOfOrNull { l ->
+                parseMonto(l)
             }
     }
 

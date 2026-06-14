@@ -58,6 +58,7 @@ import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.ui.theme.*
 import androidx.compose.material3.MaterialTheme
 import com.example.flowtrack.presentation.components.categoriaRegistry
+
 @Composable
 fun ResumenScreen(
     viewModel: ResumenViewModel = hiltViewModel(),
@@ -117,6 +118,7 @@ fun ResumenScreen(
                 BalancePeriodoCard(
                     ingresos = state.resumen!!.ingresosTotales,
                     gastos = state.resumen!!.gastosTotales,
+                    balanceNeto = state.resumen!!.balanceNeto,
                     modifier = Modifier
                         .padding(horizontal = Spacing.xl)
                         .padding(bottom = Spacing.md),
@@ -186,8 +188,6 @@ fun ResumenScreen(
     }
 }
 
-// ── Segmented tab button ─────────────────────────────────────────────────────
-
 @Composable
 private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () -> Unit) {
     val bgColor by animateColorAsState(
@@ -213,8 +213,6 @@ private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () ->
     }
 }
 
-// ── Period pill ──────────────────────────────────────────────────────────────
-
 @Composable
 private fun PeriodPill(label: String, active: Boolean, onClick: () -> Unit) {
     val bg  = if (active) MaterialTheme.colorScheme.primary   else MaterialTheme.colorScheme.surface
@@ -231,8 +229,6 @@ private fun PeriodPill(label: String, active: Boolean, onClick: () -> Unit) {
         Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = fg)
     }
 }
-
-// ── Por banco tab ────────────────────────────────────────────────────────────
 
 @Composable
 private fun BancoTab(bancos: List<ResumenBanco>, modifier: Modifier = Modifier) {
@@ -328,8 +324,6 @@ private fun BancoStat(
     }
 }
 
-// ── Por categoría tab ────────────────────────────────────────────────────────
-
 @Composable
 private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier = Modifier) {
     if (categorias.isEmpty()) {
@@ -394,12 +388,14 @@ private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier 
     }
 }
 
-// ── Balance del período card ──────────────────────────────────────────────────
-
 @Composable
-private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math.BigDecimal, modifier: Modifier = Modifier) {
-    val balance = ingresos - gastos
-    val positivo = balance >= java.math.BigDecimal.ZERO
+private fun BalancePeriodoCard(
+    ingresos: java.math.BigDecimal, 
+    gastos: java.math.BigDecimal, 
+    balanceNeto: java.math.BigDecimal,
+    modifier: Modifier = Modifier
+) {
+    val positivo = balanceNeto >= java.math.BigDecimal.ZERO
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -421,7 +417,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    (if (positivo) "" else "-") + formatMoney(balance.abs()),
+                    (if (positivo) "" else "-") + formatMoney(balanceNeto.abs()),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (positivo) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,

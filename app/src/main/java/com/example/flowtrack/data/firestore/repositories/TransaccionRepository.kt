@@ -83,15 +83,16 @@ class TransaccionRepository @Inject constructor(
         inicio: Instant?,
         fin: Instant?,
         limite: Int,
+        cuentaId: String?
     ): AppResult<List<Transaccion>> {
         return try {
-            val local = offlineStore.getTransacciones(uid, inicio, fin, limite)
+            val local = offlineStore.getTransacciones(uid, inicio, fin, limite, cuentaId)
             if (local.isNotEmpty()) {
                 return AppResult.Success(local)
             }
 
-            syncRemote(uid, inicio, fin, limite)
-            AppResult.Success(offlineStore.getTransacciones(uid, inicio, fin, limite))
+            syncRemote(uid, inicio, fin, limite, cuentaId)
+            AppResult.Success(offlineStore.getTransacciones(uid, inicio, fin, limite, cuentaId))
         } catch (e: Exception) {
             AppResult.Error(ErrorApp.FirestoreError("Error al cargar transacciones: ${e.message}", e))
         }
@@ -101,7 +102,8 @@ class TransaccionRepository @Inject constructor(
         uid: String,
         inicio: Instant?,
         fin: Instant?,
-        limite: Int = 0
+        limite: Int = 0,
+        cuentaId: String? = null
     ) {
         var query = colRef(uid).orderBy("fecha", Query.Direction.DESCENDING)
 
@@ -111,6 +113,10 @@ class TransaccionRepository @Inject constructor(
 
         if (fin != null) {
             query = query.whereLessThanOrEqualTo("fecha", com.google.firebase.Timestamp(fin.epochSecond, fin.nano))
+        }
+        
+        if (cuentaId != null) {
+            query = query.whereEqualTo("cuentaId", cuentaId)
         }
 
         if (limite > 0) {

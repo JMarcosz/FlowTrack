@@ -74,7 +74,7 @@ fun ResumenPeriodoScreen(
                 )
 
                 else -> {
-                    TotalesHeader(resumen.totalIngresos, resumen.totalGastos)
+                    TotalesHeader(resumen.totalIngresos, resumen.totalGastos, resumen.balanceFinal)
                     LazyColumn(
                         contentPadding = PaddingValues(Spacing.md),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -88,13 +88,36 @@ fun ResumenPeriodoScreen(
 }
 
 @Composable
-private fun TotalesHeader(ingresos: BigDecimal, gastos: BigDecimal) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        TotalCard("Ingresos", ingresos, ExtendedTheme.colors.success, Modifier.weight(1f))
-        TotalCard("Gastos", gastos, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+private fun TotalesHeader(ingresos: BigDecimal, gastos: BigDecimal, balanceFinal: BigDecimal) {
+    Column(modifier = Modifier.padding(horizontal = Spacing.md)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            TotalCard("Ingresos", ingresos, ExtendedTheme.colors.success, Modifier.weight(1f))
+            TotalCard("Gastos", gastos, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+        }
+        
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+            modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm),
+            shape = Radii.md,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+        ) {
+            Row(
+                modifier = Modifier.padding(Spacing.md),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Balance final del período", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+                Text(
+                    formatMoney(balanceFinal),
+                    style = MaterialTheme.typography.titleMedium.merge(TabularNumber),
+                    fontWeight = FontWeight.Bold,
+                    color = if (balanceFinal >= BigDecimal.ZERO) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error
+                )
+            }
+        }
     }
 }
 

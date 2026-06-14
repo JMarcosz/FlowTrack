@@ -202,6 +202,7 @@ class OfflineStore @Inject constructor(
         inicio: Instant? = null,
         fin: Instant? = null,
         limite: Int = 0,
+        cuentaId: String? = null,
     ): List<Transaccion> = query {
         val args = mutableListOf<String>()
         val sql = buildString {
@@ -215,6 +216,10 @@ class OfflineStore @Inject constructor(
             if (fin != null) {
                 append(" AND fecha_millis <= ?")
                 args += fin.toEpochMilli().toString()
+            }
+            if (cuentaId != null) {
+                append(" AND cuenta_id = ?")
+                args += cuentaId
             }
             append(" ORDER BY fecha_millis DESC, entity_id DESC")
             if (limite > 0) append(" LIMIT $limite")

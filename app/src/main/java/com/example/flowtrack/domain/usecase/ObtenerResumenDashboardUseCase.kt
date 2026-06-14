@@ -3,6 +3,7 @@ package com.example.flowtrack.domain.usecase
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
+import com.example.flowtrack.data.firestore.repositories.CuentaRepository
 import com.example.flowtrack.domain.model.TipoTransaccion
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -68,6 +69,7 @@ data class ResumenDashboard(
 class ObtenerResumenDashboardUseCase @Inject constructor(
     private val transaccionRepository: TransaccionRepository,
     private val movimientoTarjetaRepository: MovimientoTarjetaRepository,
+    private val cuentaRepository: CuentaRepository,
     private val comparisonService: FinancialComparisonService,
 ) {
 
@@ -82,63 +84,42 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         val rangoAnterior = comparisonService.getPreviousEquivalentPeriod(periodo, ahora, zona)
         val unidad        = unidadParaPeriodo(periodo)
 
-        // ── Cargar ambos rangos sin límite ────────────────────────────────────
+        // ── Cargar datos en paralelo ──────────────────────────────────────────
         val txActualDeferred = async {
-            transaccionRepository.obtenerTransacciones(
-                uid,
-                rangoActual.inicio,
-                rangoActual.fin,
-                limite = 0,
-            )
+            transaccionRepository.obtenerTransacciones(uid, rangoActual.inicio, rangoActual.fin, limite = 0)
         }
         val txAnteriorDeferred = async {
-            transaccionRepository.obtenerTransacciones(
-                uid,
-                rangoAnterior.inicio,
-                rangoAnterior.fin,
-                limite = 0,
-            )
+            transaccionRepository.obtenerTransacciones(uid, rangoAnterior.inicio, rangoAnterior.fin, limite = 0)
         }
         val movActualDeferred = async {
-            movimientoTarjetaRepository.obtenerMovimientos(
-                uid,
-                rangoActual.inicio,
-                rangoActual.fin,
-            )
+            movimientoTarjetaRepository.obtenerMovimientos(uid, rangoActual.inicio, rangoActual.fin)
         }
         val movAnteriorDeferred = async {
-            movimientoTarjetaRepository.obtenerMovimientos(
-                uid,
-                rangoAnterior.inicio,
-                rangoAnterior.fin,
-            )
+            movimientoTarjetaRepository.obtenerMovimientos(uid, rangoAnterior.inicio, rangoAnterior.fin)
         }
+        val cuentasDeferred = async { cuentaRepository.obtenerCuentas(uid) }
 
         val resTxActual = txActualDeferred.await()
-        if (resTxActual is AppResult.Error) {
-            return@coroutineScope AppResult.Error(resTxActual.error)
-        }
+        if (resTxActual is AppResult.Error) return@coroutineScope AppResult.Error(resTxActual.error)
         val txActuales = (resTxActual as AppResult.Success).data
 
         val resTxAnterior = txAnteriorDeferred.await()
-        if (resTxAnterior is AppResult.Error) {
-            return@coroutineScope AppResult.Error(resTxAnterior.error)
-        }
+        if (resTxAnterior is AppResult.Error) return@coroutineScope AppResult.Error(resTxAnterior.error)
         val txAnteriores = (resTxAnterior as AppResult.Success).data
 
         val resMovActual = movActualDeferred.await()
-        if (resMovActual is AppResult.Error) {
-            return@coroutineScope AppResult.Error(resMovActual.error)
-        }
+        if (resMovActual is AppResult.Error) return@coroutineScope AppResult.Error(resMovActual.error)
         val movActuales = (resMovActual as AppResult.Success).data
 
         val resMovAnterior = movAnteriorDeferred.await()
-        if (resMovAnterior is AppResult.Error) {
-            return@coroutineScope AppResult.Error(resMovAnterior.error)
-        }
+        if (resMovAnterior is AppResult.Error) return@coroutineScope AppResult.Error(resMovAnterior.error)
         val movAnteriores = (resMovAnterior as AppResult.Success).data
 
-        // ── Comparación MTD via FinancialComparisonService ────────────────────
+        val resCuentas = cuentasDeferred.await()
+        if (resCuentas is AppResult.Error) return@coroutineScope AppResult.Error(resCuentas.error)
+        val cuentasVisibles = (resCuentas as AppResult.Success).data.filter { it.activa && it.mostrarEnDashboard }
+
+        // ── Comparación MTD ───────────────────────────────────────────────────
         val comparacion = comparisonService.calcular(
             periodoAnterior = rangoAnterior,
             txActuales      = txActuales,
@@ -147,16 +128,32 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
             movAnteriores   = movAnteriores,
         )
 
-        val gastoActual   = comparacion.gastoActual
-        val ingresoActual = comparacion.ingresoActual
-        val balActual     = ingresoActual - gastoActual
+        // ── Balance Neto Real (Suma de balances finales de cuentas) ──────────
+        // Para cada cuenta activa:
+        // 1. Tomamos el balance de la ultima transaccion en el rango.
+        // 2. Si no hay, buscamos la ultima transaccion antes del rango.
+        var totalBalanceFinal = BigDecimal.ZERO
+        cuentasVisibles.forEach { cuenta ->
+            val ultimaTxRango = txActuales.filter { it.cuentaId == cuenta.id }.maxByOrNull { it.fecha }
+            if (ultimaTxRango != null) {
+                totalBalanceFinal += (ultimaTxRango.balanceDespues ?: BigDecimal.ZERO)
+            } else {
+                // Consultar ultima transaccion historica previa al rango
+                val resPrevia = transaccionRepository.obtenerTransacciones(uid, null, rangoActual.inicio, 1)
+                if (resPrevia is AppResult.Success) {
+                    val txPrevia = resPrevia.data.filter { it.cuentaId == cuenta.id }.firstOrNull()
+                    totalBalanceFinal += (txPrevia?.balanceDespues ?: BigDecimal.ZERO)
+                }
+            }
+        }
 
-        // Balance anterior solo para la métrica de balance (independiente de cobertura)
-        val balAnterior = comparacion.ingresoAnterior - comparacion.gastoAnterior
-        val deltaBalance = delta(balActual, balAnterior)
+        val balActual     = totalBalanceFinal
+        val balAnterior   = balActual - (comparacion.ingresoActual - comparacion.gastoActual)
+        val deltaBalance  = delta(balActual, balAnterior)
 
         // ── Serie temporal ────────────────────────────────────────────────────
-        val serie = construirSerie(rangoActual, zona, unidad, txActuales, movActuales)
+        val balanceInicialPeriodo = balActual - (comparacion.ingresoActual - comparacion.gastoActual)
+        val serie = construirSerie(rangoActual, zona, unidad, txActuales, movActuales, balanceInicialPeriodo)
 
         // ── Breakdown por banco ───────────────────────────────────────────────
         val codigosBanco = (txActuales.map { it.bancoCodigo } + movActuales.map { it.bancoCodigo }).distinct()
@@ -184,8 +181,8 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
 
         AppResult.Success(
             ResumenDashboard(
-                gastoTotal         = gastoActual,
-                ingresoTotal       = ingresoActual,
+                gastoTotal         = comparacion.gastoActual,
+                ingresoTotal       = comparacion.ingresoActual,
                 balanceNeto        = balActual,
                 comparacion        = comparacion,
                 deltaBalance       = deltaBalance,
@@ -197,10 +194,6 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         )
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Helpers internos
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun unidadParaPeriodo(periodo: String) = when (periodo) {
         "Últimos 3 meses" -> UnidadBucket.SEMANA
         "Este año"        -> UnidadBucket.MES
@@ -209,7 +202,7 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
 
     private fun delta(actual: BigDecimal, anterior: BigDecimal): DeltaMetrica {
         val pct = if (anterior.compareTo(BigDecimal.ZERO) == 0) null
-        else (actual - anterior).divide(anterior.abs(), 4, RoundingMode.HALF_UP)
+        else (actual - anterior).divide(anterior.abs().coerceAtLeast(BigDecimal.ONE), 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal("100"))
                 .setScale(1, RoundingMode.HALF_UP)
         return DeltaMetrica(
@@ -220,16 +213,13 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         )
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Serie temporal
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun construirSerie(
         rango: RangoPeriodo,
         zona: ZoneId,
         unidad: UnidadBucket,
         txs: List<com.example.flowtrack.domain.model.Transaccion>,
         movs: List<com.example.flowtrack.domain.model.MovimientoTarjeta>,
+        balanceBase: BigDecimal
     ): List<PuntoSerie> {
         val buckets = when (unidad) {
             UnidadBucket.DIA    -> diasEnRango(rango, zona)
@@ -237,7 +227,7 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
             UnidadBucket.MES    -> mesesEnRango(rango, zona)
         }
 
-        var balanceAcumulado = BigDecimal.ZERO
+        var balanceAcumulado = balanceBase
         return buckets.map { (etiqueta, inicio, fin) ->
             val txBucket = txs.filter { !it.fecha.isBefore(inicio) && it.fecha.isBefore(fin) }
             val movBucket = movs.filter { !it.fechaTransaccion.isBefore(inicio) && it.fechaTransaccion.isBefore(fin) }
