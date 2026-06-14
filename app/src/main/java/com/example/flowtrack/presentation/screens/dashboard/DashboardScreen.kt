@@ -334,7 +334,7 @@ private fun DashboardContent(
                                         )
                                         Text(
                                             slice.label,
-                                            fontSize = 13.sp, color = TextBody,
+                                            fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.weight(1f),
                                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                                         )

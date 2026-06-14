@@ -164,7 +164,7 @@ private fun EmptyHistorial(navController: NavController, modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(Icons.Outlined.Inbox, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(56.dp))
-            Text("Sin importaciones aún", fontWeight = FontWeight.SemiBold, color = TextBody)
+            Text("Sin importaciones aún", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Importa tu primer estado de cuenta para empezar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             Button(
                 onClick = { navController.navigate(Screen.Upload.route) },
@@ -307,7 +307,7 @@ private fun EstadoBadge(estado: EstadoCarga) {
         EstadoCarga.EXITOSO  -> Triple(ExtendedTheme.colors.successContainer, ExtendedTheme.colors.onSuccessContainer, "Exitoso")
         EstadoCarga.PARCIAL  -> Triple(ExtendedTheme.colors.warningContainer, ExtendedTheme.colors.onWarningContainer, "Parcial")
         EstadoCarga.FALLIDO  -> Triple(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.error, "Fallido")
-        EstadoCarga.ELIMINADO -> Triple(Neutral100, MaterialTheme.colorScheme.onSurfaceVariant, "Eliminado")
+        EstadoCarga.ELIMINADO -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "Eliminado")
     }
     Box(
         Modifier.clip(RoundedCornerShape(20.dp)).background(bgColor).padding(horizontal = 8.dp, vertical = 3.dp),
@@ -317,7 +317,7 @@ private fun EstadoBadge(estado: EstadoCarga) {
 @Composable
 private fun InfoMini(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextBody)
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(label, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

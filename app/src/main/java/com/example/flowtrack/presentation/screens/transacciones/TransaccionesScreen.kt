@@ -149,7 +149,7 @@ fun TransaccionesScreen(
                         Text(
                             "Aplicar a todas las compras similares",
                             fontSize = 14.sp,
-                            color = TextBody,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.xxs))
@@ -1120,7 +1120,7 @@ private fun DesignPill(
     closeIcon: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val contentColor = if (active) MaterialTheme.colorScheme.onPrimary else TextBody
+    val contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(50))

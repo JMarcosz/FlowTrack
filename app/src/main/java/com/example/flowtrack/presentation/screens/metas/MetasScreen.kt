@@ -74,7 +74,7 @@ fun MetasScreen(
             state.metas.isEmpty() -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("🎯", fontSize = 48.sp)
-                    Text("Sin metas aún", fontWeight = FontWeight.SemiBold, color = TextBody)
+                    Text("Sin metas aún", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         "Crea tu primera meta de ahorro",
                         style = MaterialTheme.typography.bodySmall,

@@ -7,7 +7,6 @@ import com.example.flowtrack.ui.theme.BancoCibao
 import com.example.flowtrack.ui.theme.BancoPopular
 import com.example.flowtrack.ui.theme.BancoQik
 import com.example.flowtrack.ui.theme.BgDark
-import com.example.flowtrack.ui.theme.Muted2
 
 // Metadata completa de cada banco — fuente única de verdad para color, abreviatura y fg.
 data class BancoUI(
@@ -27,7 +26,7 @@ val bancoRegistry: Map<String, BancoUI> = listOf(
 ).associateBy { it.codigo }
 
 fun bancoPorCodigo(codigo: String): BancoUI =
-    bancoRegistry[codigo.uppercase()] ?: BancoUI(codigo, codigo, Muted2, abbr = codigo.take(2))
+    bancoRegistry[codigo.uppercase()] ?: BancoUI(codigo, codigo, Color.Gray, abbr = codigo.take(2))
 
 // Badge de banco (fondo, texto, abreviatura) — usado en TarjetasScreen y UploadScreen.
 data class BankBadge(val bg: Color, val fg: Color, val abbr: String)

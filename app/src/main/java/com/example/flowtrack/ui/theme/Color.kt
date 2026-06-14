@@ -5,23 +5,19 @@ import androidx.compose.ui.graphics.Color
 // ── Paleta primaria (azul institucional — DS §1.1) ───────────────────────────
 val Primary       = Color(0xFF2F6FED)
 val Primary600    = Color(0xFF2960DA)
-val Primary50     = Color(0xFFEAF1FE)
 val Primary100    = Color(0xFFD9E5FD)
+val Primary50     = Color(0xFFEAF1FE)
 
 // ── Neutrales (DS §1.2) ───────────────────────────────────────────────────────
-val Ink           = Color(0xFF0F172A)   // texto principal
-val Ink2          = Color(0xFF1E293B)   // texto secundario fuerte
-val TextBody      = Color(0xFF334155)   // párrafo
-val Muted         = Color(0xFF64748B)   // labels, captions
-val Muted2        = Color(0xFF94A3B8)   // iconos terciarios
-val Line          = Color(0xFFE5E9F0)   // bordes fuertes
-val Line2         = Color(0xFFEEF1F5)   // bordes suaves, hover
-val BgScreen      = Color(0xFFF4F6FA)   // background de pantalla
-val BgCard        = Color.White         // background de cards
+val Ink           = Color(0xFF0F172A)   // texto principal (Login)
+val Muted         = Color(0xFF64748B)   // labels, captions (Login)
 val BgDark        = Color(0xFF0B1220)   // login, tarjetas oscuras
-val SurfaceContainer = Color(0xFFF1F5F9) // nivel intermedio
-val OutlineCustom = Color(0xFFCBD5E1)    // bordes inputs
-val ScrimCustom   = Color(0x66000000)    // overlay dialogos
+val BgScreen      = Color(0xFFF4F6FA)   // light background
+val BgCard        = Color.White         // light surface
+val Line2         = Color(0xFFEEF1F5)   // light surfaceVariant
+val SurfaceContainer = Color(0xFFF1F5F9)
+val OutlineCustom = Color(0xFFCBD5E1)
+val ScrimCustom   = Color(0x66000000)
 
 // ── Paleta Modo Oscuro (Propuesta Ajustada) ──────────────────────────────────
 val PrimaryDark          = Color(0xFF7AA0FF)
@@ -40,17 +36,13 @@ val WarningDark          = Color(0xFFFBBF24)
 val ScrimDark            = Color(0xCC000000)
 
 // ── Semánticos (DS §1.3) ──────────────────────────────────────────────────────
-val Income        = Color(0xFF16A34A)
-val Income50      = Color(0xFFE7F7EC)
 val Success       = Color(0xFF16A34A)
 val Success50     = Color(0xFFE7F7EC)
 val Expense       = Color(0xFFDC2626)
 val Expense50     = Color(0xFFFDECEC)
 val Warning       = Color(0xFFF59E0B)
 val Warning50     = Color(0xFFFFF7ED)
-val Warning700    = Color(0xFFA16207)
 val Warning900    = Color(0xFF92400E)
-val Neutral100    = Color(0xFFE5E7EB)
 
 // ── Categorías (DS §1.4) ──────────────────────────────────────────────────────
 val CatCompras          = Color(0xFF3B82F6)

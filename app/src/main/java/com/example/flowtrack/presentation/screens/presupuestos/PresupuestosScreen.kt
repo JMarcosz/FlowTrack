@@ -87,7 +87,7 @@ fun PresupuestosScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Outlined.Savings, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(56.dp))
-                    Text("Sin presupuestos", fontWeight = FontWeight.SemiBold, color = TextBody)
+                    Text("Sin presupuestos", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         "Crea un presupuesto para controlar tus gastos por categoría",
                         style = MaterialTheme.typography.bodySmall,
@@ -309,7 +309,7 @@ private fun NuevoPresupuestoSheet(
                         p.name.lowercase().replaceFirstChar { it.uppercase() },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = if (sel) MaterialTheme.colorScheme.onPrimary else TextBody,
+                        color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }

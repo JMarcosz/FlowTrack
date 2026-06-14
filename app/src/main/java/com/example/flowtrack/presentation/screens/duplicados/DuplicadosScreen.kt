@@ -124,7 +124,7 @@ private fun TransaccionMiniRow(etiqueta: String, tx: Transaccion) {
             Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
         ) { Text(etiqueta, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold) }
         Column(Modifier.weight(1f)) {
-            Text(tx.descripcionCorta, fontSize = 12.sp, color = TextBody, fontWeight = FontWeight.Medium)
+            Text(tx.descripcionCorta, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
             Text(tx.fecha.toString(), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val esCredito = tx.tipo == TipoTransaccion.CREDITO

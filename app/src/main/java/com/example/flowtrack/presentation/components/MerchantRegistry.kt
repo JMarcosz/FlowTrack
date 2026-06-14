@@ -31,7 +31,7 @@ data class MerchantUI(
 private data class MerchantSwatch(val bg: Color, val fg: Color)
 
 private val merchantSwatches = listOf(
-    MerchantSwatch(Primary50, Primary600),
+    MerchantSwatch(Color(0xFFEAF1FE), Color(0xFF2960DA)),
     MerchantSwatch(CatCompras, Color.White),
     MerchantSwatch(CatServicios, Color.White),
     MerchantSwatch(CatTransporte, BgDark),
@@ -51,14 +51,14 @@ private val merchantSwatches = listOf(
 
 private val merchantRegistry = listOf(
     MerchantUI("AMAZON PRIME", "Amazon Prime", "AP", CatCompras, Color.White),
-    MerchantUI("LARAVEL CLOUD", "Laravel Cloud", "LC", Primary600, Color.White),
+    MerchantUI("LARAVEL CLOUD", "Laravel Cloud", "LC", Color(0xFF2960DA), Color.White),
     MerchantUI("ALTICE", "Altice", "AL", CatServicios, Color.White),
     MerchantUI("CLARO", "Claro", "CL", CatServicios, Color.White),
     MerchantUI("UBER EATS", "Uber Eats", "UE", CatCompras, Color.White),
     MerchantUI("UBER", "Uber", "UB", CatTransporte, BgDark),
     MerchantUI("NETFLIX", "Netflix", "NF", CatPagos, Color.White),
     MerchantUI("SPOTIFY", "Spotify", "SP", CatPagos, Color.White),
-    MerchantUI("PAYPAL", "PayPal", "PP", Primary600, Color.White),
+    MerchantUI("PAYPAL", "PayPal", "PP", Color(0xFF2960DA), Color.White),
     MerchantUI("CHUCK E CHEESE", "Chuck E. Cheese", "CC", CatPagos, Color.White),
     MerchantUI("MEGAPLEX", "Megaplex", "MP", CatPagos, Color.White),
     MerchantUI("BATH", "Bath", "BT", CatPagos, Color.White),
@@ -96,14 +96,14 @@ fun MerchantLogo(
     val merchant = remember(descripcionNormalizada) { merchantPorDescripcion(descripcionNormalizada) }
     
     // Si el merchant usa los colores primarios base, los hacemos dinámicos
-    val isDefaultPrimary = merchant.bg == Primary50 || merchant.bg == Primary600
+    val isDefaultPrimary = merchant.bg == Color(0xFFEAF1FE) || merchant.bg == Color(0xFF2960DA)
     val backgroundColor = if (isDefaultPrimary) {
-        if (merchant.bg == Primary50) MaterialTheme.colorScheme.primaryContainer 
+        if (merchant.bg == Color(0xFFEAF1FE)) MaterialTheme.colorScheme.primaryContainer 
         else MaterialTheme.colorScheme.primary
     } else merchant.bg
     
     val foregroundColor = if (isDefaultPrimary) {
-        if (merchant.fg == Primary600) MaterialTheme.colorScheme.primary
+        if (merchant.fg == Color(0xFF2960DA)) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onPrimary
     } else merchant.fg
 

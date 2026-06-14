@@ -534,7 +534,7 @@ private fun UploadProcesandoContent(mensaje: String) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp), strokeWidth = 3.dp)
-        Text(mensaje, style = MaterialTheme.typography.bodyLarge, color = TextBody)
+        Text(mensaje, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -557,13 +557,13 @@ private fun UploadExitoContent(
             Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = ExtendedTheme.colors.success, modifier = Modifier.size(36.dp))
         }
         Text("¡Importación exitosa!", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
-        Text("$transaccionesInsertadas transacciones importadas desde $banco", style = MaterialTheme.typography.bodyLarge, color = TextBody, textAlign = TextAlign.Center)
+        Text("$transaccionesInsertadas transacciones importadas desde $banco", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Button(onClick = onVerHistorial, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
             Text("Ver historial", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
         }
         Button(onClick = onNuevoArchivo, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
-            Text("Importar otro archivo", color = TextBody, fontWeight = FontWeight.SemiBold)
+            Text("Importar otro archivo", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
         }
     }
 }
