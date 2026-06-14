@@ -196,7 +196,7 @@ fun TransaccionesScreen(
                         showDeleteDialog = false
                         selectedTx = null
                     }) {
-                        Text("Eliminar", color = Expense, fontWeight = FontWeight.SemiBold)
+                        Text("Eliminar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
                     }
                 },
                 dismissButton = {
@@ -279,7 +279,7 @@ private fun TransaccionesLista(
             )
             PeriodoDropdown(
                 selected = state.periodo,
-                options = PERIODOS_TRANSACCIONES,
+                options = listOf("Este mes", "Mes pasado", "Últimos 3 meses", "Este año"),
                 onSelect = onPeriodo,
             )
         }
@@ -570,7 +570,7 @@ private fun TransaccionFila(
                 text = if (isIncome) "+ ${formatMoney(tx.monto)}" else "- ${formatMoney(tx.monto)}",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isIncome) Income else Expense,
+                color = if (isIncome) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
             )
 
             Icon(
@@ -602,7 +602,7 @@ private fun TransaccionFila(
                     Text(
                         text = "- ${formatMoney(derivada.monto)}",
                         fontSize = 12.sp,
-                        color = Expense,
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -700,7 +700,7 @@ private fun TransaccionDetalle(
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.6).sp,
-                            color = if (isIncome) Income else Expense,
+                            color = if (isIncome) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(top = Spacing.sm),
                         )
                     }
@@ -764,7 +764,7 @@ private fun TransaccionDetalle(
                             DetalleRow(
                                 label = d.descripcionCorta.ifBlank { "Retención DGII" },
                                 value = "- ${formatMoney(d.monto)}",
-                                valueColor = Expense,
+                                valueColor = MaterialTheme.colorScheme.error,
                             )
                         }
                     }
@@ -792,9 +792,9 @@ private fun TransaccionDetalle(
                         onClick = onEliminar,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Expense50),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.errorContainer),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Expense,
+                            contentColor = MaterialTheme.colorScheme.error,
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                     ) {
@@ -854,7 +854,7 @@ private fun FiltrosSheet(
                 modifier = Modifier.weight(1f),
             )
             TextButton(onClick = onLimpiar) {
-                Text("Limpiar todo", color = Expense, fontSize = 13.sp)
+                Text("Limpiar todo", color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)

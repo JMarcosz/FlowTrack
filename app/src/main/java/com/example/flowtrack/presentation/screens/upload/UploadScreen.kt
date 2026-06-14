@@ -75,13 +75,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.presentation.components.bancoPorCodigo
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Expense50
-import com.example.flowtrack.ui.theme.Radii
-import com.example.flowtrack.ui.theme.Spacing
-import com.example.flowtrack.ui.theme.Success
-import com.example.flowtrack.ui.theme.Success50
-import com.example.flowtrack.ui.theme.TextBody
+import com.example.flowtrack.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -395,13 +389,13 @@ private fun UploadFormContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Expense50, RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(12.dp))
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Error, contentDescription = null, tint = Expense, modifier = Modifier.size(20.dp))
-                Text(errorMensaje, style = MaterialTheme.typography.bodySmall, color = Expense)
+                Icon(Icons.Outlined.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                Text(errorMensaje, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
         }
 
@@ -447,7 +441,7 @@ private fun TarjetaFechasSection(
             isError = fechaCorteText.isNotBlank() && parseFecha(fechaCorteText) == null,
             supportingText = {
                 if (fechaCorteText.isNotBlank() && parseFecha(fechaCorteText) == null)
-                    Text("Formato inválido. Usa dd/mm/aaaa", color = Expense)
+                    Text("Formato inválido. Usa dd/mm/aaaa", color = MaterialTheme.colorScheme.error)
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -466,7 +460,7 @@ private fun TarjetaFechasSection(
             isError = fechaLimitePagoText.isNotBlank() && parseFecha(fechaLimitePagoText) == null,
             supportingText = {
                 if (fechaLimitePagoText.isNotBlank() && parseFecha(fechaLimitePagoText) == null)
-                    Text("Formato inválido. Usa dd/mm/aaaa", color = Expense)
+                    Text("Formato inválido. Usa dd/mm/aaaa", color = MaterialTheme.colorScheme.error)
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -557,16 +551,16 @@ private fun UploadExitoContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(
-            modifier = Modifier.size(72.dp).background(Success50, CircleShape),
+            modifier = Modifier.size(72.dp).background(ExtendedTheme.colors.successContainer, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = Success, modifier = Modifier.size(36.dp))
+            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = ExtendedTheme.colors.success, modifier = Modifier.size(36.dp))
         }
         Text("¡Importación exitosa!", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Text("$transaccionesInsertadas transacciones importadas desde $banco", style = MaterialTheme.typography.bodyLarge, color = TextBody, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Button(onClick = onVerHistorial, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
-            Text("Ver historial", fontWeight = FontWeight.SemiBold)
+            Text("Ver historial", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
         }
         Button(onClick = onNuevoArchivo, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
             Text("Importar otro archivo", color = TextBody, fontWeight = FontWeight.SemiBold)

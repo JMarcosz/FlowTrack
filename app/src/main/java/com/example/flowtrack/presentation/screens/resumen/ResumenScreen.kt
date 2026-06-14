@@ -55,11 +55,7 @@ import com.example.flowtrack.presentation.components.DonutChart
 import com.example.flowtrack.presentation.components.DonutSlice
 import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Radii
-import com.example.flowtrack.ui.theme.Spacing
-import com.example.flowtrack.ui.theme.TabularNumber
+import com.example.flowtrack.ui.theme.*
 import androidx.compose.material3.MaterialTheme
 import com.example.flowtrack.presentation.components.categoriaRegistry
 @Composable
@@ -297,12 +293,12 @@ private fun BancoCard(b: ResumenBanco) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                BancoStat(label = "Gastos",   value = formatMoney(b.gastos),   color = Expense)
-                BancoStat(label = "Ingresos", value = formatMoney(b.ingresos), color = Income)
+                BancoStat(label = "Gastos",   value = formatMoney(b.gastos),   color = MaterialTheme.colorScheme.error)
+                BancoStat(label = "Ingresos", value = formatMoney(b.ingresos), color = ExtendedTheme.colors.success)
                 BancoStat(
                     label = "Balance",
                     value = formatMoney(b.balance.abs()),
-                    color = if (b.balance >= java.math.BigDecimal.ZERO) Income else Expense,
+                    color = if (b.balance >= java.math.BigDecimal.ZERO) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
                     prefix = if (b.balance < java.math.BigDecimal.ZERO) "-" else "",
                     align = Alignment.End,
                 )
@@ -428,7 +424,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
                     (if (positivo) "" else "-") + formatMoney(balance.abs()),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (positivo) Income else Expense,
+                    color = if (positivo) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
                     style = TabularNumber,
                 )
             }
@@ -442,7 +438,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Ingresos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
-                    Text(formatMoney(ingresos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Income, style = TabularNumber)
+                    Text(formatMoney(ingresos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = ExtendedTheme.colors.success, style = TabularNumber)
                 }
 
                 // Divisor vertical
@@ -458,7 +454,7 @@ private fun BalancePeriodoCard(ingresos: java.math.BigDecimal, gastos: java.math
                 Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                     Text("Gastos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
-                    Text(formatMoney(gastos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense, style = TabularNumber)
+                    Text(formatMoney(gastos), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error, style = TabularNumber)
                 }
             }
         }

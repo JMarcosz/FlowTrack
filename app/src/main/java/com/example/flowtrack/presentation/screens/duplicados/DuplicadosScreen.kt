@@ -32,12 +32,7 @@ import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.TextBody
-import com.example.flowtrack.ui.theme.Warning50
-import com.example.flowtrack.ui.theme.Warning700
-import com.example.flowtrack.ui.theme.Warning900
+import com.example.flowtrack.ui.theme.*
 
 /**
  * Pantalla de detalle de duplicados detectados.
@@ -92,12 +87,12 @@ private fun DuplicadosContent(pares: List<ParDuplicado>, modifier: Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Surface(shape = RoundedCornerShape(12.dp), color = Warning50) {
+            Surface(shape = RoundedCornerShape(12.dp), color = ExtendedTheme.colors.warningContainer) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Outlined.Info, null, tint = Warning700, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.Info, null, tint = ExtendedTheme.colors.onWarningContainer, modifier = Modifier.size(18.dp))
                     Text(
                         "Estas transacciones ya existen en Firestore con el mismo ID determinístico. Se sobreescribirán de forma idempotente.",
-                        style = MaterialTheme.typography.bodySmall, color = Warning900,
+                        style = MaterialTheme.typography.bodySmall, color = ExtendedTheme.colors.onWarningContainer,
                     )
                 }
             }
@@ -136,7 +131,7 @@ private fun TransaccionMiniRow(etiqueta: String, tx: Transaccion) {
         Text(
             "${if (esCredito) "+" else "-"} ${formatMoney(tx.monto)}",
             fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-            color = if (esCredito) Income else Expense,
+            color = if (esCredito) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
         )
     }
 }

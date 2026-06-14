@@ -70,14 +70,7 @@ import com.example.flowtrack.domain.model.Carga
 import com.example.flowtrack.domain.model.EstadoCarga
 import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Neutral100
-import com.example.flowtrack.ui.theme.Success
-import com.example.flowtrack.ui.theme.Success50
-import com.example.flowtrack.ui.theme.TextBody
-import com.example.flowtrack.ui.theme.Warning
-import com.example.flowtrack.ui.theme.Warning50
-import com.example.flowtrack.ui.theme.Warning900
+import com.example.flowtrack.ui.theme.*
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -102,7 +95,7 @@ fun HistorialScreen(
             text = { Text("Se eliminarán todas las transacciones, movimientos y estados de tarjeta de todas las importaciones. Esta acción no se puede deshacer.") },
             confirmButton = {
                 TextButton(onClick = { viewModel.eliminarTodo(); confirmarEliminarTodo = false }) {
-                    Text("Eliminar todo", color = Expense)
+                    Text("Eliminar todo", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { confirmarEliminarTodo = false }) { Text("Cancelar") } },
@@ -130,7 +123,7 @@ fun HistorialScreen(
                 actions = {
                     if (estado is HistorialEstado.ConDatos) {
                         IconButton(onClick = { confirmarEliminarTodo = true }) {
-                            Icon(Icons.Outlined.DeleteSweep, "Eliminar todo", tint = Expense)
+                            Icon(Icons.Outlined.DeleteSweep, "Eliminar todo", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 },
@@ -177,7 +170,7 @@ private fun EmptyHistorial(navController: NavController, modifier: Modifier) {
                 onClick = { navController.navigate(Screen.Upload.route) },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(12.dp),
-            ) { Text("Importar ahora") }
+            ) { Text("Importar ahora", color = MaterialTheme.colorScheme.onPrimary) }
         }
     }
 }
@@ -185,7 +178,7 @@ private fun EmptyHistorial(navController: NavController, modifier: Modifier) {
 @Composable
 private fun ErrorHistorial(mensaje: String, modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(mensaje, color = Expense, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
+        Text(mensaje, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
     }
 }
 
@@ -227,7 +220,7 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
             text = { Text("Se eliminarán ${carga.transaccionesInsertadas} transacción(es) importadas con '${carga.nombreArchivo}'.") },
             confirmButton = {
                 TextButton(onClick = { onEliminar(); confirmarEliminar = false }) {
-                    Text("Eliminar", color = Expense)
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { confirmarEliminar = false }) { Text("Cancelar") } },
@@ -278,10 +271,10 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                     }
 
                     if (carga.advertencias.isNotEmpty()) {
-                        Surface(color = Warning50, shape = RoundedCornerShape(8.dp)) {
+                        Surface(color = ExtendedTheme.colors.warningContainer, shape = RoundedCornerShape(8.dp)) {
                             Column(Modifier.fillMaxWidth().padding(8.dp)) {
                                 carga.advertencias.forEach { adv ->
-                                    Text("• $adv", style = MaterialTheme.typography.bodySmall, color = Warning900)
+                                    Text("• $adv", style = MaterialTheme.typography.bodySmall, color = ExtendedTheme.colors.onWarningContainer)
                                 }
                             }
                         }
@@ -290,9 +283,9 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                     if (carga.estado != EstadoCarga.ELIMINADO) {
                         OutlinedButton(
                             onClick = { confirmarEliminar = true },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Expense),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                             border = ButtonDefaults.outlinedButtonBorder.copy(
-                                brush = androidx.compose.ui.graphics.SolidColor(Expense.copy(alpha = 0.4f))
+                                brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
                             ),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.align(Alignment.End),
@@ -311,8 +304,8 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
 @Composable
 private fun EstadoBadge(estado: EstadoCarga) {
     val (bgColor, textColor, texto) = when (estado) {
-        EstadoCarga.EXITOSO  -> Triple(Success50, Success, "Exitoso")
-        EstadoCarga.PARCIAL  -> Triple(Warning50, Warning, "Parcial")
+        EstadoCarga.EXITOSO  -> Triple(ExtendedTheme.colors.successContainer, ExtendedTheme.colors.onSuccessContainer, "Exitoso")
+        EstadoCarga.PARCIAL  -> Triple(ExtendedTheme.colors.warningContainer, ExtendedTheme.colors.onWarningContainer, "Parcial")
         EstadoCarga.FALLIDO  -> Triple(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.error, "Fallido")
         EstadoCarga.ELIMINADO -> Triple(Neutral100, MaterialTheme.colorScheme.onSurfaceVariant, "Eliminado")
     }

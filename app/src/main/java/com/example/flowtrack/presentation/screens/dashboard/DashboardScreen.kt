@@ -76,16 +76,8 @@ import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.presentation.components.categoriaPorId
 import com.example.flowtrack.presentation.components.shimmerEffect
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Expense50
-import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Income50
-import com.example.flowtrack.ui.theme.Success
-import com.example.flowtrack.ui.theme.TabularNumber
-import com.example.flowtrack.ui.theme.TextBody
+import com.example.flowtrack.ui.theme.*
 import java.math.BigDecimal
-
-// ── PERIODOS ─────────────────────────────────────────────────────────────────
 
 @Composable
 fun DashboardScreen(
@@ -210,7 +202,7 @@ private fun DashboardContent(
                 Spacer(modifier = Modifier.width(12.dp))
                 PeriodoDropdown(
                     selected = periodo,
-                    options  = PERIODOS_DASHBOARD,
+                    options  = listOf("Este mes", "Mes pasado", "Últimos 3 meses", "Este año"),
                     onSelect = onPeriodo,
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -227,8 +219,8 @@ private fun DashboardContent(
                 DashStatCard(
                     label               = "Gastos totales",
                     value               = formatMoney(resumen.gastoTotal),
-                    color               = Expense,
-                    bgColor             = Expense50,
+                    color               = MaterialTheme.colorScheme.error,
+                    bgColor             = MaterialTheme.colorScheme.errorContainer,
                     isExpense           = true,
                     porcentaje          = resumen.comparacion.expenseChangePercentage,
                     esIncremento        = resumen.comparacion.expenseIsIncrement,
@@ -241,8 +233,8 @@ private fun DashboardContent(
                 DashStatCard(
                     label               = "Ingresos totales",
                     value               = formatMoney(resumen.ingresoTotal),
-                    color               = Income,
-                    bgColor             = Income50,
+                    color               = ExtendedTheme.colors.success,
+                    bgColor             = ExtendedTheme.colors.successContainer,
                     isExpense           = false,
                     porcentaje          = resumen.comparacion.incomeChangePercentage,
                     esIncremento        = resumen.comparacion.incomeIsIncrement,
@@ -503,8 +495,8 @@ private fun BalanceNetoCard(
     modifier: Modifier = Modifier,
 ) {
     val delta   = resumen.deltaBalance
-    val color   = if (delta.esIncremento) Income else Expense
-    val bgColor = if (delta.esIncremento) Income50 else Expense50
+    val color   = if (delta.esIncremento) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error
+    val bgColor = if (delta.esIncremento) ExtendedTheme.colors.successContainer else MaterialTheme.colorScheme.errorContainer
 
     Card(
         shape     = RoundedCornerShape(16.dp),
@@ -604,7 +596,7 @@ private fun DeltaBadge(
         return
     }
     val good   = if (inverse) !esIncremento else esIncremento
-    val dColor = if (good) Success else Expense
+    val dColor = if (good) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -672,14 +664,14 @@ private fun BancoRow(banco: BancoUI, datos: DatosBancoResumen) {
             if (datos.gastos > BigDecimal.ZERO) {
                 Text(
                     "- ${formatMoney(datos.gastos)}",
-                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense,
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error,
                     style = TabularNumber,
                 )
             }
             if (datos.ingresos > BigDecimal.ZERO) {
                 Text(
                     "+ ${formatMoney(datos.ingresos)}",
-                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Income,
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = ExtendedTheme.colors.success,
                     style = TabularNumber,
                 )
             }

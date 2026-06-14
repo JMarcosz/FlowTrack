@@ -1,77 +1,41 @@
 package com.example.flowtrack.presentation.screens.perfil
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Spacing
-import com.google.firebase.auth.FirebaseAuth
+import com.example.flowtrack.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerfilScreen(navController: NavController) {
-    val user = FirebaseAuth.getInstance().currentUser
-    var showConfirmSignOut by remember { mutableStateOf(false) }
-
-    if (showConfirmSignOut) {
-        AlertDialog(
-            onDismissRequest = { showConfirmSignOut = false },
-            title = { Text("Cerrar sesión") },
-            text = { Text("¿Estás seguro de que quieres cerrar sesión?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    FirebaseAuth.getInstance().signOut()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                }) { Text("Cerrar sesión", color = Expense) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirmSignOut = false }) { Text("Cancelar") }
-            },
-        )
-    }
+fun PerfilScreen(
+    navController: NavController,
+    viewModel: PerfilViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsState()
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -83,27 +47,35 @@ fun PerfilScreen(navController: NavController) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
+                actions = {
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(Icons.AutoMirrored.Outlined.Logout, "Cerrar sesión", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 windowInsets = WindowInsets(0, 0, 0, 0),
             )
-        },
+        }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = Spacing.md),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(24.dp))
-
             // Avatar
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = user?.displayName?.firstOrNull()?.uppercase() ?: "U",
-                    fontSize = 28.sp,
+                    text = state.nombre.firstOrNull()?.toString() ?: "U",
+                    fontSize = 40.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -112,57 +84,105 @@ fun PerfilScreen(navController: NavController) {
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = user?.displayName ?: "Usuario",
-                style = MaterialTheme.typography.titleLarge,
+                text = state.nombre,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = user?.email ?: "",
+                text = state.email,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(Modifier.height(32.dp))
 
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 1.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    InfoRow("Cuenta", user?.providerData?.firstOrNull()?.providerId?.removeSuffix(".com") ?: "google")
-                    HorizontalDivider()
-                    InfoRow("UID", user?.uid?.take(12)?.plus("...") ?: "—")
-                    HorizontalDivider()
-                    InfoRow("Email verificado", if (user?.isEmailVerified == true) "Sí" else "No")
-                }
+            // Información de cuenta
+            ProfileSection(title = "Información de cuenta") {
+                ProfileItem(icon = Icons.Outlined.Person, label = "Nombre", value = state.nombre)
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                ProfileItem(icon = Icons.Outlined.Email, label = "Correo", value = state.email)
             }
 
             Spacer(Modifier.height(24.dp))
 
+            // Acciones
             OutlinedButton(
-                onClick = { showConfirmSignOut = true },
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Expense),
+                onClick = { showLogoutDialog = true },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
             ) {
                 Icon(Icons.AutoMirrored.Outlined.Logout, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Cerrar sesión", fontWeight = FontWeight.SemiBold)
             }
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "ID de usuario: ${state.uid.take(8)}...",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Estás seguro que deseas cerrar sesión?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.signOut()
+                    showLogoutDialog = false
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }) { Text("Cerrar sesión", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+        )
+    }
+}
+
+@Composable
+private fun ProfileSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title.uppercase(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            letterSpacing = 0.8.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Column(content = content)
         }
     }
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun ProfileItem(icon: ImageVector, label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(16.dp))
+        Column {
+            Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+        }
     }
 }

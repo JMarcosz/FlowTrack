@@ -127,7 +127,7 @@ fun MetasScreen(
 
 @Composable
 private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit) {
-    val ringColor = if (meta.completada) Success else MaterialTheme.colorScheme.primary
+    val ringColor = if (meta.completada) ExtendedTheme.colors.success else MaterialTheme.colorScheme.primary
     var confirmar by remember { mutableStateOf(false) }
 
     if (confirmar) {
@@ -135,7 +135,7 @@ private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit
             onDismissRequest = { confirmar = false },
             title = { Text("Eliminar meta") },
             text = { Text("¿Eliminar la meta \"${meta.nombre}\"?") },
-            confirmButton = { TextButton(onClick = { onEliminar(); confirmar = false }) { Text("Eliminar", color = Expense) } },
+            confirmButton = { TextButton(onClick = { onEliminar(); confirmar = false }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirmar = false }) { Text("Cancelar") } },
         )
     }
@@ -188,7 +188,7 @@ private fun MetaCard(meta: Meta, onDepositar: () -> Unit, onEliminar: () -> Unit
                 )
                 if (meta.completada) {
                     Spacer(Modifier.height(4.dp))
-                    Text("¡Meta completada! 🎉", fontSize = 11.sp, color = Success, fontWeight = FontWeight.SemiBold)
+                    Text("¡Meta completada! 🎉", fontSize = 11.sp, color = ExtendedTheme.colors.success, fontWeight = FontWeight.SemiBold)
                 } else {
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -241,7 +241,7 @@ private fun DepositoSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline),
             )
             Button(
                 onClick = { monto.trim().toBigDecimalOrNull()?.let { onDepositar(it) } },
@@ -249,7 +249,7 @@ private fun DepositoSheet(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 enabled = monto.trim().toBigDecimalOrNull() != null,
-            ) { Text("Agregar", fontWeight = FontWeight.SemiBold) }
+            ) { Text("Agregar", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary) }
         }
     }
 }
@@ -276,7 +276,7 @@ private fun NuevaMetaSheet(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline),
         )
 
         OutlinedTextField(
@@ -287,7 +287,7 @@ private fun NuevaMetaSheet(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Line),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline),
         )
 
         Text("Elige un emoji", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
@@ -316,7 +316,7 @@ private fun NuevaMetaSheet(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 enabled = nombre.isNotBlank() && monto.trim().toBigDecimalOrNull() != null,
-            ) { Text("Crear meta", fontWeight = FontWeight.SemiBold) }
+            ) { Text("Crear meta", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary) }
         }
     }
 }

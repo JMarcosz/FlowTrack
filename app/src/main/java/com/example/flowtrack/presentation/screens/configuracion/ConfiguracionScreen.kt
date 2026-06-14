@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -16,41 +15,30 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Brightness4
+import androidx.compose.material.icons.outlined.BrightnessHigh
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Category
-import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DeleteForever
-import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.GTranslate
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Menu
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.Rule
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,27 +50,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.flowtrack.core.extensions.formatearFecha
-import com.example.flowtrack.core.extensions.formatearMoneda
-import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Radii
-import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.delay
-import java.time.LocalDate
-import kotlin.time.Duration.Companion.milliseconds
 
-private val FORMATOS_FECHA = listOf("dd/MM/yyyy", "yyyy-MM-dd", "dd-MM-yyyy")
-private val FORMATOS_MONEDA = listOf("RD$ 0.00", "0.00 RD$", "$0.00")
-
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfiguracionScreen(
     navController: NavController,
@@ -90,25 +66,23 @@ fun ConfiguracionScreen(
     viewModel: ConfiguracionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val user = FirebaseAuth.getInstance().currentUser
-    val displayName = user?.displayName?.takeIf { it.isNotBlank() } ?: "Usuario"
-    val email = user?.email ?: ""
-    val config = state.config
-    var dialogo by remember { mutableStateOf<Dialogo?>(null) }
-    var confirmarBorrado by remember { mutableStateOf(false) }
-
-    LaunchedEffect(state.error, state.exito) {
-        if (state.error != null || state.exito != null) {
-            delay(3000.milliseconds)
-            viewModel.clearMensajes()
-        }
-    }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Configuración", fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        "Configuración",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-0.3).sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
                         Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
@@ -118,398 +92,274 @@ fun ConfiguracionScreen(
                 windowInsets = WindowInsets(0, 0, 0, 0),
             )
         },
-    ) { padding ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState()),
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.xl),
         ) {
-            Card(
-                shape = Radii.lg,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.xl)
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
-            ) {
-                Row(
-                    modifier = Modifier.padding(Spacing.xl),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            displayName.first().toString().uppercase(),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
+            Spacer(Modifier.height(Spacing.lg))
+
+            // ── Perfil ────────────────────────────────────────────────────────
+            ConfigSection(title = "Cuenta") {
+                ConfigItem(
+                    icon = Icons.Outlined.AccountCircle,
+                    label = "Perfil",
+                    onClick = { navController.navigate(Screen.Perfil.route) },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                ConfigItem(
+                    icon = Icons.Outlined.NotificationsNone,
+                    label = "Notificaciones",
+                    onClick = { navController.navigate(Screen.Notificaciones.route) },
+                )
+            }
+
+            // ── Preferencias ──────────────────────────────────────────────────
+            ConfigSection(title = "Preferencias") {
+                ConfigItem(
+                    icon = if (state.config.temaOscuro) Icons.Outlined.Brightness4 else Icons.Outlined.BrightnessHigh,
+                    label = "Modo oscuro",
+                    trailing = {
+                        Switch(
+                            checked = state.config.temaOscuro,
+                            onCheckedChange = { viewModel.toggleTema(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            ),
                         )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(displayName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                        Text(email, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
-                }
+                    },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                ConfigItem(
+                    icon = Icons.Outlined.GTranslate,
+                    label = "Idioma",
+                    onClick = { showLanguageDialog = true },
+                    trailing = {
+                        Text(
+                            text = if (state.config.idioma.startsWith("es")) "Español" else "English",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                )
             }
 
-            if (state.error != null) {
-                Spacer(Modifier.height(Spacing.md))
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.xl),
-                    shape = Radii.md,
-                ) {
-                    Text(
-                        state.error!!,
-                        modifier = Modifier.padding(Spacing.md),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                }
-            }
-            if (state.exito != null) {
-                Spacer(Modifier.height(Spacing.md))
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.xl),
-                    shape = Radii.md,
-                ) {
-                    Text(
-                        state.exito!!,
-                        modifier = Modifier.padding(Spacing.md),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(Spacing.xl))
-            SectionLabel("Cuentas y datos")
-            Spacer(Modifier.height(Spacing.sm))
-            SettingsCard {
-                SettingsRow(
+            // ── Datos ─────────────────────────────────────────────────────────
+            ConfigSection(title = "Datos y Organización") {
+                ConfigItem(
                     icon = Icons.Outlined.Category,
                     label = "Categorías",
                     onClick = { navController.navigate(Screen.Categorias.route) },
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsRow(
-                    icon = Icons.Outlined.History,
-                    label = "Historial",
-                    onClick = { navController.navigate(Screen.Historial.route) },
+                ConfigItem(
+                    icon = Icons.Outlined.Rule,
+                    label = "Reglas de categorización",
+                    onClick = { navController.navigate(Screen.Reglas.route) },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                ConfigItem(
+                    icon = Icons.Outlined.Shield,
+                    label = "Privacidad y seguridad",
+                    onClick = { },
                 )
             }
 
-            Spacer(Modifier.height(Spacing.xxl))
-            SectionLabel("Preferencias")
-            Spacer(Modifier.height(Spacing.sm))
-            SettingsCard {
-                SettingsRow(
-                    icon = Icons.Outlined.Notifications,
-                    label = "Notificaciones",
-                    onClick = { navController.navigate(Screen.Notificaciones.route) },
+            // ── Soporte ───────────────────────────────────────────────────────
+            ConfigSection(title = "FlowTrack") {
+                ConfigItem(
+                    icon = Icons.Outlined.HelpOutline,
+                    label = "Ayuda y soporte",
+                    onClick = { },
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsSwitchRow(
-                    icon = Icons.Filled.DarkMode,
-                    label = "Modo oscuro",
-                    checked = config.temaOscuro,
-                    onCheckedChange = { viewModel.toggleTema(it) },
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = Spacing.md),
-                ) {
-                    Text(
-                        "Ajustes generales",
-                        modifier = Modifier.padding(horizontal = Spacing.xl),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(Modifier.height(Spacing.sm))
-                    Surface(
-                        color = MaterialTheme.colorScheme.background,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.xl),
-                        shape = Radii.md,
-                    ) {
-                        Column(modifier = Modifier.padding(Spacing.md)) {
-                            Text("Vista previa", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.height(Spacing.xs))
-                            Text(
-                                formatearMoneda(state.balanceNeto, config.monedaPredeterminada, config.formatoMoneda),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                formatearFecha(LocalDate.now(), config.formatoFecha),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(Spacing.sm))
-                    PrefRow("Moneda base", config.monedaPredeterminada.name) { dialogo = Dialogo.MonedaBase }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = Spacing.xl))
-                    PrefRow("Formato de fecha", config.formatoFecha) { dialogo = Dialogo.FormatoFecha }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = Spacing.xl))
-                    PrefRow("Formato de moneda", config.formatoMoneda) { dialogo = Dialogo.FormatoMoneda }
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsRow(
-                    icon = Icons.Filled.FileDownload,
-                    label = "Exportar estados",
-                    onClick = { navController.navigate(Screen.Exportar.route) },
-                )
-            }
-
-            Spacer(Modifier.height(Spacing.xxl))
-            SectionLabel("Cuenta")
-            Spacer(Modifier.height(Spacing.sm))
-            SettingsCard {
-                SettingsRow(
-                    icon = Icons.Outlined.DeleteForever,
-                    label = "Borrar todos mis datos",
-                    labelColor = Expense,
-                    iconColor = Expense,
-                    onClick = { confirmarBorrado = true },
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                SettingsRow(
-                    icon = Icons.AutoMirrored.Outlined.Logout,
-                    label = "Cerrar sesión",
-                    labelColor = Expense,
-                    iconColor = Expense,
-                    showChevron = false,
-                    onClick = {
-                        FirebaseAuth.getInstance().signOut()
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                        }
+                ConfigItem(
+                    icon = Icons.Outlined.Code,
+                    label = "Versión",
+                    trailing = {
+                        Text(
+                            "v1.0.5",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     },
                 )
             }
 
-            Spacer(Modifier.height(Spacing.xxl))
-            Text(
-                "FlowTrack v1.0.0",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = Spacing.xxl),
-                textAlign = TextAlign.Center,
-            )
+            // ── Acciones de Peligro ───────────────────────────────────────────
+            Spacer(Modifier.height(Spacing.lg))
+            ConfigSection(title = null) {
+                ConfigItem(
+                    icon = Icons.AutoMirrored.Outlined.Logout,
+                    label = "Cerrar sesión",
+                    labelColor = MaterialTheme.colorScheme.error,
+                    iconColor = MaterialTheme.colorScheme.error,
+                    onClick = { showLogoutDialog = true },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                ConfigItem(
+                    icon = Icons.Outlined.DeleteForever,
+                    label = "Borrar mis datos",
+                    labelColor = MaterialTheme.colorScheme.error,
+                    iconColor = MaterialTheme.colorScheme.error,
+                    onClick = { showDeleteAccountDialog = true },
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.xxxl))
         }
     }
 
-    when (dialogo) {
-        Dialogo.MonedaBase -> SeleccionDialog(
-            titulo = "Moneda base",
-            opciones = Moneda.entries.map { it.name },
-            seleccionActual = config.monedaPredeterminada.name,
-            onSeleccion = { viewModel.setMonedaBase(Moneda.valueOf(it)); dialogo = null },
-            onDismiss = { dialogo = null },
+    // ── Dialogos ───────────────────────────────────────────────────────────
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Estás seguro que deseas cerrar sesión?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    FirebaseAuth.getInstance().signOut()
+                    showLogoutDialog = false
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }) { Text("Cerrar sesión", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
         )
-        Dialogo.FormatoFecha -> SeleccionDialog(
-            titulo = "Formato de fecha",
-            opciones = FORMATOS_FECHA,
-            seleccionActual = config.formatoFecha,
-            etiqueta = { formatearFecha(LocalDate.now(), it) },
-            onSeleccion = { viewModel.setFormatoFecha(it); dialogo = null },
-            onDismiss = { dialogo = null },
-        )
-        Dialogo.FormatoMoneda -> SeleccionDialog(
-            titulo = "Formato de moneda",
-            opciones = FORMATOS_MONEDA,
-            seleccionActual = config.formatoMoneda,
-            etiqueta = { formatearMoneda(state.balanceNeto, config.monedaPredeterminada, it) },
-            onSeleccion = { viewModel.setFormatoMoneda(it); dialogo = null },
-            onDismiss = { dialogo = null },
-        )
-        null -> Unit
     }
 
-    if (confirmarBorrado) {
+    if (showDeleteAccountDialog) {
         AlertDialog(
-            onDismissRequest = { confirmarBorrado = false },
-            icon = { Icon(Icons.Outlined.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("¿Borrar todos mis datos?") },
-            text = {
-                Text(
-                    "Se eliminarán permanentemente todas tus cuentas, tarjetas, transacciones, " +
-                        "movimientos, cargas e historial. Esta acción no se puede deshacer.\n\n" +
-                        "Tu configuración y preferencias se conservarán.",
-                )
-            },
+            onDismissRequest = { showDeleteAccountDialog = false },
+            title = { Text("Borrar todos mis datos", color = MaterialTheme.colorScheme.error) },
+            text = { Text("Esta acción es irreversible. Se eliminarán todas tus transacciones, cuentas y metas permanentemente.") },
             confirmButton = {
-                Button(
-                    onClick = {
-                        confirmarBorrado = false
-                        viewModel.borrarTodosMisDatos()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                TextButton(
+                    onClick = { viewModel.borrarTodosMisDatos(); showDeleteAccountDialog = false },
                     enabled = !state.isDeleting,
                 ) {
                     if (state.isDeleting) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
-                        Spacer(Modifier.width(Spacing.sm))
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Eliminar permanentemente", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                     }
-                    Text("Sí, borrar todo")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmarBorrado = false }) {
-                    Text("Cancelar")
+                TextButton(onClick = { showDeleteAccountDialog = false }) { Text("Cancelar") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+        )
+    }
+
+    if (showLanguageDialog) {
+        // En v1 no tenemos setIdioma implementado todavia de forma reactiva completa en VM, pero podemos mockear el diálogo
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Seleccionar idioma") },
+            text = {
+                Column {
+                    listOf("es-DO" to "Español", "en-US" to "English").forEach { (codigo, opcion) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showLanguageDialog = false }
+                                .padding(vertical = Spacing.md),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(opcion, color = MaterialTheme.colorScheme.onSurface)
+                            if (state.config.idioma == codigo) {
+                                Icon(Icons.Outlined.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
                 }
             },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showLanguageDialog = false }) { Text("Cerrar") } },
         )
     }
 }
 
-private enum class Dialogo { MonedaBase, FormatoFecha, FormatoMoneda }
-
 @Composable
-private fun SectionLabel(label: String) {
-    Text(
-        label.uppercase(),
-        fontSize = 11.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        letterSpacing = 0.6.sp,
-        modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = 2.dp),
-    )
-}
-
-@Composable
-private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        shape = Radii.lg,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.xl)
-            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
-    ) {
-        Column(content = content)
-    }
-}
-
-@Composable
-private fun SettingsRow(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    labelColor: Color = MaterialTheme.colorScheme.onSurface,
-    iconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    showChevron: Boolean = true,
-    trailing: (@Composable () -> Unit)? = null,
+private fun ConfigSection(
+    title: String?,
+    content: @Composable () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
-        Text(label, fontSize = 15.sp, color = labelColor, modifier = Modifier.weight(1f))
-        if (trailing != null) {
-            trailing()
-        } else if (showChevron) {
-            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+    Column(modifier = Modifier.padding(bottom = Spacing.xl)) {
+        if (title != null) {
+            Text(
+                text = title.uppercase(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(start = Spacing.sm, bottom = Spacing.sm),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp)),
+        ) {
+            content()
         }
     }
 }
 
 @Composable
-private fun SettingsSwitchRow(
+private fun ConfigItem(
     icon: ImageVector,
     label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    onClick: (() -> Unit)? = null,
+    labelColor: Color = MaterialTheme.colorScheme.onSurface,
+    iconColor: Color = MaterialTheme.colorScheme.primary,
+    trailing: @Composable (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = Spacing.xl, vertical = Spacing.sm),
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            .padding(horizontal = Spacing.lg, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-        Text(label, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.surface, checkedTrackColor = MaterialTheme.colorScheme.primary),
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(iconColor.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, null, tint = iconColor, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(Spacing.md))
+        Text(
+            text = label,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = labelColor,
+            modifier = Modifier.weight(1f),
         )
+        if (trailing != null) {
+            trailing()
+        } else if (onClick != null) {
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(12.dp),
+            )
+        }
     }
-}
-
-@Composable
-private fun PrefRow(titulo: String, valor: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.xl, vertical = Spacing.md),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(titulo, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-        Text(valor, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun SeleccionDialog(
-    titulo: String,
-    opciones: List<String>,
-    seleccionActual: String,
-    etiqueta: (String) -> String = { it },
-    onSeleccion: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(titulo, color = MaterialTheme.colorScheme.onSurface) },
-        text = {
-            Column {
-                opciones.forEach { opcion ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSeleccion(opcion) }
-                            .padding(vertical = Spacing.sm),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = opcion == seleccionActual, onClick = { onSeleccion(opcion) })
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text(etiqueta(opcion), color = MaterialTheme.colorScheme.onSurface)
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } },
-    )
 }

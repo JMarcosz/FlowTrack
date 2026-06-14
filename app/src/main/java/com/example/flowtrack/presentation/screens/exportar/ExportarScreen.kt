@@ -54,9 +54,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.components.MerchantLogo
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Radii
-import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.*
 import com.example.flowtrack.domain.usecase.FormatoExportacion
 import com.example.flowtrack.domain.usecase.SeccionExportacionXlsx
 import java.time.LocalDate
@@ -257,7 +255,7 @@ fun ExportarScreen(
                             color = MaterialTheme.colorScheme.onPrimary,
                         )
                     } else {
-                        Text("Exportar")
+                        Text("Exportar", color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             }
@@ -266,7 +264,7 @@ fun ExportarScreen(
                 item { StatusBanner(text = state.error!!, background = MaterialTheme.colorScheme.errorContainer, color = MaterialTheme.colorScheme.error) }
             }
             if (state.exito != null) {
-                item { StatusBanner(text = state.exito!!, background = MaterialTheme.colorScheme.primaryContainer, color = MaterialTheme.colorScheme.primary) }
+                item { StatusBanner(text = state.exito!!, background = ExtendedTheme.colors.successContainer, color = ExtendedTheme.colors.onSuccessContainer) }
             }
         }
     }

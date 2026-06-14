@@ -93,8 +93,8 @@ private fun TotalesHeader(ingresos: BigDecimal, gastos: BigDecimal) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        TotalCard("Ingresos", ingresos, Income, Modifier.weight(1f))
-        TotalCard("Gastos", gastos, Expense, Modifier.weight(1f))
+        TotalCard("Ingresos", ingresos, ExtendedTheme.colors.success, Modifier.weight(1f))
+        TotalCard("Gastos", gastos, MaterialTheme.colorScheme.error, Modifier.weight(1f))
     }
 }
 
@@ -134,7 +134,7 @@ private fun BucketRow(bucket: BucketResumen) {
             Column(horizontalAlignment = Alignment.End) {
                 Text(formatMoney(bucket.balance, withSign = true),
                     style = MaterialTheme.typography.bodyLarge.merge(TabularNumber), fontWeight = FontWeight.SemiBold,
-                    color = if (bucket.balance >= BigDecimal.ZERO) Income else Expense)
+                    color = if (bucket.balance >= BigDecimal.ZERO) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error)
                 Text("+${formatMoney(bucket.ingresos)} · -${formatMoney(bucket.gastos)}",
                     style = MaterialTheme.typography.bodySmall.merge(TabularNumber), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

@@ -41,13 +41,7 @@ import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.PeriodoPresupuesto
 import com.example.flowtrack.domain.usecase.PresupuestoConGasto
 import com.example.flowtrack.presentation.components.categoriaRegistry
-import com.example.flowtrack.ui.theme.CatSinCategorizar
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Radii
-import com.example.flowtrack.ui.theme.Spacing
-import com.example.flowtrack.ui.theme.Success
-import com.example.flowtrack.ui.theme.TextBody
-import com.example.flowtrack.ui.theme.Warning
+import com.example.flowtrack.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -156,7 +150,7 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
             text = { Text("¿Eliminar el presupuesto de ${cat?.nombre ?: "esta categoría"}?") },
             confirmButton = {
                 TextButton(onClick = { onEliminar(); confirmarEliminar = false }) {
-                    Text("Eliminar", color = Expense)
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { confirmarEliminar = false }) { Text("Cancelar") } },
@@ -164,9 +158,9 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
     }
 
     val barColor = when {
-        pg.excedido        -> Expense
-        pg.porcentaje > 0.7f -> Warning
-        else               -> Success
+        pg.excedido        -> MaterialTheme.colorScheme.error
+        pg.porcentaje > 0.7f -> ExtendedTheme.colors.warning
+        else               -> ExtendedTheme.colors.success
     }
 
     Surface(
@@ -220,7 +214,7 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
                     formatMoney(pg.gastoActual),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Expense,
+                    color = MaterialTheme.colorScheme.error,
                 )
                 Text(
                     "de ${formatMoney(pg.presupuesto.montoLimite)}",
@@ -234,7 +228,7 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
                 Text(
                     "Presupuesto excedido por ${formatMoney(pg.gastoActual - pg.presupuesto.montoLimite)}",
                     fontSize = 11.sp,
-                    color = Expense,
+                    color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.Medium,
                 )
             }
@@ -338,7 +332,7 @@ private fun NuevoPresupuestoSheet(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 enabled = monto.trim().toBigDecimalOrNull() != null && catSeleccionada != null,
-            ) { Text("Guardar", fontWeight = FontWeight.SemiBold) }
+            ) { Text("Guardar", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary) }
         }
     }
 }

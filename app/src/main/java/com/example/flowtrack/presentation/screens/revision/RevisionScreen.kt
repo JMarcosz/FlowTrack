@@ -55,15 +55,7 @@ import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.data.parsers.core.TransaccionNormalizada
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Expense50
-import com.example.flowtrack.ui.theme.Income
-import com.example.flowtrack.ui.theme.Income50
-import com.example.flowtrack.ui.theme.TabularNumber
-import com.example.flowtrack.ui.theme.Warning
-import com.example.flowtrack.ui.theme.Warning50
-import com.example.flowtrack.ui.theme.Warning700
-import com.example.flowtrack.ui.theme.Warning900
+import com.example.flowtrack.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,7 +97,7 @@ fun RevisionScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                        ) { Text("Confirmar (${listo.transacciones.size})", fontWeight = FontWeight.SemiBold) }
+                        ) { Text("Confirmar (${listo.transacciones.size})", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary) }
                     }
                 }
             }
@@ -233,18 +225,18 @@ private fun StatMini(label: String, value: String) {
 
 @Composable
 private fun DuplicadosAlertCard(duplicados: Int, onVer: () -> Unit) {
-    Surface(shape = RoundedCornerShape(12.dp), color = Warning50) {
+    Surface(shape = RoundedCornerShape(12.dp), color = ExtendedTheme.colors.warningContainer) {
         Row(
             Modifier.fillMaxWidth().padding(12.dp).clickable(onClick = onVer),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(Icons.Outlined.Warning, null, tint = Warning700, modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.Warning, null, tint = ExtendedTheme.colors.onWarningContainer, modifier = Modifier.size(20.dp))
             Column(Modifier.weight(1f)) {
-                Text("Posibles duplicados: $duplicados", fontWeight = FontWeight.SemiBold, color = Warning900, fontSize = 13.sp)
-                Text("Toca para ver detalles", style = MaterialTheme.typography.bodySmall, color = Warning700)
+                Text("Posibles duplicados: $duplicados", fontWeight = FontWeight.SemiBold, color = ExtendedTheme.colors.onWarningContainer, fontSize = 13.sp)
+                Text("Toca para ver detalles", style = MaterialTheme.typography.bodySmall, color = ExtendedTheme.colors.onWarningContainer.copy(alpha = 0.8f))
             }
-            Icon(Icons.Outlined.ChevronRight, null, tint = Warning, modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.ChevronRight, null, tint = ExtendedTheme.colors.onWarningContainer, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -262,7 +254,8 @@ private fun AdvertenciasCard(advertencias: List<String>) {
 @Composable
 private fun TransaccionRevisionRow(tx: TransaccionNormalizada) {
     val esCredito = tx.tipo == TipoTransaccion.CREDITO
-    val colorMonto = if (esCredito) Income else Expense
+    val colorMonto = if (esCredito) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error
+    val colorBg = if (esCredito) ExtendedTheme.colors.successContainer else MaterialTheme.colorScheme.errorContainer
     val signo = if (esCredito) "+" else "-"
 
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 0.5.dp) {
@@ -272,13 +265,13 @@ private fun TransaccionRevisionRow(tx: TransaccionNormalizada) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(
-                Modifier.size(36.dp).background(if (esCredito) Income50 else Expense50, RoundedCornerShape(10.dp)),
+                Modifier.size(36.dp).background(colorBg, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     if (esCredito) Icons.Outlined.ArrowDownward else Icons.Outlined.ArrowUpward,
                     null,
-                    tint = if (esCredito) Income else Expense,
+                    tint = colorMonto,
                     modifier = Modifier.size(16.dp),
                 )
             }

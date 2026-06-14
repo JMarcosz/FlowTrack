@@ -81,13 +81,7 @@ import com.example.flowtrack.presentation.components.CreditCardShimmerItem
 import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.presentation.components.bankBadge
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Radii
-import com.example.flowtrack.ui.theme.Spacing
-import com.example.flowtrack.ui.theme.Success
-import com.example.flowtrack.ui.theme.Success50
-import com.example.flowtrack.ui.theme.TabularNumber
-import com.example.flowtrack.ui.theme.Warning
+import com.example.flowtrack.ui.theme.*
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
@@ -408,8 +402,8 @@ fun WhiteCreditCard(
                         }
                         DropdownMenu(expanded = menuExpandido, onDismissRequest = { menuExpandido = false }) {
                             DropdownMenuItem(
-                                text = { Text("Eliminar", color = Expense) },
-                                leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = Expense) },
+                                text = { Text("Eliminar", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = { menuExpandido = false; onEliminar() },
                             )
                         }
@@ -438,7 +432,7 @@ fun WhiteCreditCard(
                         formatMoney(pagoPendiente, tarjeta.moneda),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Expense,
+                        color = MaterialTheme.colorScheme.error,
                         letterSpacing = (-0.4).sp,
                         style = TabularNumber,
                     )
@@ -479,7 +473,7 @@ fun WhiteCreditCard(
                         .fillMaxWidth(utilizacionFrac)
                         .fillMaxHeight()
                         .clip(Radii.pill)
-                        .background(if (utilizacionFrac > 0.6f) Expense else Success),
+                        .background(if (utilizacionFrac > 0.6f) MaterialTheme.colorScheme.error else ExtendedTheme.colors.success),
                 )
             }
             Spacer(Modifier.height(Spacing.sm))
@@ -518,9 +512,9 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
     val fechaLocal = snap.fechaLimitePago.atZone(ZONA).toLocalDate()
 
     val (urgenciaColor, urgenciaLabel) = when {
-        diasRestantes <= 2  -> Expense to "Vence pronto"
-        diasRestantes <= 6  -> Warning to "Esta semana"
-        else                -> Success to "A tiempo"
+        diasRestantes <= 2  -> MaterialTheme.colorScheme.error to "Vence pronto"
+        diasRestantes <= 6  -> ExtendedTheme.colors.warning to "Esta semana"
+        else                -> ExtendedTheme.colors.success to "A tiempo"
     }
 
     Row(
@@ -547,7 +541,7 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
             )
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(formatMoney(snap.pagoTotal), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Expense, style = TabularNumber)
+            Text(formatMoney(snap.pagoTotal), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error, style = TabularNumber)
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
@@ -639,7 +633,7 @@ private fun HistorialRow(snap: EstadoTarjetaSnap) {
             formatMoney(snap.balanceAlCorte, snap.moneda),
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Expense,
+            color = MaterialTheme.colorScheme.error,
             style = TabularNumber,
         )
     }
@@ -671,10 +665,10 @@ fun StatusBadge(label: String) {
     Box(
         modifier = Modifier
             .clip(Radii.pill)
-            .background(Success50)
+            .background(ExtendedTheme.colors.successContainer)
             .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Success)
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ExtendedTheme.colors.onSuccessContainer)
     }
 }
 

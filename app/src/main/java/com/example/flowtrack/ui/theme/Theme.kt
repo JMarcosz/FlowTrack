@@ -12,13 +12,25 @@ import androidx.compose.ui.graphics.Color
 @Immutable
 data class ExtendedColors(
     val success: Color,
-    val warning: Color
+    val onSuccess: Color,
+    val successContainer: Color,
+    val onSuccessContainer: Color,
+    val warning: Color,
+    val onWarning: Color,
+    val warningContainer: Color,
+    val onWarningContainer: Color,
 )
 
 val LocalExtendedColors = staticCompositionLocalOf {
     ExtendedColors(
         success = Color.Unspecified,
-        warning = Color.Unspecified
+        onSuccess = Color.Unspecified,
+        successContainer = Color.Unspecified,
+        onSuccessContainer = Color.Unspecified,
+        warning = Color.Unspecified,
+        onWarning = Color.Unspecified,
+        warningContainer = Color.Unspecified,
+        onWarningContainer = Color.Unspecified,
     )
 }
 
@@ -30,12 +42,24 @@ object ExtendedTheme {
 
 private val lightExtendedColors = ExtendedColors(
     success = Success,
-    warning = Warning
+    onSuccess = Color.White,
+    successContainer = Success50,
+    onSuccessContainer = Success,
+    warning = Warning,
+    onWarning = Color.White,
+    warningContainer = Warning50,
+    onWarningContainer = Warning900,
 )
 
 private val darkExtendedColors = ExtendedColors(
     success = SuccessDark,
-    warning = WarningDark
+    onSuccess = BackgroundDark,
+    successContainer = SuccessDark.copy(alpha = 0.15f),
+    onSuccessContainer = SuccessDark,
+    warning = WarningDark,
+    onWarning = BackgroundDark,
+    warningContainer = WarningDark.copy(alpha = 0.15f),
+    onWarningContainer = WarningDark,
 )
 
 // Design system §2 — FinanzasLightColorScheme

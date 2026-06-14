@@ -33,7 +33,6 @@ import androidx.navigation.NavController
 import com.example.flowtrack.R
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.BgDark
-import com.example.flowtrack.ui.theme.Expense
 import com.example.flowtrack.ui.theme.Ink
 import com.example.flowtrack.ui.theme.Muted
 import com.example.flowtrack.ui.theme.Primary
@@ -125,7 +124,7 @@ fun LoginScreen(
         if (uiState is LoginUiState.Error) {
             Text(
                 text = (uiState as LoginUiState.Error).message,
-                color = Expense,
+                color = Color(0xFFFF7070),
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 12.dp),

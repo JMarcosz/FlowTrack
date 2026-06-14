@@ -63,8 +63,7 @@ import com.example.flowtrack.domain.model.ReglaCategoria
 import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.domain.model.TipoMatch
 import com.example.flowtrack.presentation.components.categoriaRegistry
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -281,7 +280,7 @@ private fun SugerenciaCard(
                 Button(onClick = onAceptar, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
                     Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Asignar")
+                    Text("Asignar", color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }

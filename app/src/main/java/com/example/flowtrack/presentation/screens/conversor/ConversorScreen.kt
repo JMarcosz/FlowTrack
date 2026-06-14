@@ -1,6 +1,7 @@
 package com.example.flowtrack.presentation.screens.conversor
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,24 +13,43 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material3.*
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -37,230 +57,184 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.TasaCambio
-import com.example.flowtrack.ui.theme.Expense
-import com.example.flowtrack.ui.theme.Spacing
-import com.example.flowtrack.ui.theme.Success
-import java.text.NumberFormat
+import com.example.flowtrack.ui.theme.*
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversorScreen(
     navController: NavController,
+    onMenuClick: () -> Unit = {},
     viewModel: ConversorViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val resultado = viewModel.calcularResultado()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Conversor Divisas", fontWeight = FontWeight.Bold) },
+                title = { Text("Conversor de Divisas", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
+                    IconButton(onClick = onMenuClick) {
+                        Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 windowInsets = WindowInsets(0, 0, 0, 0),
             )
-        }
+        },
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (state.error != null) {
-                Text(state.error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
-            } else if (state.tasa != null) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(Spacing.md),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Indicador de tasas del día
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(modifier = Modifier.padding(Spacing.md)) {
-                            Text("Tasa del Día (${state.tasa!!.fuente})", style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.height(Spacing.sm))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Compra", style = MaterialTheme.typography.bodySmall)
-                                    Text("RD$ ${state.tasa!!.compra}", fontWeight = FontWeight.Bold)
-                                }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Venta", style = MaterialTheme.typography.bodySmall)
-                                    Text("RD$ ${state.tasa!!.venta}", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = Spacing.xl)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(Spacing.lg))
 
-                    Spacer(Modifier.height(Spacing.xl))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(2.dp),
+            ) {
+                Column(Modifier.padding(Spacing.xl)) {
+                    // Moneda origen
+                    MonedaRow(
+                        label = "De",
+                        moneda = if (state.direccionDopAUsd) "DOP" else "USD",
+                        onMonedaClick = { viewModel.invertirDireccion() }
+                    )
 
-                    val labelOrigen = if (state.direccionDopAUsd) "Monto en DOP (RD$)" else "Monto en USD (US$)"
-                    val labelDestino = if (state.direccionDopAUsd) "Equivalente en USD" else "Equivalente en DOP"
+                    Spacer(Modifier.height(Spacing.md))
 
                     OutlinedTextField(
                         value = state.montoEntrada,
                         onValueChange = { viewModel.setMonto(it) },
-                        label = { Text(labelOrigen) },
+                        label = { Text("Monto") },
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = RoundedCornerShape(12.dp)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        shape = RoundedCornerShape(12.dp),
+                    )
+
+                    Spacer(Modifier.height(Spacing.lg))
+
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        IconButton(
+                            onClick = { viewModel.invertirDireccion() },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                        ) {
+                            Icon(Icons.Outlined.SwapVert, null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    Spacer(Modifier.height(Spacing.lg))
+
+                    // Moneda destino
+                    MonedaRow(
+                        label = "A",
+                        moneda = if (state.direccionDopAUsd) "USD" else "DOP",
+                        onMonedaClick = { viewModel.invertirDireccion() }
                     )
 
                     Spacer(Modifier.height(Spacing.md))
 
-                    IconButton(
-                        onClick = { viewModel.invertirDireccion() },
-                        modifier = Modifier.size(48.dp)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                            .padding(Spacing.md)
                     ) {
-                        Icon(Icons.Default.SwapVert, contentDescription = "Invertir dirección")
+                        Text(
+                            "%.2f %s".format(Locale.US, resultado.toDouble(), if (state.direccionDopAUsd) "USD" else "DOP"),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
-
-                    Spacer(Modifier.height(Spacing.md))
-
-                    val result = viewModel.calcularResultado()
-                    val formatter = NumberFormat.getNumberInstance(Locale("en", "US")).apply {
-                        minimumFractionDigits = 2
-                        maximumFractionDigits = 2
-                    }
-                    val prefix = if (state.direccionDopAUsd) "US$ " else "RD$ "
-
-                    Text(
-                        text = "$prefix${formatter.format(result)}",
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(labelDestino, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                    if (state.historico.size >= 2) {
-                        Spacer(Modifier.height(Spacing.xxl))
-                        TasaHistoricoChart(historico = state.historico)
-                    }
-
-                    Spacer(Modifier.height(Spacing.xl))
                 }
+            }
+
+            Spacer(Modifier.height(Spacing.xl))
+
+            if (state.isLoading) {
+                CircularProgressIndicator()
+            } else {
+                state.tasa?.let { tasa ->
+                    TasaInfo(tasa, state.direccionDopAUsd)
+                }
+            }
+
+            if (state.historico.isNotEmpty()) {
+                HistoricoSection(state.historico)
             }
         }
     }
 }
 
 @Composable
-private fun TasaHistoricoChart(historico: List<TasaCambio>) {
-    val ventas = historico.map { it.venta.toFloat() }
-    val minVal = ventas.min()
-    val maxVal = ventas.max()
-    val rango = (maxVal - minVal).takeIf { it > 0f } ?: 1f
-    val lineColor = MaterialTheme.colorScheme.primary
-    val gridColor = MaterialTheme.colorScheme.surfaceVariant
+fun MonedaRow(label: String, moneda: String, onMonedaClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.clickable { onMonedaClick() }, verticalAlignment = Alignment.CenterVertically) {
+            Text(moneda, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.width(Spacing.xs))
+            Icon(Icons.Outlined.History, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(modifier = Modifier.padding(Spacing.md)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Evolución tasa venta (30 días)",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Spacer(Modifier.height(Spacing.sm))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    "Mín: RD$ ${"%.2f".format(minVal)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Success,
-                    fontSize = 11.sp
-                )
-                Text(
-                    "Máx: RD$ ${"%.2f".format(maxVal)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Expense,
-                    fontSize = 11.sp
-                )
-            }
-            Spacer(Modifier.height(Spacing.sm))
+@Composable
+fun TasaInfo(tasa: TasaCambio, dopAUsd: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Tasa de cambio actual", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+        Text(
+            if (dopAUsd) "Venta: RD$ ${tasa.venta}" else "Compra: RD$ ${tasa.compra}",
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
 
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-            ) {
-                val w = size.width
-                val h = size.height
-                val padLeft = 8f
-                val padRight = 8f
-                val padTop = 8f
-                val padBottom = 8f
-                val chartW = w - padLeft - padRight
-                val chartH = h - padTop - padBottom
-
-                // Líneas de referencia horizontales
-                val steps = 4
-                for (i in 0..steps) {
-                    val y = padTop + chartH * (1f - i.toFloat() / steps)
-                    drawLine(
-                        color = gridColor,
-                        start = Offset(padLeft, y),
-                        end = Offset(w - padRight, y),
-                        strokeWidth = 1f
+@Composable
+fun HistoricoSection(historico: List<TasaCambio>) {
+    Column(Modifier.fillMaxWidth().padding(top = Spacing.xxl)) {
+        Text("Variación 7 días", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.height(Spacing.md))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            historico.take(7).forEach { h ->
+                val base = historico.first().venta.toDouble()
+                val actual = h.venta.toDouble()
+                val diff = actual - base
+                val color = if (diff >= 0) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        Modifier
+                            .width(32.dp)
+                            .height((40 + diff * 10).coerceAtLeast(10.0).dp)
+                            .background(color, RoundedCornerShape(4.dp))
                     )
-                }
-
-                // Línea del gráfico
-                val path = Path()
-                ventas.forEachIndexed { idx, v ->
-                    val x = padLeft + chartW * (idx.toFloat() / (ventas.size - 1))
-                    val y = padTop + chartH * (1f - ((v - minVal) / rango).toFloat())
-                    if (idx == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                }
-                drawPath(
-                    path = path,
-                    color = lineColor,
-                    style = Stroke(
-                        width = 3f,
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
-                    )
-                )
-
-                // Puntos en cada dato
-                ventas.forEachIndexed { idx, v ->
-                    val x = padLeft + chartW * (idx.toFloat() / (ventas.size - 1))
-                    val y = padTop + chartH * (1f - ((v - minVal) / rango).toFloat())
-                    drawCircle(color = lineColor, radius = 4f, center = Offset(x, y))
+                    Text(h.fecha.dayOfMonth.toString(), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-
-            Spacer(Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+        }
+        Spacer(Modifier.height(Spacing.lg))
+        Card(
+            Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(Modifier.padding(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.History, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(Spacing.md))
                 Text(
-                    historico.first().fecha.toString(),
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    historico.last().fecha.toString(),
-                    fontSize = 10.sp,
+                    "Última actualización: %s".format(historico.last().fecha.toString()),
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
