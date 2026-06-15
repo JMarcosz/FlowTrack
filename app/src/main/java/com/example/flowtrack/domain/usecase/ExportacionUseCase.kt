@@ -16,11 +16,11 @@ import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaReposi
 import com.example.flowtrack.data.firestore.repositories.TarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.domain.model.Cuenta
+import com.example.flowtrack.domain.model.CategoriaCatalogo
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
 import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
-import com.example.flowtrack.presentation.components.categoriaRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.ss.usermodel.BorderStyle
@@ -502,7 +502,7 @@ class ExportacionUseCase @Inject constructor(
     }
 
     private fun categoriaNombre(categoriaId: String?): String =
-        categoriaId?.let { categoriaRegistry[it]?.nombre } ?: "Sin categorizar"
+        CategoriaCatalogo.nombreDe(categoriaId)
 
     private fun cuentaEtiqueta(cuentaId: String, cuentasPorId: Map<String, Cuenta>): String =
         cuentasPorId[cuentaId]?.alias?.ifBlank { cuentasPorId[cuentaId]?.numeroCuenta ?: cuentaId } ?: cuentaId

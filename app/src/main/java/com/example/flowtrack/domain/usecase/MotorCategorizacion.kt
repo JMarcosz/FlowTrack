@@ -1,6 +1,7 @@
 package com.example.flowtrack.domain.usecase
 
 import com.example.flowtrack.core.extensions.normalizarDescripcion
+import com.example.flowtrack.domain.model.CategoriaCatalogo
 import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.ReglaCategoria
 import com.example.flowtrack.domain.model.TipoMatch
@@ -9,13 +10,13 @@ import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
 
 /**
- * Motor de categorización automática de transacciones.
+ * Motor de categorizacion automatica de transacciones.
  *
  * Orden de precedencia:
  *   1. Reglas del usuario (uidUsuario != null), ordenadas por prioridad DESC
  *   2. Reglas del sistema (uidUsuario == null), ordenadas por prioridad DESC
- *   3. Keywords específicos de comercio contra descripcionNormalizada
- *   4. Tipo genérico de transacción contra descripcionCorta
+ *   3. Keywords especificos de comercio contra descripcionNormalizada
+ *   4. Tipo generico de transaccion contra descripcionCorta
  *   5. null si ninguna regla aplica
  */
 object MotorCategorizacion {
@@ -89,8 +90,6 @@ object MotorCategorizacion {
         else mov
     }
 
-    // ─── Evaluación de regla ──────────────────────────────────────────────────
-
     internal fun matchea(descripcionNormalizada: String, regla: ReglaCategoria): Boolean {
         val desc = descripcionNormalizada.normalizarDescripcion()
         return when (regla.tipoMatch) {
@@ -101,114 +100,95 @@ object MotorCategorizacion {
         }
     }
 
-    // ─── Inferencia por keywords ──────────────────────────────────────────────
-
-    /**
-     * Categoriza por keywords contra la descripción completa normalizada y,
-     * como fallback, contra el tipo genérico de la descripcionCorta.
-     *
-     * Orden crítico: validar keywords compuestos antes del prefijo corto
-     * (ej. "UBER EATS" antes de "UBER" para no clasificar delivery como transporte).
-     */
     internal fun inferirPorDescripcion(
         descripcionNormalizada: String,
         descripcionCorta: String,
         tipo: TipoTransaccion,
     ): String? {
-        val desc  = descripcionNormalizada.normalizarDescripcion()
+        val desc = descripcionNormalizada.normalizarDescripcion()
         val corta = descripcionCorta.normalizarDescripcion()
 
-        // ── Comida y delivery — UBER EATS antes que el prefijo genérico UBER ─
-        if (desc.contains("UBER EATS"))          return "alimentacion"
+        if (desc.contains("UBER EATS")) return CategoriaCatalogo.ALIMENTACION
         if (desc.contains("HELADOS BON") ||
             desc.contains("PEDIDOSYA")  ||
             desc.contains("RICO HOTDOG") ||
             desc.contains("KFC")         ||
             desc.contains("TACO BELL")   ||
-            desc.contains("CHICKEN ROOMING")) return "alimentacion"
+            desc.contains("CHICKEN ROOMING")) return CategoriaCatalogo.ALIMENTACION
 
-        // ── Transporte ────────────────────────────────────────────────────────
         if (desc.contains("UBER RIDES") ||
             desc.contains("UBER")       ||
             desc.contains("DIDI")       ||
             desc.contains("OPRET")      ||
-            desc.contains("INDRIVE"))    return "transporte"
+            desc.contains("INDRIVE"))    return CategoriaCatalogo.TRANSPORTE
 
-        // ── Supermercado → compras ────────────────────────────────────────────
         if (desc.contains("BRAVO")      ||
             desc.contains("JUMBO")      ||
             desc.contains("SIRENA")     ||
             desc.contains("CARREFOUR")  ||
-            desc.contains("MINIMARKET")) return "compras"
+            desc.contains("MINIMARKET")) return CategoriaCatalogo.COMPRAS
 
-        // ── Salud ─────────────────────────────────────────────────────────────
         if (desc.contains("FARMA EXTRA") ||
             desc.contains("MEDICAR GBC") ||
-            desc.contains("FCIA"))        return "salud"
+            desc.contains("FCIA"))        return CategoriaCatalogo.SALUD
 
-        // ── Servicios ─────────────────────────────────────────────────────────
-        // CLAROREC contiene "CLARO" — basta con una sola condición
         if (desc.contains("ALTICE") ||
-            desc.contains("CLARO"))       return "servicios"
+            desc.contains("CLARO"))       return CategoriaCatalogo.SERVICIOS
 
-        // ── Suscripciones ─────────────────────────────────────────────────────
         if (desc.contains("AMAZON PRIME") ||
-            desc.contains("LARAVEL CLOUD")) return "suscripciones"
+            desc.contains("LARAVEL CLOUD")) return CategoriaCatalogo.SUSCRIPCIONES
 
-        // ── Entretenimiento / Ocio ────────────────────────────────────────────
         if (desc.contains("CHUCK E CHEESE") ||
             desc.contains("MEGAPLEX")       ||
-            desc.contains("BATH"))           return "entretenimiento"
+            desc.contains("BATH"))           return CategoriaCatalogo.ENTRETENIMIENTO
 
-        // ── Impuestos y comisiones ────────────────────────────────────────────
         if (desc.contains("PAGO IMPUESTO") ||
-            desc.contains("DGII"))           return "impuestos"
+            desc.contains("DGII"))           return CategoriaCatalogo.IMPUESTOS
         if (desc.contains("COMISIONES") ||
             desc.contains("CARGO MENSUAL") ||
-            desc.contains("CARGO RETIRO"))   return "intereses_comisiones"
+            desc.contains("CARGO RETIRO"))   return CategoriaCatalogo.INTERESES_COMISIONES
 
-        // ── Egresos / transferencias salientes ────────────────────────────────
         if (desc.contains("MB A ") ||
             desc.contains("COD CASH") ||
             desc.contains("PAGO ACH") ||
-            desc.contains("AUT PAGO"))       return "transferencia_enviada"
-        if (desc.contains("RET DE CHK"))     return "atm"
+            desc.contains("AUT PAGO"))       return CategoriaCatalogo.TRANSFERENCIA_ENVIADA
+        if (desc.contains("RET DE CHK"))     return CategoriaCatalogo.ATM
 
-        // ── Ingresos / transferencias entrantes ───────────────────────────────
-        if (desc.contains("MB DESDE"))       return "transferencia_recibida"
-        if (desc.contains("DEPOSITO") && tipo == TipoTransaccion.CREDITO) return "deposito"
+        if (desc.contains("MB DESDE"))       return CategoriaCatalogo.TRANSFERENCIA_RECIBIDA
+        if (desc.contains("DEPOSITO") && tipo == TipoTransaccion.CREDITO) return CategoriaCatalogo.DEPOSITO
 
-        // LBTR: dirección determinada por tipo
-        if (desc.contains("LBTR")) return if (tipo == TipoTransaccion.CREDITO) "transferencia_recibida" else "transferencia_enviada"
+        if (desc.contains("LBTR")) return if (tipo == TipoTransaccion.CREDITO) {
+            CategoriaCatalogo.TRANSFERENCIA_RECIBIDA
+        } else {
+            CategoriaCatalogo.TRANSFERENCIA_ENVIADA
+        }
 
-        // ── Fallback: tipo genérico desde descripcionCorta ────────────────────
         return when {
-            corta.contains("NOMINA") || corta.contains("SALARIO")               -> "salario"
+            corta.contains("NOMINA") || corta.contains("SALARIO")               -> CategoriaCatalogo.SALARIO
             tipo == TipoTransaccion.CREDITO && (
                 corta.contains("TRANSFERENCIA RECIBIDA") ||
                 corta.contains("TRANSFERENCIA ENTRANTE") ||
-                corta.contains("TRANSFERENCIA PROPIA"))                          -> "transferencia_recibida"
-            tipo == TipoTransaccion.CREDITO && corta.contains("CASHBACK")        -> "cashback"
-            tipo == TipoTransaccion.CREDITO && corta.contains("DEPOSITO")        -> "deposito"
-            corta.contains("CONSUMO POS")                                        -> "compras"
-            corta.contains("RETIRO ATM") || corta.contains("RETIRO SUCURSAL")   -> "atm"
-            corta.contains("RETIRO")                                             -> "atm"
+                corta.contains("TRANSFERENCIA PROPIA"))                          -> CategoriaCatalogo.TRANSFERENCIA_RECIBIDA
+            tipo == TipoTransaccion.CREDITO && corta.contains("CASHBACK")        -> CategoriaCatalogo.CASHBACK
+            tipo == TipoTransaccion.CREDITO && corta.contains("DEPOSITO")        -> CategoriaCatalogo.DEPOSITO
+            corta.contains("CONSUMO POS")                                        -> CategoriaCatalogo.COMPRAS
+            corta.contains("RETIRO ATM") || corta.contains("RETIRO SUCURSAL")   -> CategoriaCatalogo.ATM
+            corta.contains("RETIRO")                                             -> CategoriaCatalogo.ATM
             corta.contains("TRANSFERENCIA ENVIADA") ||
                 corta.contains("TRANSFERENCIA SALIENTE") ||
                 corta.contains("TRANSFERENCIA LBTR")    ||
-                corta.contains("TRANSFERENCIA ACH")                              -> "transferencia_enviada"
-            corta.contains("IMPUESTO DGII") || corta.contains("IMPUESTO")       -> "impuestos"
+                corta.contains("TRANSFERENCIA ACH")                              -> CategoriaCatalogo.TRANSFERENCIA_ENVIADA
+            corta.contains("IMPUESTO DGII") || corta.contains("IMPUESTO")       -> CategoriaCatalogo.IMPUESTOS
             corta.contains("COMISION ATM") ||
                 corta.contains("COMISION")  ||
                 corta.contains("CARGO MENSUAL") ||
-                corta.contains("CARGO")                                          -> "intereses_comisiones"
+                corta.contains("CARGO")                                          -> CategoriaCatalogo.INTERESES_COMISIONES
             corta.contains("PAGO SERVICIO") || corta.contains("PAGO DEBITADO") ||
-                corta.contains("CARGO PENDIENTE") || corta.contains("PAGO CHEQUE") -> "servicios"
+                corta.contains("CARGO PENDIENTE") || corta.contains("PAGO CHEQUE") -> CategoriaCatalogo.SERVICIOS
             else -> null
         }
     }
 
-    // Alias de compatibilidad — delega al nuevo método
     internal fun inferirPorDescripcionCorta(
         descripcionCorta: String,
         tipo: TipoTransaccion,

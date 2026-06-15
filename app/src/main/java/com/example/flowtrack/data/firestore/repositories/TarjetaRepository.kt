@@ -125,6 +125,30 @@ class TarjetaRepository @Inject constructor(
     override suspend fun eliminarTarjeta(uid: String, tarjetaId: String): AppResult<Unit> {
         return try {
             offlineStore.deactivateTarjeta(uid, tarjetaId)
+            offlineStore.deleteByTarjetaId("MOVIMIENTO_TARJETA", uid, tarjetaId)
+            offlineStore.deleteByTarjetaId("ESTADO_TARJETA", uid, tarjetaId)
+
+            val refUsuario = firestore.collection("usuarios").document(uid)
+            val movimientos = refUsuario.collection("movimientosTarjeta")
+                .whereEqualTo("tarjetaId", tarjetaId)
+                .get()
+                .await()
+            movimientos.documents.chunked(450).forEach { chunk ->
+                val batch = firestore.batch()
+                chunk.forEach { doc -> batch.delete(doc.reference) }
+                batch.commit().await()
+            }
+
+            val estados = refUsuario.collection("estadosTarjeta")
+                .whereEqualTo("tarjetaId", tarjetaId)
+                .get()
+                .await()
+            estados.documents.chunked(450).forEach { chunk ->
+                val batch = firestore.batch()
+                chunk.forEach { doc -> batch.delete(doc.reference) }
+                batch.commit().await()
+            }
+
             firestore.collection("usuarios").document(uid)
                 .collection("tarjetas").document(tarjetaId)
                 .update("activa", false)

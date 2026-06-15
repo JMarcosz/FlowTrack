@@ -111,7 +111,10 @@ fun RevisionScreen(
                 modifier = Modifier.padding(padding),
             )
             is RevisionEstado.Confirmado -> {
-                LaunchedEffect(Unit) { navController.navigate(Screen.Historial.route) { popUpTo(Screen.Upload.route) } }
+                LaunchedEffect(estado) {
+                    navController.navigate(Screen.Historial.route) { popUpTo(Screen.Upload.route) }
+                    viewModel.consumirConfirmacion()
+                }
             }
             is RevisionEstado.Error -> ErrorContent(s.mensaje, Modifier.padding(padding))
         }

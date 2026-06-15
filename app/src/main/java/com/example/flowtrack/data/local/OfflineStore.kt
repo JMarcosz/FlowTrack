@@ -596,6 +596,13 @@ class OfflineStore @Inject constructor(
         signalChange()
     }
 
+    suspend fun deleteByTarjetaId(entityType: String, uid: String, tarjetaId: String) {
+        io {
+            delete(TABLE_RECORDS, "entity_type=? AND uid_usuario=? AND tarjeta_id=?", arrayOf(entityType, uid, tarjetaId))
+        }
+        signalChange()
+    }
+
     suspend fun clearUser(uid: String) {
         io {
             delete(TABLE_RECORDS, "uid_usuario=?", arrayOf(uid))

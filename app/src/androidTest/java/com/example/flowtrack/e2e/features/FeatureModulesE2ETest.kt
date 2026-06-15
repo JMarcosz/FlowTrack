@@ -192,7 +192,7 @@ class FeatureModulesE2ETest {
             launchScreen {
                 val viewModel: ExportarViewModel = hiltViewModel()
                 viewModelRef.set(viewModel)
-                ExportarScreen(rememberNavController(), viewModel)
+                ExportarScreen(rememberNavController(), viewModel = viewModel)
             }.use {
                 esperarTexto("Exportar estados")
                 instrumentation.runOnMainSync {

@@ -4,6 +4,7 @@ import com.example.flowtrack.core.ml.TfIdfKMeansClusterer
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.ReglaSugeridaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
+import com.example.flowtrack.domain.model.CategoriaCatalogo
 import com.example.flowtrack.domain.model.ReglaSugerida
 import java.time.Instant
 import java.util.UUID
@@ -21,7 +22,10 @@ class AnalizarTransaccionesUseCase @Inject constructor(
         val transacciones = (res as AppResult.Success).data
         
         // 2. Filtrar no categorizadas
-        val noCategorizadas = transacciones.filter { it.categoriaId == null || it.categoriaId == "sin_categorizar" }
+        val noCategorizadas = transacciones.filter {
+            val categoriaNormalizada = CategoriaCatalogo.normalizarId(it.categoriaId)
+            categoriaNormalizada == null || categoriaNormalizada == CategoriaCatalogo.SIN_CATEGORIZAR
+        }
         if (noCategorizadas.size < 5) return AppResult.Success(0) // Muy pocas para clusterizar
 
         // 3. Clusterizar

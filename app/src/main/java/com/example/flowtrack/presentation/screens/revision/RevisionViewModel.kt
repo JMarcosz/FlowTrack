@@ -47,6 +47,12 @@ class RevisionViewModel @Inject constructor() : ViewModel() {
         // aquí solo señalamos que el usuario aprobó la revisión.
         _estado.value = RevisionEstado.Confirmado
     }
+
+    fun consumirConfirmacion() {
+        if (_estado.value is RevisionEstado.Confirmado) {
+            _estado.value = RevisionEstado.Cargando
+        }
+    }
 }
 
 sealed class RevisionEstado {

@@ -6,12 +6,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.extensions.normalizarDescripcion
 import com.example.flowtrack.core.result.AppResult
+import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.ReglaCategoriaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.data.local.TransaccionesCursor
+import com.example.flowtrack.domain.model.CategoriaCatalogo
+import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoMatch
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
+import com.example.flowtrack.domain.usecase.esGastoFinanciero
+import com.example.flowtrack.domain.usecase.esIngresoFinanciero
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
@@ -20,7 +25,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +35,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 import com.example.flowtrack.presentation.model.FiltroPeriodo
 import com.example.flowtrack.presentation.model.FiltrosAvanzadosState
@@ -44,6 +47,7 @@ data class TransaccionesState(
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = true,
     val transacciones: List<Transaccion> = emptyList(),
+    val movimientosTarjeta: List<MovimientoTarjeta> = emptyList(),
     val searchQuery: String = "",
     val filtroTipo: TipoTransaccionFiltro = TipoTransaccionFiltro.TODAS,
     val periodo: PeriodoState = PeriodoState(),
@@ -58,6 +62,7 @@ enum class TipoTransaccionFiltro { TODAS, DEBITO, CREDITO }
 class TransaccionesViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val repository: TransaccionRepository,
+    private val movimientoRepository: MovimientoTarjetaRepository,
     private val reglaRepository: ReglaCategoriaRepository,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -66,6 +71,7 @@ class TransaccionesViewModel @Inject constructor(
     val state: StateFlow<TransaccionesState> = _state.asStateFlow()
 
     private var allTransacciones: List<Transaccion> = emptyList()
+    private var allMovimientosTarjeta: List<MovimientoTarjeta> = emptyList()
     private var lastVisible: TransaccionesCursor? = null
     private var loadJob: Job? = null
     private var filterJob: Job? = null
@@ -95,6 +101,7 @@ class TransaccionesViewModel @Inject constructor(
                 isLoadingMore = false,
                 hasMore = true,
                 transacciones = emptyList(),
+                movimientosTarjeta = emptyList(),
                 filtros = it.filtros.copy(bancosDisponibles = emptyList()),
                 error = null,
             )
@@ -193,6 +200,7 @@ class TransaccionesViewModel @Inject constructor(
     fun recategorizar(tx: Transaccion, nuevaCategoria: String, aplicarATodas: Boolean) {
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
+            val categoriaNormalizada = CategoriaCatalogo.normalizarId(nuevaCategoria) ?: nuevaCategoria
             val idsActualizados = if (aplicarATodas) {
                 allTransacciones
                     .filter { it.descripcionNormalizada == tx.descripcionNormalizada }
@@ -201,14 +209,14 @@ class TransaccionesViewModel @Inject constructor(
                 mutableSetOf(tx.id)
             }
 
-            val txActualizada = tx.copy(categoriaId = nuevaCategoria, categoriaAutomatica = false)
+            val txActualizada = tx.copy(categoriaId = categoriaNormalizada, categoriaAutomatica = false)
             repository.actualizarTransaccion(txActualizada)
 
             if (aplicarATodas) {
                 reglaRepository.crearReglaPersonal(
                     uidUsuario = uid,
                     patron = tx.descripcionNormalizada,
-                    categoriaId = nuevaCategoria,
+                    categoriaId = categoriaNormalizada,
                     tipoMatch = TipoMatch.EXACTO,
                 )
                 allTransacciones
@@ -217,7 +225,7 @@ class TransaccionesViewModel @Inject constructor(
                         launch {
                             repository.actualizarTransaccion(
                                 similar.copy(
-                                    categoriaId = nuevaCategoria,
+                                    categoriaId = categoriaNormalizada,
                                     categoriaAutomatica = true,
                                 )
                             )
@@ -230,7 +238,7 @@ class TransaccionesViewModel @Inject constructor(
                     current
                 } else {
                     current.copy(
-                        categoriaId = nuevaCategoria,
+                        categoriaId = categoriaNormalizada,
                         categoriaAutomatica = current.id != tx.id,
                     )
                 }
@@ -239,11 +247,29 @@ class TransaccionesViewModel @Inject constructor(
         }
     }
 
+    fun recategorizarMovimiento(movimiento: MovimientoTarjeta, nuevaCategoria: String) {
+        viewModelScope.launch {
+            val categoriaNormalizada = CategoriaCatalogo.normalizarId(nuevaCategoria) ?: nuevaCategoria
+            val actualizada = movimiento.copy(
+                categoriaId = categoriaNormalizada,
+                categoriaAutomatica = false,
+            )
+
+            if (movimientoRepository.actualizarMovimiento(actualizada) is AppResult.Success) {
+                allMovimientosTarjeta = allMovimientosTarjeta.map { current ->
+                    if (current.id == movimiento.id) actualizada else current
+                }
+                aplicarFiltrosAsync()
+            }
+        }
+    }
+
     private fun cargarPagina(reset: Boolean) {
         loadJob?.cancel()
         if (reset) {
             filterJob?.cancel()
             allTransacciones = emptyList()
+            allMovimientosTarjeta = emptyList()
             lastVisible = null
         }
 
@@ -311,6 +337,19 @@ class TransaccionesViewModel @Inject constructor(
                     }
                 }
             }
+
+            if (reset) {
+                when (val movimientos = cargarMovimientosTarjeta(uid, inicio, fin)) {
+                    is AppResult.Success -> {
+                        allMovimientosTarjeta = movimientos.data
+                        aplicarFiltrosAsync()
+                    }
+                    is AppResult.Error -> {
+                        allMovimientosTarjeta = emptyList()
+                        _state.update { it.copy(movimientosTarjeta = emptyList()) }
+                    }
+                }
+            }
         }
     }
 
@@ -360,48 +399,112 @@ class TransaccionesViewModel @Inject constructor(
                 }
             }
         }
+
+        when (val movimientos = cargarMovimientosTarjeta(uid, inicio, fin)) {
+            is AppResult.Success -> {
+                allMovimientosTarjeta = movimientos.data
+                aplicarFiltrosAsync()
+            }
+            is AppResult.Error -> {
+                allMovimientosTarjeta = emptyList()
+                _state.update { it.copy(movimientosTarjeta = emptyList()) }
+            }
+        }
     }
+
+    private suspend fun cargarMovimientosTarjeta(
+        uid: String,
+        inicio: Instant,
+        fin: Instant,
+    ): AppResult<List<MovimientoTarjeta>> = movimientoRepository.obtenerMovimientos(
+        uid = uid,
+        inicio = inicio,
+        fin = fin,
+    )
 
     private fun aplicarFiltrosAsync() {
         filterJob?.cancel()
-        filterJob = viewModelScope.launch(Dispatchers.Default) {
+        filterJob = viewModelScope.launch {
             val current = _state.value
             val transacciones = allTransacciones
-            val queryNormalizada = current.searchQuery.normalizarDescripcion()
-            val montoBuscado = current.searchQuery.trim()
-            val filtros = current.filtros
+            val filtradas = transacciones.filter { tx -> tx.esDerivada || matchesTransaccionFiltros(tx, current) }
+            val movimientosFiltrados = allMovimientosTarjeta.filter { mov -> matchesMovimientoFiltros(mov, current) }
 
-            val filtradas = transacciones.filter { tx ->
-                if (tx.esDerivada) return@filter true
-
-                val matchBanco =
-                    filtros.bancoId == null || tx.bancoCodigo == filtros.bancoId
-                val matchTipo = when (current.filtroTipo) {
-                    TipoTransaccionFiltro.TODAS -> true
-                    TipoTransaccionFiltro.DEBITO -> tx.tipo == TipoTransaccion.DEBITO
-                    TipoTransaccionFiltro.CREDITO -> tx.tipo == TipoTransaccion.CREDITO
-                }
-                val matchQuery = queryNormalizada.isBlank() ||
-                    tx.descripcionNormalizada.contains(queryNormalizada) ||
-                    tx.descripcionOriginal.normalizarDescripcion().contains(queryNormalizada) ||
-                    tx.bancoCodigo.normalizarDescripcion().contains(queryNormalizada) ||
-                    tx.monto.toPlainString().contains(montoBuscado)
-                val matchMonto =
-                    (filtros.rangoMonto.minimo == null || tx.monto >= filtros.rangoMonto.minimo) &&
-                    (filtros.rangoMonto.maximo == null || tx.monto <= filtros.rangoMonto.maximo)
-                val matchCategoria = when {
-                    filtros.soloSinCategorizar -> tx.categoriaId == null
-                    filtros.categorias.isEmpty() -> true
-                    else -> tx.categoriaId in filtros.categorias
-                }
-
-                matchBanco && matchTipo && matchQuery && matchMonto && matchCategoria
-            }
-
-            withContext(Dispatchers.Main) {
-                _state.update { it.copy(transacciones = filtradas) }
+            _state.update {
+                it.copy(
+                    transacciones = filtradas,
+                    movimientosTarjeta = movimientosFiltrados,
+                )
             }
         }
+    }
+
+    private fun matchesTransaccionFiltros(
+        tx: Transaccion,
+        current: TransaccionesState,
+    ): Boolean {
+        val queryNormalizada = current.searchQuery.normalizarDescripcion()
+        val montoBuscado = current.searchQuery.trim()
+        val filtros = current.filtros
+
+        val matchBanco = filtros.bancoId == null || tx.bancoCodigo == filtros.bancoId
+        val matchTipo = when (current.filtroTipo) {
+            TipoTransaccionFiltro.TODAS -> true
+            TipoTransaccionFiltro.DEBITO -> tx.tipo == TipoTransaccion.DEBITO
+            TipoTransaccionFiltro.CREDITO -> tx.tipo == TipoTransaccion.CREDITO
+        }
+        val matchQuery = queryNormalizada.isBlank() ||
+            tx.descripcionNormalizada.contains(queryNormalizada) ||
+            tx.descripcionOriginal.normalizarDescripcion().contains(queryNormalizada) ||
+            tx.bancoCodigo.normalizarDescripcion().contains(queryNormalizada) ||
+            tx.monto.toPlainString().contains(montoBuscado)
+        val matchMonto =
+            (filtros.rangoMonto.minimo == null || tx.monto >= filtros.rangoMonto.minimo) &&
+            (filtros.rangoMonto.maximo == null || tx.monto <= filtros.rangoMonto.maximo)
+        val matchCategoria = when {
+            filtros.soloSinCategorizar -> {
+                val categoria = CategoriaCatalogo.normalizarId(tx.categoriaId)
+                categoria == null || categoria == CategoriaCatalogo.SIN_CATEGORIZAR
+            }
+            filtros.categorias.isEmpty() -> true
+            else -> CategoriaCatalogo.normalizarId(tx.categoriaId) in filtros.categorias
+        }
+
+        return matchBanco && matchTipo && matchQuery && matchMonto && matchCategoria
+    }
+
+    private fun matchesMovimientoFiltros(
+        mov: MovimientoTarjeta,
+        current: TransaccionesState,
+    ): Boolean {
+        val queryNormalizada = current.searchQuery.normalizarDescripcion()
+        val montoBuscado = current.searchQuery.trim()
+        val filtros = current.filtros
+
+        val matchBanco = filtros.bancoId == null || mov.bancoCodigo == filtros.bancoId
+        val matchTipo = when (current.filtroTipo) {
+            TipoTransaccionFiltro.TODAS -> true
+            TipoTransaccionFiltro.DEBITO -> mov.tipoMovimiento.esGastoFinanciero()
+            TipoTransaccionFiltro.CREDITO -> mov.tipoMovimiento.esIngresoFinanciero()
+        }
+        val matchQuery = queryNormalizada.isBlank() ||
+            mov.descripcionNormalizada.contains(queryNormalizada) ||
+            mov.descripcionOriginal.normalizarDescripcion().contains(queryNormalizada) ||
+            mov.bancoCodigo.normalizarDescripcion().contains(queryNormalizada) ||
+            mov.monto.toPlainString().contains(montoBuscado)
+        val matchMonto =
+            (filtros.rangoMonto.minimo == null || mov.monto >= filtros.rangoMonto.minimo) &&
+            (filtros.rangoMonto.maximo == null || mov.monto <= filtros.rangoMonto.maximo)
+        val matchCategoria = when {
+            filtros.soloSinCategorizar -> {
+                val categoria = CategoriaCatalogo.normalizarId(mov.categoriaId)
+                categoria == null || categoria == CategoriaCatalogo.SIN_CATEGORIZAR
+            }
+            filtros.categorias.isEmpty() -> true
+            else -> CategoriaCatalogo.normalizarId(mov.categoriaId) in filtros.categorias
+        }
+
+        return matchBanco && matchTipo && matchQuery && matchMonto && matchCategoria
     }
 
     private fun restaurarEstado(): TransaccionesState {

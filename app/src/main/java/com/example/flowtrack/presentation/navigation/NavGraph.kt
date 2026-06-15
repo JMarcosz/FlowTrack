@@ -8,8 +8,9 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.NavHostController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -26,6 +27,7 @@ import com.example.flowtrack.presentation.screens.exportar.ExportarScreen
 import com.example.flowtrack.presentation.screens.conversor.ConversorScreen
 import com.example.flowtrack.presentation.screens.notificaciones.NotificacionesScreen
 import com.example.flowtrack.presentation.screens.perfil.PerfilScreen
+import com.example.flowtrack.presentation.screens.privacidad.PrivacidadSeguridadScreen
 import com.example.flowtrack.presentation.screens.dashboard.DashboardScreen
 import com.example.flowtrack.presentation.screens.duplicados.DuplicadosScreen
 import com.example.flowtrack.presentation.screens.historial.HistorialScreen
@@ -62,6 +64,7 @@ sealed class Screen(val route: String) {
     object Reglas          : Screen("reglas")
     object Presupuestos    : Screen("presupuestos")
     object Metas           : Screen("metas")
+    object Privacidad      : Screen("privacidad")
 }
 
 private val bottomNavRoutes = setOf(
@@ -73,6 +76,9 @@ private val bottomNavRoutes = setOf(
 )
 
 private val fadeSpec = tween<Float>(durationMillis = 240)
+private const val FROM_SIDEBAR_ARG = "fromSidebar"
+
+private fun rutaConOrigen(route: String): String = "$route?$FROM_SIDEBAR_ARG={$FROM_SIDEBAR_ARG}"
 
 @Composable
 fun AppNavGraph(
@@ -108,9 +114,6 @@ fun AppNavGraph(
                 onNavigate = { route ->
                     scope.launch { drawerState.close() }
                     navController.navigate(route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -142,20 +145,119 @@ fun AppNavGraph(
                 composable(Screen.ResumenPeriodo.route) { ResumenPeriodoScreen(navController) }
                 composable(Screen.Tarjetas.route)      { TarjetasScreen(onMenuClick = openDrawer) }
                 composable(Screen.Configuracion.route) { ConfiguracionScreen(navController, onMenuClick = openDrawer) }
-                composable(Screen.Exportar.route)     { ExportarScreen(navController) }
+                composable(
+                    route = rutaConOrigen(Screen.Exportar.route),
+                    arguments = listOf(
+                        navArgument(FROM_SIDEBAR_ARG) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    ),
+                ) { entry ->
+                    ExportarScreen(
+                        navController,
+                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onDrawerReopen = openDrawer,
+                    )
+                }
                 composable(Screen.Upload.route)        { UploadScreen(navController) }
-                composable(Screen.Historial.route)     { HistorialScreen(navController) }
+                composable(
+                    route = rutaConOrigen(Screen.Historial.route),
+                    arguments = listOf(
+                        navArgument(FROM_SIDEBAR_ARG) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    ),
+                ) { entry ->
+                    HistorialScreen(
+                        navController,
+                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onDrawerReopen = openDrawer,
+                    )
+                }
                 composable(Screen.Revision.route)      { RevisionScreen(navController) }
                 composable(Screen.Duplicados.route)    { DuplicadosScreen(navController) }
-                composable(Screen.Conversor.route)     { ConversorScreen(navController) }
-                composable(Screen.Sugerencias.route)   { SugerenciasScreen(navController) }
+                composable(
+                    route = rutaConOrigen(Screen.Conversor.route),
+                    arguments = listOf(
+                        navArgument(FROM_SIDEBAR_ARG) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    ),
+                ) { entry ->
+                    ConversorScreen(
+                        navController,
+                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onMenuClick = openDrawer,
+                    )
+                }
+                composable(
+                    route = rutaConOrigen(Screen.Sugerencias.route),
+                    arguments = listOf(
+                        navArgument(FROM_SIDEBAR_ARG) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    ),
+                ) { entry ->
+                    SugerenciasScreen(
+                        navController,
+                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onDrawerReopen = openDrawer,
+                    )
+                }
                 composable(Screen.Categorias.route)    { CategoriasScreen(navController) }
-                composable(Screen.BancosYCuentas.route) { BancosYCuentasScreen(navController) }
+                composable(
+                    route = rutaConOrigen(Screen.BancosYCuentas.route),
+                    arguments = listOf(
+                        navArgument(FROM_SIDEBAR_ARG) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    ),
+                ) { entry ->
+                    BancosYCuentasScreen(
+                        navController,
+                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onDrawerReopen = openDrawer,
+                    )
+                }
                 composable(Screen.Notificaciones.route) { NotificacionesScreen(navController) }
                 composable(Screen.Perfil.route)         { PerfilScreen(navController) }
                 composable(Screen.Reglas.route)         { ReglasScreen(navController) }
-                composable(Screen.Presupuestos.route)   { PresupuestosScreen(navController) }
-                composable(Screen.Metas.route)          { MetasScreen(navController) }
+                composable(
+                    route = rutaConOrigen(Screen.Presupuestos.route),
+                    arguments = listOf(
+                        navArgument(FROM_SIDEBAR_ARG) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    ),
+                ) { entry ->
+                    PresupuestosScreen(
+                        navController,
+                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onDrawerReopen = openDrawer,
+                    )
+                }
+                composable(
+                    route = rutaConOrigen(Screen.Metas.route),
+                    arguments = listOf(
+                        navArgument(FROM_SIDEBAR_ARG) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    ),
+                ) { entry ->
+                    MetasScreen(
+                        navController,
+                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onDrawerReopen = openDrawer,
+                    )
+                }
+                composable(Screen.Privacidad.route)     { PrivacidadSeguridadScreen(navController) }
             }
         }
     }

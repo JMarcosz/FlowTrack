@@ -17,8 +17,6 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.flowtrack.presentation.navigation.Screen
 
-import androidx.navigation.NavGraph.Companion.findStartDestination
-
 private data class NavItem(val screen: Screen, val label: String, val icon: ImageVector)
 
 private val navItems = listOf(
@@ -40,7 +38,7 @@ fun FinanzasBottomNav(navController: NavController) {
                 selected = current == item.screen.route,
                 onClick = {
                     navController.navigate(item.screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
+                        popUpTo(Screen.Dashboard.route) {
                             saveState = true
                         }
                         launchSingleTop = true

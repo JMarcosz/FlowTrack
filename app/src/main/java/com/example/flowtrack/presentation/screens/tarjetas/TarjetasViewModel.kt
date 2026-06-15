@@ -3,10 +3,12 @@ package com.example.flowtrack.presentation.screens.tarjetas
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.result.AppResult
+import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.TarjetaRepository
 import com.example.flowtrack.data.store.AppDataStore
 import com.example.flowtrack.domain.model.EstadoTarjeta
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
+import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.OrigenTasa
 import com.example.flowtrack.domain.model.Tarjeta
@@ -27,6 +29,7 @@ data class TarjetasState(
     val isLoading: Boolean = false,
     val tarjetas: List<Tarjeta> = emptyList(),
     val estadosPorTarjeta: Map<String, List<EstadoTarjetaSnap>> = emptyMap(),
+    val movimientosPorTarjeta: Map<String, List<MovimientoTarjeta>> = emptyMap(),
     val error: String? = null,
 )
 
@@ -35,21 +38,25 @@ class TarjetasViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val store: AppDataStore,
     private val repository: TarjetaRepository,
+    private val movimientoRepository: MovimientoTarjetaRepository,
 ) : ViewModel() {
 
     private val _estadosPorTarjeta = MutableStateFlow<Map<String, List<EstadoTarjetaSnap>>>(emptyMap())
+    private val _movimientosPorTarjeta = MutableStateFlow<Map<String, List<MovimientoTarjeta>>>(emptyMap())
     private val _error = MutableStateFlow<String?>(null)
 
     // Tarjetas reactivas desde el store; estados cargados bajo demanda
     val state: StateFlow<TarjetasState> = combine(
         store.tarjetas,
         _estadosPorTarjeta,
+        _movimientosPorTarjeta,
         _error,
-    ) { tarjetas, estados, error ->
+    ) { tarjetas, estados, movimientos, error ->
         TarjetasState(
             isLoading = false,
             tarjetas = tarjetas.filter { it.activa },
             estadosPorTarjeta = estados,
+            movimientosPorTarjeta = movimientos,
             error = error,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TarjetasState(isLoading = true))
@@ -66,6 +73,17 @@ class TarjetasViewModel @Inject constructor(
                     if (res is AppResult.Success) mapEstados[t.id] = res.data
                 }
                 _estadosPorTarjeta.value = mapEstados
+            }
+        }
+        viewModelScope.launch {
+            val uid = auth.currentUser?.uid ?: return@launch
+            movimientoRepository.observarMovimientos(
+                uid = uid,
+                inicio = Instant.EPOCH,
+                fin = Instant.now().plusSeconds(10L * 365 * 24 * 3600),
+                limite = 0,
+            ).collect { movimientos ->
+                _movimientosPorTarjeta.value = movimientos.groupBy { it.tarjetaId }
             }
         }
     }

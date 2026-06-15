@@ -47,7 +47,7 @@ class ObtenerBalancesPorCuentaUseCaseTest {
             // Cuenta C — sin balanceDespues → no debe aparecer en el mapa
             transaccion("C", ahora.minus(2, ChronoUnit.DAYS), null, false),
         )
-        whenever(repository.obtenerTransacciones(any(), anyOrNull(), anyOrNull(), any()))
+        whenever(repository.obtenerTransacciones(any(), anyOrNull(), anyOrNull(), any(), anyOrNull()))
             .thenReturn(AppResult.Success(txs))
 
         val result = useCase.ejecutar("uid")
@@ -70,7 +70,7 @@ class ObtenerBalancesPorCuentaUseCaseTest {
             // La anterior no derivada → esta sí debe usarse
             transaccion("A", ahora.minus(5, ChronoUnit.DAYS), BigDecimal("50.00"), esDerivada = false),
         )
-        whenever(repository.obtenerTransacciones(any(), anyOrNull(), anyOrNull(), any()))
+        whenever(repository.obtenerTransacciones(any(), anyOrNull(), anyOrNull(), any(), anyOrNull()))
             .thenReturn(AppResult.Success(txs))
 
         val result = useCase.ejecutar("uid")
@@ -83,7 +83,7 @@ class ObtenerBalancesPorCuentaUseCaseTest {
 
     @Test
     fun `usuario sin transacciones retorna mapa vacio`() = runTest {
-        whenever(repository.obtenerTransacciones(any(), anyOrNull(), anyOrNull(), any()))
+        whenever(repository.obtenerTransacciones(any(), anyOrNull(), anyOrNull(), any(), anyOrNull()))
             .thenReturn(AppResult.Success(emptyList()))
 
         val result = useCase.ejecutar("uid")
@@ -96,7 +96,7 @@ class ObtenerBalancesPorCuentaUseCaseTest {
 
     @Test
     fun `error del repositorio se propaga como AppResult Error`() = runTest {
-        whenever(repository.obtenerTransacciones(any(), anyOrNull(), anyOrNull(), any()))
+        whenever(repository.obtenerTransacciones(any(), anyOrNull(), anyOrNull(), any(), anyOrNull()))
             .thenReturn(AppResult.Error(ErrorApp.FirestoreError("fallo", null)))
 
         val result = useCase.ejecutar("uid")

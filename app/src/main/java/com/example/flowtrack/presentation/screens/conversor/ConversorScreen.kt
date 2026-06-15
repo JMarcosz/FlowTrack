@@ -23,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,8 +54,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.activity.compose.BackHandler
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.TasaCambio
+import com.example.flowtrack.domain.usecase.PuntoHistoricoTasa
 import com.example.flowtrack.ui.theme.*
 import java.util.Locale
 
@@ -64,11 +65,20 @@ import java.util.Locale
 @Composable
 fun ConversorScreen(
     navController: NavController,
+    fromSidebar: Boolean = false,
     onMenuClick: () -> Unit = {},
     viewModel: ConversorViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     val resultado = viewModel.calcularResultado()
+    val volver = {
+        navController.popBackStack()
+        if (fromSidebar) {
+            onMenuClick()
+        }
+    }
+
+    BackHandler(onBack = volver)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -76,8 +86,8 @@ fun ConversorScreen(
             TopAppBar(
                 title = { Text("Conversor de Divisas", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = onMenuClick) {
-                        Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
+                    IconButton(onClick = volver) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -170,8 +180,8 @@ fun ConversorScreen(
                 }
             }
 
-            if (state.historico.isNotEmpty()) {
-                HistoricoSection(state.historico)
+            if (state.serieHistorico.isNotEmpty()) {
+                HistoricoSection(state.serieHistorico)
             }
         }
     }
@@ -202,13 +212,13 @@ fun TasaInfo(tasa: TasaCambio, dopAUsd: Boolean) {
 }
 
 @Composable
-fun HistoricoSection(historico: List<TasaCambio>) {
+fun HistoricoSection(serie: List<PuntoHistoricoTasa>) {
     Column(Modifier.fillMaxWidth().padding(top = Spacing.xxl)) {
         Text("Variación 7 días", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(Spacing.md))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            historico.take(7).forEach { h ->
-                val base = historico.first().venta.toDouble()
+            val base = serie.firstOrNull()?.venta?.toDouble() ?: 0.0
+            serie.forEach { h ->
                 val actual = h.venta.toDouble()
                 val diff = actual - base
                 val color = if (diff >= 0) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error
@@ -233,7 +243,7 @@ fun HistoricoSection(historico: List<TasaCambio>) {
                 Icon(Icons.Outlined.History, null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(Spacing.md))
                 Text(
-                    "Última actualización: %s".format(historico.last().fecha.toString()),
+                    "Última actualización: %s".format(serie.last().fecha.toString()),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

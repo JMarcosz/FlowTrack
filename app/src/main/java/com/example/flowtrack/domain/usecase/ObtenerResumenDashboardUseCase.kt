@@ -1,9 +1,10 @@
 package com.example.flowtrack.domain.usecase
 
 import com.example.flowtrack.core.result.AppResult
-import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.data.firestore.repositories.CuentaRepository
+import com.example.flowtrack.data.firestore.repositories.TasaCambioRepository
+import com.example.flowtrack.domain.model.CategoriaCatalogo
 import com.example.flowtrack.domain.model.TipoTransaccion
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -67,9 +68,10 @@ data class ResumenDashboard(
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ObtenerResumenDashboardUseCase @Inject constructor(
+    private val flujoUnificadoUseCase: ObtenerFlujoUnificadoUseCase,
     private val transaccionRepository: TransaccionRepository,
-    private val movimientoTarjetaRepository: MovimientoTarjetaRepository,
     private val cuentaRepository: CuentaRepository,
+    private val tasaCambioRepository: TasaCambioRepository,
     private val comparisonService: FinancialComparisonService,
 ) {
 
@@ -83,37 +85,25 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         val rangoActual   = comparisonService.getCurrentComparisonPeriod(periodo, ahora, zona)
         val rangoAnterior = comparisonService.getPreviousEquivalentPeriod(periodo, ahora, zona)
         val unidad        = unidadParaPeriodo(periodo)
+        val tasaDeferred  = async { tasaCambioRepository.obtenerTasaDelDia() }
 
         // ── Cargar datos en paralelo ──────────────────────────────────────────
-        val txActualDeferred = async {
-            transaccionRepository.obtenerTransacciones(uid, rangoActual.inicio, rangoActual.fin, limite = 0)
-        }
-        val txAnteriorDeferred = async {
-            transaccionRepository.obtenerTransacciones(uid, rangoAnterior.inicio, rangoAnterior.fin, limite = 0)
-        }
-        val movActualDeferred = async {
-            movimientoTarjetaRepository.obtenerMovimientos(uid, rangoActual.inicio, rangoActual.fin)
-        }
-        val movAnteriorDeferred = async {
-            movimientoTarjetaRepository.obtenerMovimientos(uid, rangoAnterior.inicio, rangoAnterior.fin)
-        }
+        val actualDeferred = async { flujoUnificadoUseCase.ejecutar(uid, rangoActual.inicio, rangoActual.fin) }
+        val anteriorDeferred = async { flujoUnificadoUseCase.ejecutar(uid, rangoAnterior.inicio, rangoAnterior.fin) }
         val cuentasDeferred = async { cuentaRepository.obtenerCuentas(uid) }
 
-        val resTxActual = txActualDeferred.await()
-        if (resTxActual is AppResult.Error) return@coroutineScope AppResult.Error(resTxActual.error)
-        val txActuales = (resTxActual as AppResult.Success).data
+        val resActual = actualDeferred.await()
+        if (resActual is AppResult.Error) return@coroutineScope AppResult.Error(resActual.error)
+        val flujoActual = (resActual as AppResult.Success).data
+        val tasaCambio = (tasaDeferred.await() as? AppResult.Success)?.data
+        val txActuales = flujoActual.transacciones.map { it.normalizarMoneda(tasaCambio) }
+        val movActuales = flujoActual.movimientos.map { it.normalizarMoneda(tasaCambio) }
 
-        val resTxAnterior = txAnteriorDeferred.await()
-        if (resTxAnterior is AppResult.Error) return@coroutineScope AppResult.Error(resTxAnterior.error)
-        val txAnteriores = (resTxAnterior as AppResult.Success).data
-
-        val resMovActual = movActualDeferred.await()
-        if (resMovActual is AppResult.Error) return@coroutineScope AppResult.Error(resMovActual.error)
-        val movActuales = (resMovActual as AppResult.Success).data
-
-        val resMovAnterior = movAnteriorDeferred.await()
-        if (resMovAnterior is AppResult.Error) return@coroutineScope AppResult.Error(resMovAnterior.error)
-        val movAnteriores = (resMovAnterior as AppResult.Success).data
+        val resAnterior = anteriorDeferred.await()
+        if (resAnterior is AppResult.Error) return@coroutineScope AppResult.Error(resAnterior.error)
+        val flujoAnterior = (resAnterior as AppResult.Success).data
+        val txAnteriores = flujoAnterior.transacciones.map { it.normalizarMoneda(tasaCambio) }
+        val movAnteriores = flujoAnterior.movimientos.map { it.normalizarMoneda(tasaCambio) }
 
         val resCuentas = cuentasDeferred.await()
         if (resCuentas is AppResult.Error) return@coroutineScope AppResult.Error(resCuentas.error)
@@ -141,7 +131,7 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
                 // Consultar ultima transaccion historica previa al rango
                 val resPrevia = transaccionRepository.obtenerTransacciones(uid, null, rangoActual.inicio, 1)
                 if (resPrevia is AppResult.Success) {
-                    val txPrevia = resPrevia.data.filter { it.cuentaId == cuenta.id }.firstOrNull()
+                    val txPrevia = resPrevia.data.filter { it.cuentaId == cuenta.id }.firstOrNull()?.normalizarMoneda(tasaCambio)
                     totalBalanceFinal += (txPrevia?.balanceDespues ?: BigDecimal.ZERO)
                 }
             }
@@ -168,11 +158,11 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         // ── Breakdown por categoría (top 5 gastos) ───────────────────────────
         val catCuenta = txActuales
             .filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
-            .groupBy { it.categoriaId ?: "sin_categorizar" }
+            .groupBy { CategoriaCatalogo.normalizarId(it.categoriaId) ?: CategoriaCatalogo.SIN_CATEGORIZAR }
             .mapValues { (_, txs) -> txs.fold(BigDecimal.ZERO) { a, tx -> a + tx.monto } }
         val catTarjeta = movActuales
             .filter { it.tipoMovimiento.esGastoFinanciero() }
-            .groupBy { it.categoriaId ?: "sin_categorizar" }
+            .groupBy { CategoriaCatalogo.normalizarId(it.categoriaId) ?: CategoriaCatalogo.SIN_CATEGORIZAR }
             .mapValues { (_, mvs) -> mvs.fold(BigDecimal.ZERO) { a, mv -> a + mv.monto } }
         val gastosPorCategoria = (catCuenta.keys + catTarjeta.keys).distinct()
             .map { id -> DatosCategoriaResumen(id, (catCuenta[id] ?: BigDecimal.ZERO) + (catTarjeta[id] ?: BigDecimal.ZERO)) }

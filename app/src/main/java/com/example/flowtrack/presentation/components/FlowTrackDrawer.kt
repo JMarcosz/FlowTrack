@@ -51,11 +51,15 @@ private val drawerItems = listOf(
     DrawerItem(Screen.Conversor.route, "Tasas de cambio", Icons.Outlined.CurrencyExchange),
 )
 
+private fun rutaDesdeSidebar(route: String): String = "$route?fromSidebar=true"
+
 @Composable
 fun FlowTrackDrawer(
     currentRoute: String?,
     onNavigate: (String) -> Unit,
 ) {
+    val currentBaseRoute = currentRoute?.substringBefore("?")
+
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.background,
     ) {
@@ -93,8 +97,8 @@ fun FlowTrackDrawer(
                     drawerItems.forEachIndexed { index, item ->
                         DrawerRow(
                             item = item,
-                            isSelected = currentRoute == item.route,
-                            onClick = { onNavigate(item.route) }
+                            isSelected = currentBaseRoute == item.route,
+                            onClick = { onNavigate(rutaDesdeSidebar(item.route)) }
                         )
                         if (index < drawerItems.size - 1) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)

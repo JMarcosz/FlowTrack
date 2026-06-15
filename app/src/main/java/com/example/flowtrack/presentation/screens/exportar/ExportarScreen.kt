@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.presentation.components.BankLogo
@@ -67,11 +68,21 @@ private val FMT_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 @Composable
 fun ExportarScreen(
     navController: NavController,
+    fromSidebar: Boolean = false,
+    onDrawerReopen: () -> Unit = {},
     viewModel: ExportarViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     var showInicioPicker by remember { mutableStateOf(false) }
     var showFinPicker by remember { mutableStateOf(false) }
+    val volver = {
+        navController.popBackStack()
+        if (fromSidebar) {
+            onDrawerReopen()
+        }
+    }
+
+    BackHandler(onBack = volver)
 
     LaunchedEffect(state.error, state.exito) {
         if (state.error != null || state.exito != null) {
@@ -107,7 +118,7 @@ fun ExportarScreen(
             TopAppBar(
                 title = { Text("Exportar estados", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = volver) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
                     }
                 },

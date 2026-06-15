@@ -185,7 +185,7 @@ fun ConfiguracionScreen(
                 ConfigItem(
                     icon = Icons.Outlined.Shield,
                     label = "Privacidad y seguridad",
-                    onClick = { },
+                    onClick = { navController.navigate(Screen.Privacidad.route) },
                 )
             }
 

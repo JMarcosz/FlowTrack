@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.ReglaSugerida
@@ -43,19 +44,29 @@ import com.example.flowtrack.ui.theme.Spacing
 @Composable
 fun SugerenciasScreen(
     navController: NavController,
+    fromSidebar: Boolean = false,
+    onDrawerReopen: () -> Unit = {},
     viewModel: SugerenciasViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     
     var showCategorySheetFor by remember { mutableStateOf<ReglaSugerida?>(null) }
     val sheetState = rememberModalBottomSheetState()
+    val volver = {
+        navController.popBackStack()
+        if (fromSidebar) {
+            onDrawerReopen()
+        }
+    }
+
+    BackHandler(onBack = volver)
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Asistente de Categorización", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = volver) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
                     }
                 },

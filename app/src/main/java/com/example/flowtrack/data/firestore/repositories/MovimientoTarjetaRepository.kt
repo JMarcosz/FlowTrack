@@ -59,6 +59,20 @@ class MovimientoTarjetaRepository @Inject constructor(
         }
     }
 
+    suspend fun actualizarMovimiento(movimiento: MovimientoTarjeta): AppResult<Unit> {
+        return try {
+            offlineStore.upsertMovimientosTarjeta(listOf(movimiento))
+            val updates = mapOf(
+                "categoriaId" to movimiento.categoriaId,
+                "categoriaAutomatica" to movimiento.categoriaAutomatica,
+            )
+            colRef(movimiento.uidUsuario).document(movimiento.id).update(updates).await()
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error al actualizar movimiento de tarjeta: ${e.message}", e))
+        }
+    }
+
     private suspend fun syncRemote(
         uid: String,
         inicio: Instant,

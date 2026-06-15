@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.example.flowtrack.core.notifications.NotificationHelper
+import com.example.flowtrack.core.workers.ClusteringWorker
+import com.example.flowtrack.core.workers.TasaCambioWorker
 import com.example.flowtrack.widget.BalanceWidgetWorker
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -23,5 +25,7 @@ class FlowTrackApplication : Application(), Configuration.Provider {
         com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
         NotificationHelper.crearCanales(this)
         BalanceWidgetWorker.enqueue(this)
+        ClusteringWorker.enqueue(this)
+        TasaCambioWorker.enqueue(this)
     }
 }

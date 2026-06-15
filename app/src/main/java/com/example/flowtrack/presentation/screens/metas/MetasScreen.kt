@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.activity.compose.BackHandler
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.Meta
 import com.example.flowtrack.ui.theme.*
@@ -37,6 +38,8 @@ private val EMOJIS = listOf("🏠", "✈️", "🚗", "📱", "💍", "🎓", "�
 @Composable
 fun MetasScreen(
     navController: NavController,
+    fromSidebar: Boolean = false,
+    onDrawerReopen: () -> Unit = {},
     viewModel: MetasViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -44,13 +47,22 @@ fun MetasScreen(
     var metaParaDeposito by remember { mutableStateOf<Meta?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val volver = {
+        navController.popBackStack()
+        if (fromSidebar) {
+            onDrawerReopen()
+        }
+    }
+
+    BackHandler(onBack = volver)
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Metas de ahorro", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = volver) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },

@@ -1,10 +1,12 @@
 package com.example.flowtrack.domain.usecase
 
 import com.example.flowtrack.core.result.AppResult
-import com.example.flowtrack.data.firestore.repositories.MovimientoTarjetaRepository
-import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.data.firestore.repositories.CuentaRepository
+import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
+import com.example.flowtrack.data.firestore.repositories.TasaCambioRepository
+import com.example.flowtrack.domain.model.CategoriaCatalogo
 import com.example.flowtrack.domain.model.TipoTransaccion
+import com.example.flowtrack.presentation.model.FiltrosAvanzadosState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -26,91 +28,123 @@ data class ResumenBanco(
 data class ResumenGeneral(
     val ingresosTotales: BigDecimal,
     val gastosTotales: BigDecimal,
-    val balanceNeto: BigDecimal, // Suma de balances finales de las cuentas al cierre del periodo
+    val balanceNeto: BigDecimal, // Suma de balances finales de las cuentas al cierre del periodo (afectado por filtro de banco)
     val porCategoria: List<ResumenCategoria>,
-    val porBanco: List<ResumenBanco>
-)
+    val porBanco: List<ResumenBanco>,
+    val gastosPorBanco: List<ResumenBanco> // Agregado para compatibilidad con ResumenViewModel (usando porBanco)
+) {
+    val gastosPorCategoria = porCategoria
+}
 
 class ObtenerResumenUseCase @Inject constructor(
+    private val flujoUnificadoUseCase: ObtenerFlujoUnificadoUseCase,
     private val transaccionRepository: TransaccionRepository,
-    private val movimientoTarjetaRepository: MovimientoTarjetaRepository,
     private val cuentaRepository: CuentaRepository,
+    private val tasaCambioRepository: TasaCambioRepository,
 ) {
-    suspend fun ejecutar(uid: String, inicio: Instant, fin: Instant): AppResult<ResumenGeneral> = coroutineScope {
-        val txDeferred = async { transaccionRepository.obtenerTransacciones(uid, inicio, fin, limite = 0) }
-        val movDeferred = async { movimientoTarjetaRepository.obtenerMovimientos(uid, inicio, fin) }
+    suspend fun ejecutar(
+        uid: String,
+        inicio: Instant,
+        fin: Instant,
+        filtros: FiltrosAvanzadosState = FiltrosAvanzadosState(),
+    ): AppResult<ResumenGeneral> = coroutineScope {
+        val flujoDeferred = async { flujoUnificadoUseCase.ejecutar(uid, inicio, fin) }
         val cuentasDeferred = async { cuentaRepository.obtenerCuentas(uid) }
+        val tasaDeferred = async { tasaCambioRepository.obtenerTasaDelDia() }
 
-        val resTx = txDeferred.await()
-        if (resTx is AppResult.Error) return@coroutineScope AppResult.Error(resTx.error)
-
-        val resMov = movDeferred.await()
-        if (resMov is AppResult.Error) return@coroutineScope AppResult.Error(resMov.error)
+        val resFlujo = flujoDeferred.await()
+        if (resFlujo is AppResult.Error) return@coroutineScope AppResult.Error(resFlujo.error)
 
         val resCuentas = cuentasDeferred.await()
         if (resCuentas is AppResult.Error) return@coroutineScope AppResult.Error(resCuentas.error)
 
-        val transacciones = (resTx as AppResult.Success).data
-        val movimientos = (resMov as AppResult.Success).data
-        val cuentasVisibles = (resCuentas as AppResult.Success).data.filter { it.activa && it.mostrarEnDashboard }
+        val tasaCambio = (tasaDeferred.await() as? AppResult.Success)?.data
+
+        val flujo = (resFlujo as AppResult.Success).data
+        var transacciones = flujo.transacciones.map { it.normalizarMoneda(tasaCambio) }
+        var movimientos = flujo.movimientos.map { it.normalizarMoneda(tasaCambio) }
+        var cuentasVisibles = (resCuentas as AppResult.Success).data.filter { it.activa && it.mostrarEnDashboard }
+
+        if (filtros.bancoId != null) {
+            transacciones = transacciones.filter { it.bancoCodigo == filtros.bancoId }
+            cuentasVisibles = cuentasVisibles.filter { it.bancoCodigo == filtros.bancoId }
+        }
+
+        if (filtros.rangoMonto.minimo != null) {
+            transacciones = transacciones.filter { it.monto >= filtros.rangoMonto.minimo }
+            movimientos = movimientos.filter { it.monto >= filtros.rangoMonto.minimo }
+        }
+
+        if (filtros.rangoMonto.maximo != null) {
+            transacciones = transacciones.filter { it.monto <= filtros.rangoMonto.maximo }
+            movimientos = movimientos.filter { it.monto <= filtros.rangoMonto.maximo }
+        }
+
+        fun categoriaNormalizada(id: String?): String? = CategoriaCatalogo.normalizarId(id)
+
+        if (filtros.soloSinCategorizar) {
+            transacciones = transacciones.filter {
+                categoriaNormalizada(it.categoriaId) == null ||
+                    categoriaNormalizada(it.categoriaId) == CategoriaCatalogo.SIN_CATEGORIZAR
+            }
+            movimientos = movimientos.filter {
+                categoriaNormalizada(it.categoriaId) == null ||
+                    categoriaNormalizada(it.categoriaId) == CategoriaCatalogo.SIN_CATEGORIZAR
+            }
+        } else if (filtros.categorias.isNotEmpty()) {
+            transacciones = transacciones.filter { categoriaNormalizada(it.categoriaId) in filtros.categorias }
+            movimientos = movimientos.filter { categoriaNormalizada(it.categoriaId) in filtros.categorias }
+        }
 
         withContext(Dispatchers.Default) {
             val totales = calcularTotalesFinancieros(transacciones, movimientos)
-            
-            // Calcular Balance Neto Real (Suma de balances finales)
-            var balanceNeto = BigDecimal.ZERO
-            cuentasVisibles.forEach { cuenta ->
-                val ultimaTxRango = transacciones.filter { it.cuentaId == cuenta.id }.maxByOrNull { it.fecha }
-                if (ultimaTxRango != null) {
-                    balanceNeto += (ultimaTxRango.balanceDespues ?: BigDecimal.ZERO)
+
+            val balanceNeto = cuentasVisibles.fold(BigDecimal.ZERO) { acc, cuenta ->
+                val resPrevia = transaccionRepository.obtenerTransacciones(uid, null, fin, 1, cuenta.id)
+                val balanceCuenta = if (resPrevia is AppResult.Success) {
+                    resPrevia.data.firstOrNull()?.normalizarMoneda(tasaCambio)?.balanceDespues ?: BigDecimal.ZERO
                 } else {
-                    // Buscar ultima transaccion historica previa al fin del periodo
-                    val resPrevia = transaccionRepository.obtenerTransacciones(uid, null, fin, 1, cuenta.id)
-                    if (resPrevia is AppResult.Success) {
-                        val txPrevia = resPrevia.data.firstOrNull()
-                        balanceNeto += (txPrevia?.balanceDespues ?: BigDecimal.ZERO)
-                    }
+                    BigDecimal.ZERO
                 }
+                acc + balanceCuenta
             }
 
             val totalFloat = totales.gastos.toFloat().coerceAtLeast(1f)
 
-            // Agrupación por categoría
             val gastosPorCat = mutableMapOf<String, BigDecimal>()
             transacciones.filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }.forEach { tx ->
-                val cat = tx.categoriaId ?: "sin_categorizar"
+                val cat = categoriaNormalizada(tx.categoriaId) ?: CategoriaCatalogo.SIN_CATEGORIZAR
                 gastosPorCat[cat] = (gastosPorCat[cat] ?: BigDecimal.ZERO) + tx.monto
             }
             movimientos.filter { it.tipoMovimiento.esGastoFinanciero() }.forEach { mov ->
-                val cat = mov.categoriaId ?: "sin_categorizar"
+                val cat = categoriaNormalizada(mov.categoriaId) ?: CategoriaCatalogo.SIN_CATEGORIZAR
                 gastosPorCat[cat] = (gastosPorCat[cat] ?: BigDecimal.ZERO) + mov.monto
             }
             val porCategoria = gastosPorCat.map { (cat, total) ->
                 ResumenCategoria(cat, total, (total.toFloat() / totalFloat) * 100f)
             }.sortedByDescending { it.total }
 
-            // Agrupación por banco
             val ingresosPorBanco = mutableMapOf<String, BigDecimal>()
-            val gastosPorBanco = mutableMapOf<String, BigDecimal>()
-            
+            val gastosPorBancoMap = mutableMapOf<String, BigDecimal>()
+
             transacciones.filter { !it.esDerivada }.forEach { tx ->
                 if (tx.tipo == TipoTransaccion.CREDITO) {
                     ingresosPorBanco[tx.bancoCodigo] = (ingresosPorBanco[tx.bancoCodigo] ?: BigDecimal.ZERO) + tx.monto
                 } else {
-                    gastosPorBanco[tx.bancoCodigo] = (gastosPorBanco[tx.bancoCodigo] ?: BigDecimal.ZERO) + tx.monto
+                    gastosPorBancoMap[tx.bancoCodigo] = (gastosPorBancoMap[tx.bancoCodigo] ?: BigDecimal.ZERO) + tx.monto
                 }
             }
             movimientos.forEach { mov ->
                 if (mov.tipoMovimiento.esIngresoFinanciero()) {
                     ingresosPorBanco[mov.bancoCodigo] = (ingresosPorBanco[mov.bancoCodigo] ?: BigDecimal.ZERO) + mov.monto
                 } else if (mov.tipoMovimiento.esGastoFinanciero()) {
-                    gastosPorBanco[mov.bancoCodigo] = (gastosPorBanco[mov.bancoCodigo] ?: BigDecimal.ZERO) + mov.monto
+                    gastosPorBancoMap[mov.bancoCodigo] = (gastosPorBancoMap[mov.bancoCodigo] ?: BigDecimal.ZERO) + mov.monto
                 }
             }
 
-            val todosBancos = (gastosPorBanco.keys + ingresosPorBanco.keys).toSet()
+            val todosBancos = (gastosPorBancoMap.keys + ingresosPorBanco.keys).toSet()
             val porBanco = todosBancos.map { banco ->
-                val g = gastosPorBanco[banco] ?: BigDecimal.ZERO
+                val g = gastosPorBancoMap[banco] ?: BigDecimal.ZERO
                 val i = ingresosPorBanco[banco] ?: BigDecimal.ZERO
                 ResumenBanco(banco, g, i, (g.toFloat() / totalFloat) * 100f)
             }.sortedByDescending { it.gastos }
@@ -122,6 +156,7 @@ class ObtenerResumenUseCase @Inject constructor(
                     balanceNeto = balanceNeto,
                     porCategoria = porCategoria,
                     porBanco = porBanco,
+                    gastosPorBanco = porBanco,
                 )
             )
         }

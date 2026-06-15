@@ -1,6 +1,7 @@
 package com.example.flowtrack.presentation.components
 
 import androidx.compose.ui.graphics.Color
+import com.example.flowtrack.domain.model.CategoriaCatalogo
 import com.example.flowtrack.ui.theme.*
 
 data class CategoriaUI(
@@ -9,26 +10,39 @@ data class CategoriaUI(
     val color: Color,
 )
 
-// Colores alineados al design system §1.4
-val categoriaRegistry: Map<String, CategoriaUI> = listOf(
-    CategoriaUI("alimentacion",           "Alimentación",             CatAlimentacion),
-    CategoriaUI("transporte",             "Transporte",               CatTransporte),
-    CategoriaUI("salud",                  "Salud",                    CatSalud),
-    CategoriaUI("entretenimiento",        "Entretenimiento",          CatPagos),
-    CategoriaUI("suscripciones",          "Suscripciones",            CatSuscripciones),
-    CategoriaUI("servicios",              "Servicios",                CatServicios),
-    CategoriaUI("compras",                "Compras",                  CatCompras),
-    CategoriaUI("atm",                    "Retiro ATM",               CatAtm),
-    CategoriaUI("transferencia_enviada",  "Transferencia enviada",    CatOtros),
-    CategoriaUI("impuestos",              "Impuestos",                CatImpuestos),
-    CategoriaUI("intereses_comisiones",   "Intereses y comisiones",   CatServicios),
-    CategoriaUI("salario",                "Salario",                  CatIngresos),
-    CategoriaUI("transferencia_recibida", "Transferencia recibida",   CatIngresos),
-    CategoriaUI("deposito",               "Depósito",                 CatIngresos),
-    CategoriaUI("cashback",               "Cashback",                 CatCashback),
-    CategoriaUI("pago_tarjeta",           "Pago a tarjeta",           CatPagos),
-    CategoriaUI("sin_categorizar",        "Sin categorizar",          CatSinCategorizar),
-).associateBy { it.id }
+// Colores alineados al design system §1.4.
+val categoriaRegistry: Map<String, CategoriaUI> = CategoriaCatalogo.categorias
+    .map { definicion ->
+        CategoriaUI(
+            id = definicion.id,
+            nombre = definicion.nombre,
+            color = colorParaCategoria(definicion.id),
+        )
+    }
+    .associateBy { it.id }
 
-fun categoriaPorId(id: String): CategoriaUI =
-    categoriaRegistry[id] ?: categoriaRegistry["sin_categorizar"]!!
+fun categoriaPorId(id: String?): CategoriaUI {
+    val normalized = CategoriaCatalogo.normalizarId(id)
+    return categoriaRegistry[normalized] ?: categoriaRegistry[CategoriaCatalogo.SIN_CATEGORIZAR]!!
+}
+
+private fun colorParaCategoria(id: String): Color = when (id) {
+    CategoriaCatalogo.ALIMENTACION -> CatAlimentacion
+    CategoriaCatalogo.TRANSPORTE -> CatTransporte
+    CategoriaCatalogo.SALUD -> CatSalud
+    CategoriaCatalogo.ENTRETENIMIENTO -> CatPagos
+    CategoriaCatalogo.SUSCRIPCIONES -> CatSuscripciones
+    CategoriaCatalogo.SERVICIOS -> CatServicios
+    CategoriaCatalogo.COMPRAS -> CatCompras
+    CategoriaCatalogo.ATM -> CatAtm
+    CategoriaCatalogo.TRANSFERENCIA_ENVIADA -> CatOtros
+    CategoriaCatalogo.IMPUESTOS -> CatImpuestos
+    CategoriaCatalogo.INTERESES_COMISIONES -> CatServicios
+    CategoriaCatalogo.SALARIO -> CatIngresos
+    CategoriaCatalogo.TRANSFERENCIA_RECIBIDA -> CatIngresos
+    CategoriaCatalogo.DEPOSITO -> CatIngresos
+    CategoriaCatalogo.CASHBACK -> CatCashback
+    CategoriaCatalogo.PAGO_TARJETA -> CatPagos
+    CategoriaCatalogo.SIN_CATEGORIZAR -> CatSinCategorizar
+    else -> CatSinCategorizar
+}

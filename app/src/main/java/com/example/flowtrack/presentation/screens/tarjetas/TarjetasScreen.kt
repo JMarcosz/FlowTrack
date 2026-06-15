@@ -1,4 +1,4 @@
-package com.example.flowtrack.presentation.screens.tarjetas
+﻿package com.example.flowtrack.presentation.screens.tarjetas
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -75,6 +75,8 @@ import com.example.flowtrack.core.extensions.formatDate
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.core.extensions.toBigDecimalSafe
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
+import com.example.flowtrack.domain.model.MovimientoTarjeta
+import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.Tarjeta
 import com.example.flowtrack.presentation.components.BankBadge
 import com.example.flowtrack.presentation.components.CreditCardShimmerItem
@@ -90,7 +92,7 @@ import java.time.temporal.ChronoUnit
 private val BANCOS_TARJETA = listOf("BANRESERVAS", "POPULAR", "QIK", "CIBAO", "BHD", "OTRO")
 private val ZONA = ZoneId.of("America/Santo_Domingo")
 
-// ── Screen ───────────────────────────────────────────────────────────────────
+// â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -111,7 +113,7 @@ fun TarjetasScreen(
             modifier = Modifier
                 .fillMaxSize(),
         ) {
-            // ── Header ────────────────────────────────────────────
+            // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -124,7 +126,7 @@ fun TarjetasScreen(
                     onClick = onMenuClick,
                     modifier = Modifier.size(36.dp),
                 ) {
-                    Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(Icons.Outlined.Menu, contentDescription = "MenÃº", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 Column {
                     Text(
@@ -135,7 +137,7 @@ fun TarjetasScreen(
                         letterSpacing = (-0.5).sp,
                     )
                     Text(
-                        "Crédito y pagos",
+                        "CrÃ©dito y pagos",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Normal,
@@ -155,7 +157,7 @@ fun TarjetasScreen(
 
             Spacer(Modifier.height(Spacing.xl))
 
-            // ── Content ───────────────────────────────────────────
+            // â”€â”€ Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             when {
                 state.isLoading && state.tarjetas.isEmpty() -> CreditCardShimmerItem()
 
@@ -172,12 +174,14 @@ fun TarjetasScreen(
                     val tarjetaActual = state.tarjetas[activeIdx]
                     val historial = (state.estadosPorTarjeta[tarjetaActual.id] ?: emptyList())
                         .sortedByDescending { it.fechaCorte }
+                    val movimientosRecientes = (state.movimientosPorTarjeta[tarjetaActual.id] ?: emptyList())
+                        .sortedByDescending { it.fechaTransaccion }
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = Spacing.xxl),
                     ) {
-                        // ── Card carousel ──────────────────────────
+                        // â”€â”€ Card carousel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         item {
                             HorizontalPager(
                                 state = pagerState,
@@ -196,7 +200,7 @@ fun TarjetasScreen(
                             }
                         }
 
-                        // ── Page dots ──────────────────────────────
+                        // â”€â”€ Page dots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         item {
                             Row(
                                 modifier = Modifier
@@ -221,7 +225,31 @@ fun TarjetasScreen(
                             }
                         }
 
-                        // ── Próximos pagos ─────────────────────────
+                        // â”€â”€ PrÃ³ximos pagos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                        if (movimientosRecientes.isNotEmpty()) {
+                            item {
+                                SectionLabel(
+                                    "Movimientos recientes",
+                                    modifier = Modifier.padding(
+                                        start = Spacing.xxl, end = Spacing.xxl,
+                                        top = Spacing.sm, bottom = Spacing.sm,
+                                    ),
+                                )
+                            }
+                            item {
+                                WhiteCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = Spacing.xxl),
+                                ) {
+                                    movimientosRecientes.take(8).forEachIndexed { idx, mov ->
+                                        MovimientoTarjetaRow(mov)
+                                        if (idx < movimientosRecientes.take(8).lastIndex) HorizontalDivider()
+                                    }
+                                }
+                            }
+                        }
+
                         val ahora = Instant.now()
                         val pagosProximos = state.tarjetas.mapNotNull { t ->
                             val snap = (state.estadosPorTarjeta[t.id] ?: emptyList())
@@ -233,7 +261,7 @@ fun TarjetasScreen(
                         if (pagosProximos.isNotEmpty()) {
                             item {
                                 SectionLabel(
-                                    "Próximos pagos",
+                                    "PrÃ³ximos pagos",
                                     modifier = Modifier.padding(
                                         start = Spacing.xxl, end = Spacing.xxl,
                                         top = Spacing.xxl, bottom = Spacing.sm,
@@ -254,7 +282,7 @@ fun TarjetasScreen(
                             }
                         }
 
-                        // ── Otras tarjetas ─────────────────────────
+                        // â”€â”€ Otras tarjetas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         val otras = state.tarjetas.filterIndexed { i, _ -> i != activeIdx }
                         if (otras.isNotEmpty()) {
                             item {
@@ -282,7 +310,7 @@ fun TarjetasScreen(
                             }
                         }
 
-                        // ── Historial ──────────────────────────────
+                        // â”€â”€ Historial â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         item {
                             Row(
                                 modifier = Modifier
@@ -343,7 +371,7 @@ fun TarjetasScreen(
     }
 }
 
-// ── White credit card ─────────────────────────────────────────────────────────
+// â”€â”€ White credit card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 fun WhiteCreditCard(
@@ -368,7 +396,7 @@ fun WhiteCreditCard(
     ) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
 
-            // ── Top: badge · name · status · menu ────────────────
+            // â”€â”€ Top: badge Â· name Â· status Â· menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BankBadgeCircle(badge, size = 40.dp)
                 Spacer(Modifier.width(Spacing.md))
@@ -382,14 +410,14 @@ fun WhiteCreditCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        "•••• ${tarjeta.ultimos4}",
+                        "â€¢â€¢â€¢â€¢ ${tarjeta.ultimos4}",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 0.8.sp,
                     )
                 }
                 // Status badge
-                StatusBadge("Al día")
+                StatusBadge("Al dÃ­a")
                 Spacer(Modifier.width(4.dp))
                 // More menu
                 if (onEliminar != null) {
@@ -413,17 +441,17 @@ fun WhiteCreditCard(
 
             Spacer(Modifier.height(Spacing.lg))
 
-            // ── Dates ─────────────────────────────────────────────
+            // â”€â”€ Dates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxl)) {
-                CardInfoItem("Corte", "día ${tarjeta.diaCorte}")
-                CardInfoItem("Pago", "día ${tarjeta.diaPago}")
+                CardInfoItem("Corte", "dÃ­a ${tarjeta.diaCorte}")
+                CardInfoItem("Pago", "dÃ­a ${tarjeta.diaPago}")
             }
 
             Spacer(Modifier.height(Spacing.lg))
             HorizontalDivider()
             Spacer(Modifier.height(Spacing.lg))
 
-            // ── Balance row ───────────────────────────────────────
+            // â”€â”€ Balance row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     Text("Pago total pendiente", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
@@ -438,7 +466,7 @@ fun WhiteCreditCard(
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Pago mínimo", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
+                    Text("Pago mÃ­nimo", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(3.dp))
                     Text(
                         formatMoney(pagoMinimo, tarjeta.moneda),
@@ -452,12 +480,12 @@ fun WhiteCreditCard(
 
             Spacer(Modifier.height(Spacing.xl))
 
-            // ── Utilización ───────────────────────────────────────
+            // â”€â”€ UtilizaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("Utilización", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("UtilizaciÃ³n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("${"%.0f".format(utilizacionFrac * 100)}%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(6.dp))
@@ -478,7 +506,7 @@ fun WhiteCreditCard(
             }
             Spacer(Modifier.height(Spacing.sm))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Límite disponible", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("LÃ­mite disponible", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     formatMoney(limiteDisponible, tarjeta.moneda),
                     fontSize = 12.sp,
@@ -490,9 +518,9 @@ fun WhiteCreditCard(
 
             Spacer(Modifier.height(Spacing.xl))
 
-            // ── Ver detalle ───────────────────────────────────────
+            // â”€â”€ Ver detalle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Text(
-                "Ver detalle ›",
+                "Ver detalle â€º",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
@@ -502,7 +530,7 @@ fun WhiteCreditCard(
     }
 }
 
-// ── Pago próximo row ──────────────────────────────────────────────────────────
+// â”€â”€ Pago prÃ³ximo row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Instant) {
@@ -535,7 +563,7 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "Vence ${formatDate(fechaLocal)} • $diasRestantes día${if (diasRestantes == 1) "" else "s"}",
+                "Vence ${formatDate(fechaLocal)} â€¢ $diasRestantes dÃ­a${if (diasRestantes == 1) "" else "s"}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -554,7 +582,7 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
     }
 }
 
-// ── Otra tarjeta compact row ──────────────────────────────────────────────────
+// â”€â”€ Otra tarjeta compact row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun OtraTarjetaRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap?) {
@@ -595,7 +623,7 @@ private fun OtraTarjetaRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap?) {
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "•••• ${tarjeta.ultimos4} · Corte día ${tarjeta.diaCorte}",
+                "â€¢â€¢â€¢â€¢ ${tarjeta.ultimos4} Â· Corte dÃ­a ${tarjeta.diaCorte}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -611,7 +639,7 @@ private fun OtraTarjetaRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap?) {
     }
 }
 
-// ── Historial row ─────────────────────────────────────────────────────────────
+// â”€â”€ Historial row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun HistorialRow(snap: EstadoTarjetaSnap) {
@@ -639,7 +667,47 @@ private fun HistorialRow(snap: EstadoTarjetaSnap) {
     }
 }
 
-// ── Reusable sub-components ───────────────────────────────────────────────────
+
+@Composable
+private fun MovimientoTarjetaRow(mov: MovimientoTarjeta) {
+    val esIngreso = mov.tipoMovimiento == TipoMovimientoTarjeta.PAGO ||
+        mov.tipoMovimiento == TipoMovimientoTarjeta.CASHBACK
+    val signo = if (esIngreso) "+" else "-"
+    val color = if (esIngreso) ExtendedTheme.colors.success else MaterialTheme.colorScheme.onSurface
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xl, vertical = Spacing.md),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                mov.descripcionOriginal.ifBlank { mov.descripcionNormalizada },
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                formatDate(mov.fechaTransaccion.atZone(ZONA).toLocalDate()),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            "$signo${formatMoney(mov.monto, mov.moneda)}",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+            style = TabularNumber,
+        )
+    }
+}
+
+// â”€â”€ Reusable sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 fun BankBadgeCircle(badge: BankBadge, size: androidx.compose.ui.unit.Dp) {
@@ -709,7 +777,7 @@ fun WhiteCard(
     )
 }
 
-// ── Nueva tarjeta sheet ───────────────────────────────────────────────────────
+// â”€â”€ Nueva tarjeta sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun NuevaTarjetaSheet(
@@ -760,7 +828,7 @@ private fun NuevaTarjetaSheet(
         OutlinedTextField(
             value = ultimos4,
             onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) ultimos4 = it },
-            label = { Text("Últimos 4 dígitos") },
+            label = { Text("Ãšltimos 4 dÃ­gitos") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -778,7 +846,7 @@ private fun NuevaTarjetaSheet(
         OutlinedTextField(
             value = limite,
             onValueChange = { limite = it },
-            label = { Text("Límite de crédito (RD\$)") },
+            label = { Text("LÃ­mite de crÃ©dito (RD\$)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -787,7 +855,7 @@ private fun NuevaTarjetaSheet(
         OutlinedTextField(
             value = diaCorte,
             onValueChange = { if (it.length <= 2 && it.all(Char::isDigit)) diaCorte = it },
-            label = { Text("Día de corte (1-31)") },
+            label = { Text("DÃ­a de corte (1-31)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

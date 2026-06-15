@@ -7,6 +7,7 @@ import com.example.flowtrack.core.notifications.NotificationHelper
 import com.example.flowtrack.core.notifications.NotificationRoute
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
+import com.example.flowtrack.core.workers.ClusteringWorker
 import com.example.flowtrack.data.firestore.mappers.toDomainCuenta
 import com.example.flowtrack.data.firestore.mappers.toDomainEstadoTarjeta
 import com.example.flowtrack.data.firestore.mappers.toDomainMovimientoTarjeta
@@ -35,6 +36,7 @@ import java.time.ZoneId
 import javax.inject.Inject
 
 private const val LIMITE_BYTES = 10 * 1024 * 1024L
+private const val LIMITE_CLUSTERING_IMPORTACION = 50
 private val ZONA_RD = ZoneId.of("America/Santo_Domingo")
 
 /**
@@ -173,6 +175,9 @@ class ProcesarArchivoUseCase @Inject constructor(
 
                 when (val r = importacionRepository.persistirCarga(uid, cuenta, txCategorizadas, carga)) {
                     is AppResult.Success -> {
+                        if (txCategorizadas.size > LIMITE_CLUSTERING_IMPORTACION) {
+                            ClusteringWorker.enqueueAfterImport(context)
+                        }
                         notificarImportacionYAlertas(uid, carga, txCategorizadas, emptyList())
                         ResultadoImportacion.Exito(carga, txCategorizadas.size)
                     }
@@ -213,6 +218,9 @@ class ProcesarArchivoUseCase @Inject constructor(
 
                 when (val r = importacionRepository.persistirCargaTarjeta(uid, tarjeta, estadoTarjeta, movimientos, carga)) {
                     is AppResult.Success -> {
+                        if (movimientos.size > LIMITE_CLUSTERING_IMPORTACION) {
+                            ClusteringWorker.enqueueAfterImport(context)
+                        }
                         notificarImportacionYAlertas(uid, carga, emptyList(), movimientos)
                         ResultadoImportacion.Exito(carga, movimientos.size)
                     }

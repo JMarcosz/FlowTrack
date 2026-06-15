@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.Carga
@@ -81,12 +82,22 @@ private val ZONA = ZoneId.of("America/Santo_Domingo")
 @Composable
 fun HistorialScreen(
     navController: NavController,
+    fromSidebar: Boolean = false,
+    onDrawerReopen: () -> Unit = {},
     viewModel: HistorialViewModel = hiltViewModel(),
 ) {
     val estado by viewModel.estado.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmarEliminarTodo by remember { mutableStateOf(false) }
+    val volver = {
+        navController.popBackStack()
+        if (fromSidebar) {
+            onDrawerReopen()
+        }
+    }
+
+    BackHandler(onBack = volver)
 
     if (confirmarEliminarTodo) {
         AlertDialog(
@@ -116,7 +127,7 @@ fun HistorialScreen(
             TopAppBar(
                 title = { Text("Historial de importaciones", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = volver) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },

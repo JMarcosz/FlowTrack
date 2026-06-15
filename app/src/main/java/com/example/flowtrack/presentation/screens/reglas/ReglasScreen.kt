@@ -63,6 +63,7 @@ import com.example.flowtrack.domain.model.ReglaCategoria
 import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.domain.model.TipoMatch
 import com.example.flowtrack.presentation.components.categoriaRegistry
+import com.example.flowtrack.presentation.components.categoriaPorId
 import com.example.flowtrack.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -191,7 +192,7 @@ private fun MisReglasTab(reglas: List<ReglaCategoria>, onEliminar: (String) -> U
 
 @Composable
 private fun ReglaCard(regla: ReglaCategoria, onEliminar: () -> Unit) {
-    val catInfo = categoriaRegistry[regla.categoriaId]
+    val catInfo = categoriaPorId(regla.categoriaId)
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -208,7 +209,7 @@ private fun ReglaCard(regla: ReglaCategoria, onEliminar: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(regla.patron, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                 Text(
-                    "${tipoMatchLabel(regla.tipoMatch)} · ${catInfo?.nombre ?: regla.categoriaId}",
+                    "${tipoMatchLabel(regla.tipoMatch)} · ${catInfo.nombre}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

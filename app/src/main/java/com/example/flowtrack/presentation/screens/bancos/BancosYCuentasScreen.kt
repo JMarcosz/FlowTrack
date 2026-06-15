@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.activity.compose.BackHandler
 import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.Cuenta
@@ -63,11 +64,22 @@ private fun StableDropdown(
 @Composable
 fun BancosYCuentasScreen(
     navController: NavController,
+    fromSidebar: Boolean = false,
+    onDrawerReopen: () -> Unit = {},
     viewModel: BancosYCuentasViewModel = hiltViewModel(),
 ) {
     val estado by viewModel.estado.collectAsState()
     var mostrarSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val volver = {
+        navController.popBackStack()
+        if (fromSidebar) {
+            onDrawerReopen()
+        }
+    }
+
+    BackHandler(onBack = volver)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -75,7 +87,7 @@ fun BancosYCuentasScreen(
             TopAppBar(
                 title = { Text("Bancos y Cuentas", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = volver) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },

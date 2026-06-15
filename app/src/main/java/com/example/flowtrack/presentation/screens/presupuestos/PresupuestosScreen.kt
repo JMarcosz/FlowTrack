@@ -37,21 +37,34 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.activity.compose.BackHandler
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.PeriodoPresupuesto
 import com.example.flowtrack.domain.usecase.PresupuestoConGasto
 import com.example.flowtrack.presentation.components.categoriaRegistry
+import com.example.flowtrack.presentation.components.categoriaPorId
 import com.example.flowtrack.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PresupuestosScreen(
     navController: NavController,
+    fromSidebar: Boolean = false,
+    onDrawerReopen: () -> Unit = {},
     viewModel: PresupuestosViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     var mostrarSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val volver = {
+        navController.popBackStack()
+        if (fromSidebar) {
+            onDrawerReopen()
+        }
+    }
+
+    BackHandler(onBack = volver)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -59,7 +72,7 @@ fun PresupuestosScreen(
             TopAppBar(
                 title = { Text("Presupuestos", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = volver) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
@@ -139,15 +152,15 @@ fun PresupuestosScreen(
 
 @Composable
 private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
-    val cat = categoriaRegistry[pg.presupuesto.categoriaId]
-    val catColor = cat?.color ?: CatSinCategorizar
+    val cat = categoriaPorId(pg.presupuesto.categoriaId)
+    val catColor = cat.color
     var confirmarEliminar by remember { mutableStateOf(false) }
 
     if (confirmarEliminar) {
         AlertDialog(
             onDismissRequest = { confirmarEliminar = false },
             title = { Text("Eliminar presupuesto") },
-            text = { Text("¿Eliminar el presupuesto de ${cat?.nombre ?: "esta categoría"}?") },
+            text = { Text("¿Eliminar el presupuesto de ${cat.nombre}?") },
             confirmButton = {
                 TextButton(onClick = { onEliminar(); confirmarEliminar = false }) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)
@@ -178,7 +191,7 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        cat?.nombre?.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                        cat.nombre.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                         color = catColor,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
@@ -186,7 +199,7 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(cat?.nombre ?: "Sin categorizar", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                    Text(cat.nombre, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                     Text(
                         pg.presupuesto.periodo.name.lowercase().replaceFirstChar { it.uppercase() },
                         fontSize = 11.sp,

@@ -40,7 +40,7 @@ class AnalizarTransaccionesUseCaseTest {
             crearTx("id1", "DESC", null),
             crearTx("id2", "DESC", null)
         )
-        whenever(transaccionRepository.obtenerTransacciones(eq(uid), anyOrNull(), anyOrNull(), eq(1000)))
+        whenever(transaccionRepository.obtenerTransacciones(eq(uid), anyOrNull(), anyOrNull(), eq(1000), anyOrNull()))
             .thenReturn(AppResult.Success(txs))
 
         // WHEN
@@ -57,7 +57,7 @@ class AnalizarTransaccionesUseCaseTest {
         val txs = (1..6).map { i ->
             crearTx("id$i", "SUPERMERCADO NACIONAL $i", null)
         }
-        whenever(transaccionRepository.obtenerTransacciones(eq(uid), anyOrNull(), anyOrNull(), eq(1000)))
+        whenever(transaccionRepository.obtenerTransacciones(eq(uid), anyOrNull(), anyOrNull(), eq(1000), anyOrNull()))
             .thenReturn(AppResult.Success(txs))
         whenever(sugeridaRepository.guardarReglas(eq(uid), any())).thenReturn(AppResult.Success(Unit))
 
