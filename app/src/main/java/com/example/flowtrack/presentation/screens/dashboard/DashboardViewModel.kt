@@ -8,6 +8,8 @@ import com.example.flowtrack.data.store.AppDataStore
 import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.usecase.ObtenerResumenDashboardUseCase
 import com.example.flowtrack.domain.usecase.ResumenDashboard
+import com.example.flowtrack.presentation.model.FiltroPeriodo
+import com.example.flowtrack.presentation.model.PeriodoState
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -18,12 +20,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-
-val PERIODOS_DASHBOARD = listOf("Este mes", "Mes pasado", "Últimos 3 meses", "Este año")
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -31,32 +32,39 @@ class DashboardViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val store: AppDataStore,
     private val resumenUseCase: ObtenerResumenDashboardUseCase,
+    private val transaccionRepository: com.example.flowtrack.data.firestore.repositories.TransaccionRepository,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _periodo = savedStateHandle.getStateFlow(
+    private val _periodoLabel = savedStateHandle.getStateFlow(
         KEY_PERIODO,
-        PERIODOS_DASHBOARD.first(),
+        FiltroPeriodo.ESTE_MES.label,
     )
-    val periodo: StateFlow<String> = _periodo
 
-    val estado: StateFlow<DashboardEstado> = _periodo
-        .flatMapLatest { periodo ->
+    val periodo: StateFlow<PeriodoState> = _periodoLabel
+        .map { label -> PeriodoState(seleccionado = FiltroPeriodo.fromLabel(label) ?: FiltroPeriodo.ESTE_MES) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, PeriodoState())
+
+    val estado: StateFlow<DashboardEstado> = _periodoLabel
+        .flatMapLatest { label ->
             val uid = auth.currentUser?.uid
                 ?: return@flatMapLatest flowOf(DashboardEstado.Error("Sin sesión activa"))
+
+            val filtroPeriodo = FiltroPeriodo.fromLabel(label) ?: FiltroPeriodo.ESTE_MES
 
             combine(
                 flowOf(uid),
                 store.cuentas,
-            ) { u, cuentas ->
+                transaccionRepository.observarRevisionLocal().onStart { emit(0L) },
+            ) { u, cuentas, _ ->
                 val result = withContext(Dispatchers.Default) {
-                    resumenUseCase.ejecutar(u, periodo)
+                    resumenUseCase.ejecutar(u, filtroPeriodo.label)
                 }
                 when (result) {
                     is AppResult.Success -> DashboardEstado.Exito(
                         resumen       = result.data,
                         cuentas       = cuentas.filter { it.mostrarEnDashboard },
-                        periodo       = periodo,
+                        periodo       = PeriodoState(seleccionado = filtroPeriodo),
                         nombreUsuario = auth.currentUser?.displayName
                             ?.substringBefore(" ")
                             ?.ifBlank { null }
@@ -72,14 +80,14 @@ class DashboardViewModel @Inject constructor(
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.Lazily, DashboardEstado.Cargando)
 
-    fun seleccionarPeriodo(p: String) {
-        if (_periodo.value != p && p in PERIODOS_DASHBOARD) {
-            savedStateHandle[KEY_PERIODO] = p
+    fun seleccionarPeriodo(p: FiltroPeriodo) {
+        if (_periodoLabel.value != p.label) {
+            savedStateHandle[KEY_PERIODO] = p.label
         }
     }
 
     fun cargarDatos() {
-        val current = _periodo.value
+        val current = _periodoLabel.value
         savedStateHandle[KEY_PERIODO] = ""
         savedStateHandle[KEY_PERIODO] = current
     }
@@ -94,7 +102,7 @@ sealed class DashboardEstado {
     data class Exito(
         val resumen: ResumenDashboard,
         val cuentas: List<Cuenta>,
-        val periodo: String,
+        val periodo: PeriodoState,
         val nombreUsuario: String,
     ) : DashboardEstado()
     data class Error(val mensaje: String) : DashboardEstado()
