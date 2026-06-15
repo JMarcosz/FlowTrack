@@ -345,12 +345,12 @@ class OfflineStore @Inject constructor(
     }
 
     suspend fun getMetas(uid: String): List<Meta> = query {
-        queryPayloads(ENTITY_META, uid, "deleted_at_millis IS NULL", emptyArray(), "updated_at_millis DESC, entity_id DESC")
+        queryPayloads(ENTITY_META, uid, "activo=1 AND deleted_at_millis IS NULL", emptyArray(), "updated_at_millis DESC, entity_id DESC")
             .map { it.toMeta() }
     }
 
     suspend fun getPresupuestos(uid: String): List<Presupuesto> = query {
-        queryPayloads(ENTITY_PRESUPUESTO, uid, "deleted_at_millis IS NULL", emptyArray(), "updated_at_millis DESC, entity_id DESC")
+        queryPayloads(ENTITY_PRESUPUESTO, uid, "activo=1 AND deleted_at_millis IS NULL", emptyArray(), "updated_at_millis DESC, entity_id DESC")
             .map { it.toPresupuesto() }
     }
 
