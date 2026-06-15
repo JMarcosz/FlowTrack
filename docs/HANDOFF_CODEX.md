@@ -1,168 +1,182 @@
-# Handoff para agente Codex — Issues pendientes
+﻿# Estado Actual del Proyecto y Deuda TÃ©cnica (Handoff)
 
-> Documento de traspaso. Asume que ya leíste `CLAUDE.md` (stack, arquitectura, comandos, reglas).
-> Aquí solo va lo que **no** está en CLAUDE.md: estado real verificado, commits recientes,
-> gotchas de setup local y guía de implementación por issue.
-> Branch activo: `sprint-3-parsers-flujo-importacion`. Fecha: 2026-06-09.
-
-**Nota BHD**
-
-- BHD está activo como parser de cuentas PDF, registrado en Hilt, factory, upload y seed (`tieneParser: true`).
-- El fixture real vive solo en `docs/03-fixtures/bhd.pdf`. La regresión completa y los casos cifrados se ejecutan como prueba instrumentada; el archivo no se empaqueta, commitea ni imprime.
+> **Documento maestro de tracking y traspaso.**
+> Este archivo consolida el estado real verificado del proyecto, tareas completadas recientemente y la deuda tÃ©cnica (incluyendo migraciones pendientes de arquitectura y modo oscuro). Reemplaza a las auditorÃ­as antiguas, las cuales han sido eliminadas para evitar redundancias.
+> 
+> **Fecha de actualizaciÃ³n:** 2026-06-15.
 
 ---
 
-## 0. ⚠️ Regla de oro: la auditoría está DESACTUALIZADA
+## 1. Hitos Completados Recientemente
 
-`docs/AUDITORIA_SPRINTS.md` (fechada 2026-05-15) describe un estado del repo **anterior a varios refactors**.
-Ya se comprobó dos veces que sus "issues" no reflejan la realidad:
+### UnificaciÃ³n de Filtros (Completado)
+Se ha unificado con Ã©xito la interfaz de filtrado y el selector de periodos para las pantallas principales:
+- **Componentes ExtraÃ­dos:** `PeriodoDropdown` y `FiltrosSheet` extraÃ­dos a `presentation/components/Filters.kt` sin alterar estilos.
+- **Tipado Fuerte:** Creados `PeriodoState` y `FiltrosAvanzadosState` en `presentation/model/Filtros.kt`.
+- **ViewModels Refactorizados:** `DashboardViewModel`, `ResumenViewModel` y `TransaccionesViewModel` migrados para usar los nuevos estados.
+- **Dominio:** `ObtenerResumenUseCase` actualizado para aceptar `FiltrosAvanzadosState` y aplicar filtros (banco, monto, categorÃ­as) directamente al balance neto y agregaciones (donas/barras).
+- **Pruebas:** 15 pruebas unitarias (`DashboardViewModelTest`, `ResumenViewModelTest`, `ObtenerResumenUseCaseFiltrosTest`) creadas y pasando verde.
+- Se repararon pruebas existentes (`ObtenerBalancesPorCuentaUseCaseTest`, `AnalizarTransaccionesUseCaseTest`) que arrojaban falsos positivos por mock de parÃ¡metros `anyOrNull()`.
 
-- **Issue #1** ("ExitoTarjeta devuelve Error — Qik/Cibao no persisten") era **obsoleto**: la persistencia ya funcionaba; el problema real eran bugs de exactitud del parser.
-- **Issue #2** ("9 pantallas ausentes"): 5 de las 7 nombradas **ya existían y estaban ruteadas**.
+### BHD y Parsers
+- **BHD:** Activo como parser de cuentas PDF, registrado en Hilt y seed. El fixture real vive en `docs/03-fixtures/bhd.pdf` y su regresiÃ³n se ejecuta como prueba instrumentada.
+- **Cibao / Qik:** Bugs de exactitud (metadata columnar en Cibao, regex de lÃ­mite en Qik) corregidos en commits recientes (`66cc244`).
 
-**Antes de implementar cualquier issue de abajo: verificá el estado actual del código** (grep/lectura),
-no confíes en la descripción de la auditoría. Cada issue abajo trae el estado **ya verificado** al 2026-06-09.
-
----
-
-## 1. Commits recientes verificados
-
-- `66cc244` — issue #1: exactitud de parsers Qik/Cibao, persistencia de tarjetas,
-  bimoneda, hash y pruebas de regresión.
-- `7cf0233` — issue #2: Ajustes Generales, resúmenes por periodo, notificaciones
-  locales y configuración Hilt de WorkManager.
-
-Antes de estos commits se verificaron `testDebugUnitTest`, `assembleDebug` y el
-test instrumentado de Qik en un Pixel 6 Pro.
-
-En esta sesión se cerró un refactor adicional de core/data/domain:
-
-- `ClasificacionFinanciera` centraliza los totales financieros compartidos.
-- `TasaCambio` vive en `domain/model` y usa `BigDecimal`.
-- `ProcesarArchivoUseCase` quedó en `com.example.flowtrack.domain.usecase`.
-- Los repositorios de configuración, reglas y presupuesto usan DTOs y mappers
-  explícitos para documentos existentes.
-- `CategorizadorTransaccion` fue retirado.
-
-`.idea/deploymentTargetSelector.xml` es ruido del IDE, no lo commitees.
+### Core y Preferencias
+- CentralizaciÃ³n de `ClasificacionFinanciera` y `TasaCambio` en dominio.
+- ConfiguraciÃ³n de Hilt para `WorkManager`.
+- Ajustes Generales, notificaciones locales y resÃºmenes por periodo (`7cf0233`).
 
 ---
 
-## 2. Gotchas de setup local (no están en CLAUDE.md)
+## 2. Gotchas de Setup Local
 
-- **JDK para Gradle:** no hay `java` en PATH. Usar el JBR de Android Studio:
-  `$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"` antes de `.\gradlew.bat ...`
-- **`app/google-services.json`** está gitignored y es **obligatorio para compilar** (el plugin
-  `processDebugGoogleServices` corre en todo build, incluso tests JVM). Si falta, pedirlo al usuario.
-  SHA-1 debug ya registrado: `7B:D1:FD:74:C5:F1:CC:36:DE:C1:DF:9E:CF:28:40:C5:52:53:56:17`.
-- **Fixtures reales** en `docs/03-fixtures/` (gitignored, datos bancarios reales — **nunca commitear ni
-  pegar su contenido**). Nombres reales NO normalizados: `Qik.pdf`, `Asociacion Cibao.xls`,
-  `Banreservas.pdf`, `Banco Popular Dominicano 026.csv`. Los tests los localizan por patrón vía
-  `FixtureLoader` (test/.../parsers/core/FixtureLoader.kt) — busca por substring, no nombre exacto.
-- **PDFBox no corre en JVM puro** (PDFBox-Android lanza `ExceptionInInitializerError`). Los parsers PDF
-  **solo se testean por test instrumentado** (`androidTest`, requiere device). Hay un
-  device disponible. Correr instrumentados con:
-  `.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=<FQN>"`
-  (`--tests` NO funciona en connectedDebugAndroidTest).
-- **Fixtures sintéticos CI** (datos falsos, commiteables): `app/src/test/resources/fixtures/` (popular_v1.csv)
-  y `app/src/androidTest/assets/fixtures/qik_v1.pdf`. Generar más con Python (reportlab/pypdf instalados).
-- Tras tocar modelos/DTOs corré la suite completa: `.\gradlew.bat testDebugUnitTest` (≈205 tests).
-- BHD usa `BhdTextParserTest` con texto sintético en JVM y `BhdPdfParserInstrumentedTest` con el fixture
-  real transferido temporalmente al `cacheDir` del Pixel 6 Pro.
+- **JDK para Gradle:** usar el JBR de Android Studio (`$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`).
+- **`app/google-services.json`:** gitignored pero **obligatorio**. (SHA-1 debug: `7B:D1:FD:74:C5:F1:CC:36:DE:C1:DF:9E:CF:28:40:C5:52:53:56:17`).
+- **Fixtures reales:** en `docs/03-fixtures/` (NUNCA COMMITEAR).
+- **PDFBox:** solo se testea por test instrumentado (`androidTest`).
+- **Tests Instrumentados:** `.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=<FQN>"`.
+- Tras tocar modelos/DTOs correr suite completa: `.\gradlew.bat testDebugUnitTest` (â‰ˆ208 tests actualmente, todos en verde).
 
 ---
 
-## 3. Issues pendientes — estado verificado y cómo implementarlos
+## 3. Backlog Consolidado: Issues Pendientes e ImplementaciÃ³n
 
-### Issue #3 — Color `Income` incorrecto  →  COMPLETADO
-- El verde legacy incorrecto ya no existe en producción.
-- `Income = #16A34A` y `Expense = #DC2626` están protegidos por prueba JVM.
-- Todos los gastos/débitos visibles usan `Expense`; los ingresos usan `Income`.
-- Los estados positivos no financieros usan `Success`/`Success50`, documentados
-  en el design system aunque compartan el mismo valor visual que `Income`.
-- Un test Compose instrumentado renderiza muestras sintéticas y valida sus
-  colores en dispositivo, sin Firebase ni datos bancarios reales.
+### Issue #1 â€” MigraciÃ³n a Paging 3 y Arquitectura de Datos
+- **Contexto:** Se extrajeron interfaces (`ITransaccionRepository`) pero la capa de datos aÃºn orquesta directamente Firebase/OfflineStore y la UI acopla detalles locales (`TransaccionesCursor`).
+- **Pendiente:** 
+  1. Migrar `ITransaccionRepository` a firmas reactivas `Flow<PagingData<T>>`.
+  2. Implementar `PagingSource` local basado en el `OfflineStore`.
+  3. Actualizar `TransaccionesViewModel` para consumir `PagingData` mediante `collectAsLazyPagingItems()` en Compose y eliminar `TransaccionesCursor`.
+  4. Implementar incrementalmente `RemoteDataSource` y `LocalDataSource`.
 
-### Issue #4 — Derivadas DGII no agrupadas bajo su transacción padre
-- **Estado:** no reverificado a fondo. El modelo soporta el vínculo: `Transaccion.transaccionPadreId`,
-  `esDerivada`, `derivadasIds`. El parser BanReservas ya detecta DGII como derivada y `ProcesarArchivoUseCase`
-  hace una 2ª pasada para vincular `transaccionPadreId`.
-- **Qué falta (UI):** en `TransaccionesScreen`, mostrar las derivadas como acordeón bajo la padre con
-  `Badge("+N impuesto")` (plan §7.5). Hoy solo se muestra una bandera textual.
-- **Cómo:** el `TransaccionesViewModel` debe exponer las derivadas (`derivadasIds`) junto a la padre;
-  la fila padre expande/colapsa sus hijas con `AnimatedVisibility`. Verificar primero qué ya hace la pantalla.
+### Issue #2 â€” MigraciÃ³n a Modo Oscuro
+- **Contexto:** Se detectÃ³ que la interfaz utiliza variables estÃ¡ticas de color (`BgScreen`, `Ink`, `Primary`, etc.) desde `com.example.flowtrack.ui.theme.*` impidiendo reaccionar al cambio de tema.
+- **Pendiente:** Reemplazar colores estÃ¡ticos por variables dinÃ¡micas semÃ¡nticas (`MaterialTheme.colorScheme.background`, `.surface`, `.onSurface`, etc.) en:
+  - Globales: `BankRegistry.kt`, `FlowTrackDrawer.kt`.
+  - Pantallas: `DashboardScreen.kt`, `HistorialScreen.kt`, `PresupuestosScreen.kt`, `ConfiguracionScreen.kt`, `BancosYCuentasScreen.kt`, `PerfilScreen.kt`, `ReglasScreen.kt`, `ConversorScreen.kt`, `DuplicadosScreen.kt`, `ExportarScreen.kt`, `NotificacionesScreen.kt`, `LoginScreen.kt`.
 
-### Issue #5 — `tnum` (cifras tabulares) ausente en montos
-- **Estado:** ya existe `core/extensions/Format.kt` con `formatMoney`, `formatearMoneda`, `formatearFecha`
-  (estas dos últimas las agregó el issue #2 y respetan la config del usuario).
-- **Qué falta:** aplicar `fontFeatureSettings = "tnum"` en los `Text` de montos. Crear un `TextStyle`
-  `TabularNumber` (o modifier) y aplicarlo en Dashboard, Transacciones, Resumen, Tarjetas, ResumenPeriodo.
-- **Cómo:** `style = MaterialTheme.typography.bodyLarge.merge(TextStyle(fontFeatureSettings = "tnum"))`.
-  Es migración transversal de pantallas; bajo riesgo.
+### Issue #3 â€” Limpieza de CÃ³digo Muerto
+- **Contexto:** Diversas utilidades, DTOs y mappers no estÃ¡n en uso.
+- **Pendiente:** Eliminar o refactorizar:
+  - `Mappers.kt`: `toConfiguracionUsuarioDto`, `toReglaCategoriaDto`, `toReglaSugeridaDto`, `toNotificacionConfigDto`, `CuentaDetectada.toDomainConBanco`.
+  - `OfflineStore.kt`: MÃ©todos inactivos `replaceTransacciones`, `replaceCuentas`, `replaceTarjetas`, etc.
+  - `ExportacionUseCase.kt`: Sobrecargas de conveniencia sin uso para `exportarCsv` y `exportarPdf` con firma `(context, uid, inicio, fin)`.
+  - Recursos y XML: Limpiar paletas `purple_200`, `teal_200`, `launch_icon_bg` de `colors.xml`.
 
-### Issue #6 — Fuente Inter no integrada
-- **Estado:** todo usa `FontFamily.Default` (TODO en `ui/theme/Type.kt`).
-- **Cómo:** `androidx.compose.ui:ui-text-google-fonts` + `GoogleFont("Inter")` con `FontFamily`, y asignar
-  en `Type.kt`. Agregar la dependencia en `gradle/libs.versions.toml` (no hardcodear coordenadas).
+### Issue #4 â€” Derivadas DGII no agrupadas bajo su transacciÃ³n padre
+- **Estado:** El modelo soporta el vÃ­nculo `transaccionPadreId`, y los parsers lo aplican. 
+- **Pendiente (UI):** En `TransaccionesScreen`, mostrar las derivadas como acordeÃ³n bajo la padre (ej. `Badge("+N impuesto")`). Expandir con `AnimatedVisibility`.
 
-### Issue #7 — Tests de parsers (PARCIAL)
-- **Verificado:** Cibao y Qik ya tienen cobertura (issue #1: Cibao JVM con fixture real; Qik instrumentado).
-- **Qué falta:** solo **Popular** (`PopularCsvParser`). Ya existe `PopularCsvParserTest` y el fixture
-  sintético `popular_v1.csv`; revisar si las aserciones son reales o débiles y reforzarlas. CSV corre en JVM.
+### Issue #5 â€” `tnum` (cifras tabulares) ausente en montos
+- **Estado:** Ya existe la funciÃ³n de formateo, falta aplicar el estilo tipogrÃ¡fico.
+- **Pendiente:** Crear `TextStyle` `TabularNumber` (`fontFeatureSettings = "tnum"`) y aplicarlo en todos los `Text` de montos.
 
-### Issue #8 — Exportar XLSX + Vista previa  (absorbe el bloque "C" del issue #2)
-- **Verificado:** `ExportacionUseCase` tiene `exportarCsv` y `exportarPdf` — **no hay XLSX**. No existe
-  `ExportarScreen` ni `VistaPreviaReporteScreen`. `FileProvider` ya está configurado (Manifest + file_provider_paths.xml).
-- **Qué hacer:**
-  1. Agregar `exportarXlsx(...)` a `ExportacionUseCase` usando **fastexcel** (ya en el stack del plan;
-     agregar dep al version catalog si falta). Múltiples hojas (transacciones, resumen por categoría/banco).
-  2. `ExportarScreen` (selección de rango/cuentas, botón generar) + `VistaPreviaReporteScreen` (preview) + rutas.
-  3. Compartir vía el FileProvider existente (ver `ConfiguracionViewModel.compartirUri`).
+### Issue #6 â€” Fuente Inter no integrada
+- **Pendiente:** Adoptar Google Fonts (`ui-text-google-fonts`) para inyectar "Inter" en `Type.kt` reemplazando `FontFamily.Default`. Dependencia debe ir en `libs.versions.toml`.
 
-### Issue #9 — Componentes del Design System (CASI RESUELTO)
-- **Verificado:** `FinanzasSwitch.kt` ✅ existe (en uso), `BankLogo.kt` ✅ existe, `BankRegistry.kt` ✅.
-- **Qué falta:** solo **`MerchantLogo`** (DS §5.5). Requiere un `MerchantRegistry` (descripcionNormalizada → abbr+color).
-  `TransaccionItem` usa hoy un icono genérico. Crear `MerchantLogo` + registry y usarlo en las filas.
+### Issue #7 â€” Exportar XLSX + Vista previa
+- **Estado:** `ExportacionUseCase` solo tiene CSV y PDF. 
+- **Pendiente:** 
+  1. Agregar exportaciÃ³n a XLSX usando `fastexcel`.
+  2. Construir `ExportarScreen` y `VistaPreviaReporteScreen`.
+  3. Integrar con `FileProvider`.
 
-### Issue #10 — Colores hardcodeados en pantallas
-- **Estado:** no reverificado de forma exhaustiva. Buscar `Color(0xFF...)` inline en `RevisionScreen`,
-  `HistorialScreen`, `DashboardScreen` y reemplazar por tokens de `ui/theme/Color.kt`.
-  Caso conocido: Qik usaba `Color(0xFFE6A800)` en vez del token `BancoQik`. **Verificar con grep antes.**
+### Issue #8 â€” MerchantLogo (Design System)
+- **Estado:** `TransaccionItem` usa un Ã­cono genÃ©rico.
+- **Pendiente:** Crear un `MerchantRegistry` (descripcionNormalizada â†’ abbr+color) e implementar el componente `MerchantLogo`.
 
-### Issue #11 — Integridad de persistencia de tarjeta (hallazgos del firebase-persistence-tester)
-Derivado del issue #1. Tres hallazgos, con archivo:línea:
-- **ALTO-1 — merge pisa `alias`:** `ImportacionRepository.persistirCargaTarjeta` usa `SetOptions.merge()`
-  con un `TarjetaDto` que siempre lleva `alias` autogenerado → re-importar pisa el alias editado por el usuario.
-  **Fix:** leer el doc existente y preservar `alias` (mismo patrón que `construirDtoCuentaConBalanceProtegido`
-  para `Cuenta` en ese repo), o `SetOptions.mergeFields(...)` excluyendo `alias`.
-- **MEDIO-2 — `EstadoTarjetaSnap` sobreescribible:** se escribe con `set()` sin merge; re-importar el mismo
-  corte puede degradarlo. **Fix:** escribir solo si no existe, o versionar.
-- **MEDIO-3 — dinero como `Double` en DTOs:** viola "dinero = BigDecimal". **Fix:** migrar campos monetarios
-  de los DTOs a `String` (`toPlainString()`/`BigDecimal(string)`) en mappers. Es invasivo (toca round-trips);
-  hacerlo con cuidado y correr `MapperRoundTripTest`.
+### Issue #9 â€” Integridad de Persistencia de Tarjeta
+Derivado de hallazgos del tester, requieren mitigaciÃ³n en repositorios:
+- **ALTO:** `ImportacionRepository.persistirCargaTarjeta` pisa el campo `alias` al usar `SetOptions.merge()`. **Fix:** excluir `alias` del merge o leer el existente y preservarlo.
+- **MEDIO:** Escribir en `EstadoTarjetaSnap` degrada datos si se reimporta. **Fix:** Solo escribir si no existe o versionar.
+- **MEDIO:** Dinero persistido como `Double` en DTOs. **Fix:** Migrar DTOs monetarios a `String` (`toPlainString()`). Riesgo alto, requiere asegurar compatibilidad en mappers y tests de RoundTrip.
+
+### Issue #10 â€” Consolidar literales de categorÃ­as en `MotorCategorizacion`
+- **Contexto:** `CategoriaCatalogo` ya centraliza el catÃ¡logo de categorÃ­as, pero `MotorCategorizacion` todavÃ­a contiene literales de texto duplicados para inferencia automÃ¡tica.
+- **Pendiente:** Reemplazar los retornos y comparaciones de categorÃ­as en `MotorCategorizacion` por constantes de `CategoriaCatalogo`, sin modificar la lÃ³gica de precedencia ni el comportamiento de inferencia.
+- **Objetivo:** Evitar divergencia entre el catÃ¡logo de UI, exportaciÃ³n y la heurÃ­stica de categorizaciÃ³n automÃ¡tica.
+- **Riesgo:** Bajo-medio. El cambio es mecÃ¡nico, pero puede romper pruebas si algÃºn literal no queda mapeado exactamente a su constante equivalente.
+
+### Issue #11 â€” Quitar fallback mock de `TasaCambioRepository`
+- **Contexto:** `TasaCambioRepository` aÃºn crea una tasa `BCRD (Mock)` local cuando no existe la tasa del dÃ­a en Firestore. Esa semilla de respaldo quedÃ³ fuera de `APP-401`.
+- **Pendiente:** Reemplazar el fallback mock por un comportamiento explÃ­cito de error o por una estrategia de fuente real definida por el plan maestro, sin inventar datos locales.
+- **Objetivo:** Evitar que el sistema presente tasas sintÃ©ticas como si fueran reales cuando no hay sincronizaciÃ³n remota.
+- **Riesgo:** Medio-alto. Puede afectar conversor, resumen y cualquier flujo que hoy dependa implÃ­citamente de la tasa mock como Ãºltimo recurso.
+
+
+### Issue #12 â€” ImportaciÃ³n parcial en ACAP/Cibao y Qik
+- **Contexto:** En algunos estados de cuenta importados de Asociación Cibao (ACAP) y Qik, el resumen se persiste y se muestra correctamente, pero las transacciones no aparecen en la UI ni en el flujo reactivo esperado.
+- **Pendiente:** Validar el flujo de importación completo para esos parsers: detección de formato, parseo, mapeo a dominio, persistencia en Firestore/OfflineStore y exposición reactiva en la pantalla de transacciones.
+- **Objetivo:** Identificar por qué el resumen queda disponible mientras las transacciones se pierden o no se renderizan, y corregir la ruta exacta sin tocar agregación.
+- **Riesgo:** Alto. Puede estar en parsers, persistencia o filtros/reactividad; requiere aislar el origen real antes de modificar comportamiento.
+
+### Issue #13 â€” Back navigation distinto para Sidebar y Configuración
+- **Contexto:** El retorno con `Back` debe comportarse distinto según el origen de la pantalla. Si una pantalla se abrió desde el sidebar, el retorno debe reabrir el sidebar y volver a la pantalla principal previa. Si la pantalla se abrió desde Configuración, el retorno debe volver a Configuración con el sidebar cerrado.
+- **Pendiente:** Separar la lógica de navegación de retorno para distinguir origen `Sidebar` vs `Configuración`, sin romper el flujo actual de las pantallas principales.
+- **Objetivo:** Evitar que pantallas abiertas desde Configuración hereden el comportamiento de reabrir drawer, y mantener el contrato actual del sidebar solo para accesos desde el menú lateral.
+- **Riesgo:** Medio-alto. Toca navegación global y puede afectar backstack si no se acota correctamente el origen de la pantalla.
+
+### Issue #14 â€” Botón de retroceso en Convertor de divisas
+- **Contexto:** La pantalla de Convertor de divisas no muestra botón visible de retroceso, aunque debe seguir la misma lógica de retorno que las demás pantallas secundarias: volver a la pantalla anterior y reabrir el sidebar cuando corresponda.
+- **Pendiente:** Agregar el botón de retroceso en la barra superior del Convertor y enlazarlo con la misma lógica de navegación usada en las otras pantallas del drawer.
+- **Objetivo:** Unificar la experiencia de regreso en Convertor con Metas, Presupuestos, Bancos y cuentas, Historial, Exportar y Sugerencias.
+- **Riesgo:** Bajo-medio. El ajuste es de UI/navegación, pero debe respetar el origen de apertura para no romper el contrato definido en el Issue #13.
+
+### Issue #15 â€” Botón para volver a Inicio tras importar
+- **Contexto:** Después de completar una importación, el usuario necesita una acción explícita para regresar a la pantalla de Inicio sin depender del backstack o de cerrar pantallas manualmente.
+- **Pendiente:** Agregar un botón de navegación a Inicio en el flujo de importación exitosa, integrado en la UI existente sin alterar la lógica de importación.
+- **Objetivo:** Reducir fricción post-importación y llevar al usuario a la pantalla principal para revisar el resultado.
+- **Riesgo:** Medio. Toca la pantalla/flujo posterior a importación y debe respetar el backstack actual y el origen de navegación.
+
+### Issue #16 â€” Filtro Ingresos/Gastos no aplica a movimientos de tarjeta
+- **Contexto:** En la pantalla de transacciones, el filtro por tipo funciona para `Transaccion` pero deja visibles los `MovimientoTarjeta` aunque no correspondan al tipo seleccionado.
+- **Pendiente:** Hacer que el filtro `Ingresos / Gastos / Todas` afecte también a los movimientos de tarjeta mostrados en la misma pantalla.
+- **Objetivo:** Mantener consistencia visual y funcional entre transacciones bancarias y movimientos de tarjeta bajo el mismo filtro.
+- **Riesgo:** Medio. Hay que mapear correctamente tipos de movimiento de tarjeta a ingresos o gastos financieros sin romper la lista principal.
+
+### Issue #17 â€” Persistencia del estado del filtro al cambiar de pantalla
+- **Contexto:** Al salir y volver a una pantalla, el estado del filtro de transacciones no siempre se conserva como espera el usuario.
+- **Pendiente:** Garantizar persistencia de estado del filtro al cambiar de pantalla y restaurar el estado activo cuando se vuelve a `Transacciones`.
+- **Objetivo:** Evitar que el usuario pierda el contexto de filtros aplicados al navegar entre pantallas principales.
+- **Riesgo:** Medio. Toca navegación y restauración de estado; hay que evitar regresiones en el backstack.
+
+### Issue #18 â€” Normalización de categoría legacy `Compra`
+- **Contexto:** Algunas transacciones y movimientos llegan con la categoría legacy `"Compra"` y el sistema los trata como si fueran `Sin categorizar` en filtros, listas y gráficos.
+- **Pendiente:** Normalizar ese alias a la categoría canónica `compras` en la capa de lectura, filtrado y agregación sin alterar el dato persistido original.
+- **Objetivo:** Alinear UI, filtros y gráficos con la categoría real y evitar falsos `Sin categorizar`.
+- **Riesgo:** Medio. Toca la fuente de verdad de categorías y puede afectar pantallas que consumen ids crudos.
+
+### Issue #19 â€” Detalle editable para movimientos de tarjeta
+- **Contexto:** La lista de movimientos de tarjeta no permite abrir una vista de detalle ni cambiar su categoría, a diferencia de las transacciones.
+- **Pendiente:** Agregar detalle navegable para `MovimientoTarjeta` con acción de cambio de categoría usando la misma lógica de edición existente.
+- **Objetivo:** Paridad funcional entre transacciones bancarias y movimientos de tarjeta en la pantalla de transacciones.
+- **Riesgo:** Medio. Hay que añadir soporte de edición en repositorio y ViewModel sin romper el flujo actual de transacciones.
+
+### Issue #20 â€” Refresco instantáneo del detalle al recategorizar
+- **Contexto:** Al cambiar la categoría desde el detalle, la pantalla no refleja el nuevo valor hasta salir y volver.
+- **Pendiente:** Hacer que el detalle derive su estado de la lista reactiva para que el cambio se vea inmediatamente en `Transaccion` y `MovimientoTarjeta`.
+- **Objetivo:** Confirmación visual instantánea después de recategorizar, sin navegación adicional.
+- **Riesgo:** Medio. Requiere evitar objetos congelados en memoria y mantener el detalle sincronizado con el estado fuente.
+
+### Issue #21 â€” Sustituir logos de bancos por assets locales
+- **Contexto:** Los bancos deben mostrar los logos disponibles en `app/src/main/res/logos/` en lugar de variantes genéricas o inconsistentes.
+- **Estado:** Completado. El mapeo visual ahora usa assets locales compilables en `res/drawable`.
+- **Objetivo:** Unificar la identidad visual de bancos y cuentas con los recursos reales del proyecto.
+- **Riesgo:** Bajo-medio. Toca recursos y componentes de badges/logos, pero no la lógica financiera.
+
+### Issue #22 â€” Barra de estado invisible en modo oscuro
+- **Contexto:** En tema oscuro la barra de estado no se distingue correctamente, जबकि en tema claro sí se ve.
+- **Estado:** Completado. La Activity aplica el modo de barras según el tema efectivo y mantiene transparencia.
+- **Objetivo:** Mantener visibilidad consistente de estado y navegación del sistema en ambos temas.
+- **Riesgo:** Medio. Toca configuración visual global y puede requerir revisar `enableEdgeToEdge` y colores de sistema.
+
+### Issue #23 â€” Tema por defecto según sistema y persistencia de elección
+- **Contexto:** El usuario puede cambiar el modo visual manualmente, pero la app no debe ignorar la preferencia que el sistema ya tiene asignada por defecto.
+- **Estado:** Completado. El arranque usa el tema del sistema como valor inicial y persiste la preferencia guardada del usuario.
+- **Objetivo:** Respetar el modo del sistema por defecto y seguir permitiendo el cambio manual actual.
+- **Riesgo:** Medio. Toca preferencias, estado persistido y la lógica de arranque del tema.
 
 ---
 
-## 4. Pendientes diferidos del issue #2 (no son de la lista original, pero quedaron anotados)
-
-- **Alertas de gasto alto (trigger):** el toggle `alertasGastosAltos` se persiste en `NotificacionConfig`,
-  pero su disparo es event-driven (al importar transacciones) y **no está cableado**. Implementar: tras una
-  importación, si un gasto supera `umbralGastoAlto`, notificar (canal `NotificationHelper.CANAL_ALERTAS`).
-- **Idioma / i18n:** diferido. Requiere externalizar strings a `values/strings.xml` (es) + `values-en/` y
-  cambio de locale en runtime. El campo `ConfiguracionUsuario.idioma` ya existe pero no se aplica.
-- **Backup:** diferido. CLAUDE.md prohíbe Storage/servicios extra; opción recomendada cuando se retome:
-  export local JSON vía Storage Access Framework (sin servicios nuevos). Campo `ConfiguracionUsuario.ultimoBackup` ya existe.
-
----
-
-## 5. Notas de implementación útiles (descubiertas en #1/#2)
-
-- **WorkManager + Hilt ya quedó configurado** (issue #2): `FlowTrackApplication` es `Configuration.Provider`
-  con `HiltWorkerFactory` y el Manifest deshabilita el inicializador default. Nuevos `@HiltWorker` funcionan.
-  Patrón de notificación: `NotificationHelper` (canales `recordatorios_pago`/`resumenes`/`alertas`) +
-  `NotificacionScheduler.aplicar(context, config)`.
-- **Bimoneda Cibao:** `MovimientoTarjeta.montoUsd: BigDecimal?` guarda el monto en USD paralelo al `monto` (DOP).
-  El hash de movimiento (`HashGenerator.hashMovimientoTarjeta`) incluye `montoUsd` solo cuando es ≠ 0
-  (no cambia IDs de movimientos sin USD).
-- **Formato según preferencias:** usar `formatearFecha(date, config.formatoFecha)` y
-  `formatearMoneda(monto, config.monedaPredeterminada, config.formatoMoneda)` de `Format.kt` en pantallas nuevas.
+*Cualquier desarrollo futuro debe tomar como punto de partida exclusivo este documento y el `PLAN_MAESTRO_V2.md`.*
