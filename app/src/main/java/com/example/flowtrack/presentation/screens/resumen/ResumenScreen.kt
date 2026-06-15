@@ -54,11 +54,21 @@ import com.example.flowtrack.domain.usecase.ResumenCategoria
 import com.example.flowtrack.presentation.components.DonutChart
 import com.example.flowtrack.presentation.components.DonutSlice
 import com.example.flowtrack.presentation.components.EmptyState
+import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.ui.theme.*
 import androidx.compose.material3.MaterialTheme
-import com.example.flowtrack.presentation.components.categoriaRegistry
+import com.example.flowtrack.presentation.components.categoriaPorId
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.example.flowtrack.presentation.components.FiltrosSheet
+import com.example.flowtrack.presentation.components.PeriodoDropdown
+import com.example.flowtrack.presentation.model.FiltroPeriodo
+import com.example.flowtrack.presentation.components.DesignPill
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResumenScreen(
     viewModel: ResumenViewModel = hiltViewModel(),
@@ -66,7 +76,8 @@ fun ResumenScreen(
     onMenuClick: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
-    var periodoActivo by remember { mutableStateOf(RangoFecha.ESTE_MES) }
+    var showFiltrosSheet by remember { mutableStateOf(false) }
+    val filtrosSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Box(
         modifier = Modifier
@@ -142,19 +153,27 @@ fun ResumenScreen(
 
             Spacer(Modifier.height(Spacing.md))
 
-            // ── Period pills ─────────────────────────────────────
+            // ── Controles de Filtro ────────────────────────────────
             Row(
-                modifier = Modifier.padding(horizontal = Spacing.xl),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.xl),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                PeriodPill(label = "Este mes",    active = periodoActivo == RangoFecha.ESTE_MES) {
-                    periodoActivo = RangoFecha.ESTE_MES
-                    viewModel.setRangoPredefinido(RangoFecha.ESTE_MES)
-                }
-                PeriodPill(label = "Mes pasado",  active = periodoActivo == RangoFecha.MES_PASADO) {
-                    periodoActivo = RangoFecha.MES_PASADO
-                    viewModel.setRangoPredefinido(RangoFecha.MES_PASADO)
-                }
+                PeriodoDropdown(
+                    state = state.periodo,
+                    onPeriodoSelected = { viewModel.seleccionarPeriodo(it) },
+                )
+                
+                val filtrosActivos = state.filtros.cantidadActivos
+                val filtroLabel = if (filtrosActivos > 0) "$filtrosActivos filtro${if (filtrosActivos == 1) "" else "s"}" else "Filtros"
+                DesignPill(
+                    label = filtroLabel,
+                    active = filtrosActivos > 0,
+                    trailingIcon = true,
+                    onClick = { showFiltrosSheet = true },
+                )
             }
 
             Spacer(Modifier.height(Spacing.xl))
@@ -174,7 +193,7 @@ fun ResumenScreen(
             } else {
                 if (state.tabSeleccionado == 0) {
                     BancoTab(
-                        bancos = state.resumen!!.porBanco,
+                        bancos = state.resumen!!.gastosPorBanco,
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
@@ -183,6 +202,28 @@ fun ResumenScreen(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
+            }
+        }
+        
+        if (showFiltrosSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showFiltrosSheet = false },
+                sheetState = filtrosSheetState,
+                containerColor = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            ) {
+                FiltrosSheet(
+                    state = state.filtros,
+                    onAplicar = { filtros ->
+                        viewModel.aplicarFiltros(filtros)
+                        showFiltrosSheet = false
+                    },
+                    onLimpiar = {
+                        viewModel.limpiarFiltrosAvanzados()
+                        showFiltrosSheet = false
+                    },
+                    onDismiss = { showFiltrosSheet = false },
+                )
             }
         }
     }
@@ -210,23 +251,6 @@ private fun RowScope.SegmentedTab(label: String, active: Boolean, onClick: () ->
         contentAlignment = Alignment.Center,
     ) {
         Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = textColor)
-    }
-}
-
-@Composable
-private fun PeriodPill(label: String, active: Boolean, onClick: () -> Unit) {
-    val bg  = if (active) MaterialTheme.colorScheme.primary   else MaterialTheme.colorScheme.surface
-    val fg  = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-    val border = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-    Box(
-        modifier = Modifier
-            .clip(Radii.pill)
-            .background(bg)
-            .border(1.dp, border, Radii.pill)
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
-    ) {
-        Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = fg)
     }
 }
 
@@ -265,20 +289,7 @@ private fun BancoCard(b: ResumenBanco) {
     ) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(banco.color.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        banco.nombre.first().toString(),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = banco.color,
-                    )
-                }
+                BankLogo(bancoCodigo = b.bancoCodigo, size = 36.dp)
                 Spacer(Modifier.width(Spacing.md))
                 Text(banco.nombre, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             }
@@ -337,7 +348,7 @@ private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier 
     }
 
     val slices = categorias.map { c ->
-        val cat = categoriaRegistry[c.categoriaId] ?: categoriaRegistry["sin_categorizar"]!!
+        val cat = categoriaPorId(c.categoriaId)
         DonutSlice(c.total.toFloat(), cat.color, cat.nombre)
     }
 
@@ -372,7 +383,7 @@ private fun CategoriaTab(categorias: List<ResumenCategoria>, modifier: Modifier 
 
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
                         categorias.forEach { c ->
-                            val cat = categoriaRegistry[c.categoriaId] ?: categoriaRegistry["sin_categorizar"]!!
+                            val cat = categoriaPorId(c.categoriaId)
                             CategoriaRow(
                                 nombre = cat.nombre,
                                 color  = cat.color,

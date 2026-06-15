@@ -73,8 +73,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.domain.model.ProductoTipo
-import com.example.flowtrack.presentation.components.bancoPorCodigo
+import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -153,6 +154,15 @@ fun UploadScreen(
                         banco = estadoActual.banco,
                         onNuevoArchivo = { viewModel.resetear() },
                         onVerHistorial = { navController.navigate("historial") },
+                        onIrInicio = {
+                            navController.navigate(Screen.Dashboard.route) {
+                                popUpTo(Screen.Dashboard.route) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
                     )
                 }
             }
@@ -481,11 +491,6 @@ private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> 
         disponible   -> MaterialTheme.colorScheme.surface
         else         -> MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
     }
-    val bancoInfo  = bancoPorCodigo(banco.codigo)
-    val bancoColor = bancoInfo.color.let { if (disponible) it else it.copy(alpha = 0.4f) }
-    val textoColor = bancoInfo.fgColor
-    val abbr       = bancoInfo.abbr
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -501,12 +506,11 @@ private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Box(
-            modifier = Modifier.size(42.dp).background(bancoColor, RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(abbr, color = textoColor, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp)
-        }
+        BankLogo(
+            bancoCodigo = banco.codigo,
+            size = 42.dp,
+            modifier = Modifier,
+        )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 banco.nombre,
@@ -544,6 +548,7 @@ private fun UploadExitoContent(
     banco: String,
     onNuevoArchivo: () -> Unit,
     onVerHistorial: () -> Unit,
+    onIrInicio: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
@@ -561,6 +566,9 @@ private fun UploadExitoContent(
         Spacer(Modifier.height(8.dp))
         Button(onClick = onVerHistorial, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
             Text("Ver historial", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
+        }
+        Button(onClick = onIrInicio, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
+            Text("Ir a inicio", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
         }
         Button(onClick = onNuevoArchivo, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
             Text("Importar otro archivo", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)

@@ -48,6 +48,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.example.flowtrack.presentation.components.PeriodoDropdown
+import com.example.flowtrack.presentation.model.FiltroPeriodo
+import com.example.flowtrack.presentation.model.PeriodoState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +71,7 @@ import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.usecase.DatosBancoResumen
 import com.example.flowtrack.domain.usecase.ResumenDashboard
 import com.example.flowtrack.presentation.components.BancoUI
+import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.components.DonutChart
 import com.example.flowtrack.presentation.components.DonutSlice
 import com.example.flowtrack.presentation.components.ErrorState
@@ -131,8 +135,8 @@ private fun LoadingContent() {
 @Composable
 private fun DashboardContent(
     estado: DashboardEstado.Exito,
-    periodo: String,
-    onPeriodo: (String) -> Unit,
+    periodo: PeriodoState,
+    onPeriodo: (FiltroPeriodo) -> Unit,
     navController: NavController?,
     onMenuClick: () -> Unit,
 ) {
@@ -201,9 +205,8 @@ private fun DashboardContent(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 PeriodoDropdown(
-                    selected = periodo,
-                    options  = listOf("Este mes", "Mes pasado", "Últimos 3 meses", "Este año"),
-                    onSelect = onPeriodo,
+                    state = periodo,
+                    onPeriodoSelected = onPeriodo,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
@@ -640,20 +643,7 @@ private fun BancoRow(banco: BancoUI, datos: DatosBancoResumen) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(banco.color),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                banco.abbr,
-                fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.3).sp,
-                color = banco.fgColor,
-            )
-        }
+        BankLogo(bancoCodigo = datos.bancoCodigo, size = 34.dp)
         Text(
             banco.nombre,
             modifier = Modifier.weight(1f),
@@ -673,59 +663,6 @@ private fun BancoRow(banco: BancoUI, datos: DatosBancoResumen) {
                     "+ ${formatMoney(datos.ingresos)}",
                     fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = ExtendedTheme.colors.success,
                     style = TabularNumber,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PeriodoDropdown(
-    selected: String,
-    options: List<String>,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = modifier) {
-        OutlinedButton(
-            onClick = { expanded = true },
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-            modifier = Modifier.height(36.dp),
-        ) {
-            Text(selected, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-                Icons.Outlined.KeyboardArrowDown, contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp),
-            )
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { opt ->
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                opt, fontSize = 14.sp,
-                                fontWeight = if (opt == selected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            if (opt == selected) {
-                                Icon(
-                                    Icons.Outlined.Check, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp),
-                                )
-                            }
-                        }
-                    },
-                    onClick = { onSelect(opt); expanded = false },
                 )
             }
         }

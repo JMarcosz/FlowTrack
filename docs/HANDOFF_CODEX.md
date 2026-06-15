@@ -177,6 +177,18 @@ Derivado de hallazgos del tester, requieren mitigaciÃ³n en repositorios:
 - **Objetivo:** Respetar el modo del sistema por defecto y seguir permitiendo el cambio manual actual.
 - **Riesgo:** Medio. Toca preferencias, estado persistido y la lógica de arranque del tema.
 
+### Issue #24 — Logos de bancos en Inicio/Resumen y contraste para PNG en dark mode
+- **Contexto:** Las tarjetas de bancos en Inicio y Resumen todavía muestran monogramas, y varios logos PNG se pierden sobre fondos oscuros si no tienen una base clara.
+- **Estado:** Completado. Inicio y Resumen ahora usan los logos locales de banco, y los logos PNG se renderizan sobre fondo claro en ambos temas con contraste adicional en dark mode.
+- **Objetivo:** Unificar la identidad visual de bancos en toda la app y evitar pérdida de legibilidad en logos con transparencia o colores profundos.
+- **Riesgo:** Bajo-medio. Toca componentes visuales reutilizados y el tratamiento de assets locales.
+
+### Issue #25 — Logos de bancos en la pantalla de importación
+- **Contexto:** La pantalla de importación de estados seguía mostrando monogramas en la selección de banco.
+- **Estado:** Completado. La selección de banco ahora usa los mismos logos locales y fondo claro que el resto de la app.
+- **Objetivo:** Mantener consistencia visual entre importación, inicio y resumen.
+- **Riesgo:** Bajo. Es un cambio de UI reutilizando el componente de logo ya corregido.
+
 ---
 
 *Cualquier desarrollo futuro debe tomar como punto de partida exclusivo este documento y el `PLAN_MAESTRO_V2.md`.*
