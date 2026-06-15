@@ -1,6 +1,8 @@
 package com.example.flowtrack.presentation.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
+import com.example.flowtrack.R
 import com.example.flowtrack.ui.theme.BancoBanReservas
 import com.example.flowtrack.ui.theme.BancoBhd
 import com.example.flowtrack.ui.theme.BancoCibao
@@ -8,27 +10,28 @@ import com.example.flowtrack.ui.theme.BancoPopular
 import com.example.flowtrack.ui.theme.BancoQik
 import com.example.flowtrack.ui.theme.BgDark
 
-// Metadata completa de cada banco — fuente única de verdad para color, abreviatura y fg.
+// Metadata completa de cada banco: fuente unica de verdad para color, abreviatura, logo y fg.
 data class BancoUI(
     val codigo: String,
     val nombre: String,
     val color: Color,
     val abbr: String,
+    @DrawableRes val logoResId: Int? = null,
     val fgColor: Color = Color.White,
 )
 
 val bancoRegistry: Map<String, BancoUI> = listOf(
-    BancoUI("BANRESERVAS", "BanReservas",         BancoBanReservas, abbr = "BR"),
-    BancoUI("POPULAR",     "Banco Popular",        BancoPopular,     abbr = "BP"),
-    BancoUI("QIK",         "Qik",                 BancoQik,         abbr = "QIK", fgColor = BgDark),
-    BancoUI("CIBAO",       "Asociación Cibao",    BancoCibao,       abbr = "AC"),
-    BancoUI("BHD",         "BHD León",            BancoBhd,         abbr = "BHD"),
+    BancoUI("BANRESERVAS", "BanReservas", BancoBanReservas, abbr = "BR", logoResId = R.drawable.logo_banreservas),
+    BancoUI("POPULAR", "Banco Popular", BancoPopular, abbr = "BP", logoResId = R.drawable.logo_popular),
+    BancoUI("QIK", "Qik", BancoQik, abbr = "QIK", logoResId = R.drawable.logo_qik, fgColor = BgDark),
+    BancoUI("CIBAO", "Asociacion Cibao", BancoCibao, abbr = "AC", logoResId = R.drawable.logo_cibao),
+    BancoUI("BHD", "BHD Leon", BancoBhd, abbr = "BHD", logoResId = R.drawable.logo_bhd),
 ).associateBy { it.codigo }
 
 fun bancoPorCodigo(codigo: String): BancoUI =
     bancoRegistry[codigo.uppercase()] ?: BancoUI(codigo, codigo, Color.Gray, abbr = codigo.take(2))
 
-// Badge de banco (fondo, texto, abreviatura) — usado en TarjetasScreen y UploadScreen.
+// Badge de banco (fondo, texto, abreviatura) â€” usado en TarjetasScreen y UploadScreen.
 data class BankBadge(val bg: Color, val fg: Color, val abbr: String)
 
 fun bankBadge(bancoCodigo: String): BankBadge {
