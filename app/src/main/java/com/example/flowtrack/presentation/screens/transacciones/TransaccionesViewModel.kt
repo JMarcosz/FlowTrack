@@ -24,16 +24,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-val PERIODOS_TRANSACCIONES = listOf("Este mes", "Mes pasado", "Últimos 3 meses", "Este año")
+import com.example.flowtrack.presentation.model.FiltroPeriodo
+import com.example.flowtrack.presentation.model.FiltrosAvanzadosState
+import com.example.flowtrack.presentation.model.PeriodoState
+import com.example.flowtrack.presentation.model.RangoMonto
 
 @Stable
 data class TransaccionesState(
@@ -43,26 +46,10 @@ data class TransaccionesState(
     val transacciones: List<Transaccion> = emptyList(),
     val searchQuery: String = "",
     val filtroTipo: TipoTransaccionFiltro = TipoTransaccionFiltro.TODAS,
-    val bancosDisponibles: List<String> = emptyList(),
-    val bancoFiltro: String? = null,
-    val periodo: String = PERIODOS_TRANSACCIONES.first(),
-    val montoMin: BigDecimal? = null,
-    val montoMax: BigDecimal? = null,
-    val categoriasFiltro: Set<String> = emptySet(),
-    val soloSinCategorizar: Boolean = false,
+    val periodo: PeriodoState = PeriodoState(),
+    val filtros: FiltrosAvanzadosState = FiltrosAvanzadosState(),
     val error: String? = null,
-) {
-    val filtrosActivos: Int
-        get() {
-            var n = 0
-            if (bancoFiltro != null) n++
-            if (montoMin != null) n++
-            if (montoMax != null) n++
-            n += categoriasFiltro.size
-            if (soloSinCategorizar) n++
-            return n
-        }
-}
+)
 
 enum class TipoTransaccionFiltro { TODAS, DEBITO, CREDITO }
 
@@ -82,10 +69,12 @@ class TransaccionesViewModel @Inject constructor(
     private var lastVisible: TransaccionesCursor? = null
     private var loadJob: Job? = null
     private var filterJob: Job? = null
+    private var revisionJob: Job? = null
     private val searchQueryFlow = MutableStateFlow(_state.value.searchQuery)
 
     init {
         cargarPagina(reset = true)
+        observarCambiosLocales()
 
         viewModelScope.launch {
             searchQueryFlow
@@ -96,17 +85,17 @@ class TransaccionesViewModel @Inject constructor(
         }
     }
 
-    fun seleccionarPeriodo(periodo: String) {
-        if (_state.value.periodo == periodo || periodo !in PERIODOS_TRANSACCIONES) return
-        savedStateHandle[KEY_PERIODO] = periodo
+    fun seleccionarPeriodo(periodo: FiltroPeriodo) {
+        if (_state.value.periodo.seleccionado == periodo) return
+        savedStateHandle[KEY_PERIODO] = periodo.label
         _state.update {
             it.copy(
-                periodo = periodo,
+                periodo = PeriodoState(seleccionado = periodo),
                 isLoading = true,
                 isLoadingMore = false,
                 hasMore = true,
                 transacciones = emptyList(),
-                bancosDisponibles = emptyList(),
+                filtros = it.filtros.copy(bancosDisponibles = emptyList()),
                 error = null,
             )
         }
@@ -125,32 +114,23 @@ class TransaccionesViewModel @Inject constructor(
         aplicarFiltrosAsync()
     }
 
-    fun setBancoFiltro(banco: String?) {
-        savedStateHandle[KEY_BANCO] = banco
-        _state.update { it.copy(bancoFiltro = banco) }
+    fun setBancoFiltro(bancoId: String?) {
+        savedStateHandle[KEY_BANCO] = bancoId
+        _state.update {
+            it.copy(filtros = it.filtros.copy(bancoId = bancoId))
+        }
         aplicarFiltrosAsync()
     }
 
-    fun aplicarFiltros(
-        banco: String?,
-        montoMin: BigDecimal?,
-        montoMax: BigDecimal?,
-        categorias: Set<String>,
-        soloSinCategorizar: Boolean,
-    ) {
-        savedStateHandle[KEY_BANCO] = banco
-        savedStateHandle[KEY_MONTO_MIN] = montoMin?.toPlainString()
-        savedStateHandle[KEY_MONTO_MAX] = montoMax?.toPlainString()
-        savedStateHandle[KEY_CATEGORIAS] = ArrayList(categorias)
-        savedStateHandle[KEY_SIN_CATEGORIA] = soloSinCategorizar
+    fun aplicarFiltros(filtros: FiltrosAvanzadosState) {
+        savedStateHandle[KEY_BANCO] = filtros.bancoId
+        savedStateHandle[KEY_MONTO_MIN] = filtros.rangoMonto.minimo?.toPlainString()
+        savedStateHandle[KEY_MONTO_MAX] = filtros.rangoMonto.maximo?.toPlainString()
+        savedStateHandle[KEY_CATEGORIAS] = ArrayList(filtros.categorias)
+        savedStateHandle[KEY_SIN_CATEGORIA] = filtros.soloSinCategorizar
+        
         _state.update {
-            it.copy(
-                bancoFiltro = banco,
-                montoMin = montoMin,
-                montoMax = montoMax,
-                categoriasFiltro = categorias,
-                soloSinCategorizar = soloSinCategorizar,
-            )
+            it.copy(filtros = filtros)
         }
         aplicarFiltrosAsync()
     }
@@ -161,13 +141,15 @@ class TransaccionesViewModel @Inject constructor(
         savedStateHandle[KEY_MONTO_MAX] = null
         savedStateHandle[KEY_CATEGORIAS] = arrayListOf<String>()
         savedStateHandle[KEY_SIN_CATEGORIA] = false
+        
         _state.update {
             it.copy(
-                bancoFiltro = null,
-                montoMin = null,
-                montoMax = null,
-                categoriasFiltro = emptySet(),
-                soloSinCategorizar = false,
+                filtros = it.filtros.copy(
+                    bancoId = null,
+                    rangoMonto = RangoMonto(),
+                    categorias = emptySet(),
+                    soloSinCategorizar = false,
+                )
             )
         }
         aplicarFiltrosAsync()
@@ -186,6 +168,20 @@ class TransaccionesViewModel @Inject constructor(
                 allTransacciones = allTransacciones.filterNot { it.id == tx.id }
                 aplicarFiltrosAsync()
             }
+        }
+    }
+
+    private fun observarCambiosLocales() {
+        val uid = auth.currentUser?.uid ?: return
+        revisionJob?.cancel()
+        revisionJob = viewModelScope.launch {
+            repository.observarRevisionLocal()
+                .drop(1)
+                .debounce(150)
+                .distinctUntilChanged()
+                .collect {
+                    refrescarDesdeCache(uid)
+                }
         }
     }
 
@@ -269,7 +265,7 @@ class TransaccionesViewModel @Inject constructor(
         }
 
         loadJob = viewModelScope.launch {
-            val (inicio, fin) = rangoParaPeriodo(_state.value.periodo)
+            val (inicio, fin) = rangoParaPeriodo(_state.value.periodo.seleccionado)
             when (
                 val result = repository.obtenerTransaccionesPage(
                     uid = uid,
@@ -288,7 +284,7 @@ class TransaccionesViewModel @Inject constructor(
                         (allTransacciones + page.transacciones).distinctBy { it.id }
                     }
 
-                    val bancoSeleccionado = _state.value.bancoFiltro
+                    val bancoSeleccionado = _state.value.filtros.bancoId
                     val bancos = buildSet {
                         addAll(allTransacciones.map { it.bancoCodigo })
                         bancoSeleccionado?.let(::add)
@@ -299,7 +295,7 @@ class TransaccionesViewModel @Inject constructor(
                             isLoading = false,
                             isLoadingMore = false,
                             hasMore = page.hasMore,
-                            bancosDisponibles = bancos,
+                            filtros = it.filtros.copy(bancosDisponibles = bancos),
                             error = null,
                         )
                     }
@@ -318,6 +314,54 @@ class TransaccionesViewModel @Inject constructor(
         }
     }
 
+    private suspend fun refrescarDesdeCache(uid: String) {
+        val current = _state.value
+        val (inicio, fin) = rangoParaPeriodo(current.periodo.seleccionado)
+        val pageSize = maxOf(PAGE_SIZE, allTransacciones.size)
+
+        when (
+            val result = repository.obtenerTransaccionesPageLocal(
+                uid = uid,
+                lastVisible = null,
+                pageSize = pageSize,
+                inicio = inicio,
+                fin = fin,
+            )
+        ) {
+            is AppResult.Success -> {
+                val page = result.data
+                lastVisible = page.lastVisible
+                allTransacciones = page.transacciones
+
+                val bancoSeleccionado = current.filtros.bancoId
+                val bancos = buildSet {
+                    addAll(allTransacciones.map { it.bancoCodigo })
+                    bancoSeleccionado?.let(::add)
+                }.sorted()
+
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isLoadingMore = false,
+                        hasMore = page.hasMore,
+                        filtros = it.filtros.copy(bancosDisponibles = bancos),
+                        error = null,
+                    )
+                }
+                aplicarFiltrosAsync()
+            }
+            is AppResult.Error -> {
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isLoadingMore = false,
+                        error = result.error.toMensajeUsuario(),
+                    )
+                }
+            }
+        }
+    }
+
     private fun aplicarFiltrosAsync() {
         filterJob?.cancel()
         filterJob = viewModelScope.launch(Dispatchers.Default) {
@@ -325,12 +369,13 @@ class TransaccionesViewModel @Inject constructor(
             val transacciones = allTransacciones
             val queryNormalizada = current.searchQuery.normalizarDescripcion()
             val montoBuscado = current.searchQuery.trim()
+            val filtros = current.filtros
 
             val filtradas = transacciones.filter { tx ->
                 if (tx.esDerivada) return@filter true
 
                 val matchBanco =
-                    current.bancoFiltro == null || tx.bancoCodigo == current.bancoFiltro
+                    filtros.bancoId == null || tx.bancoCodigo == filtros.bancoId
                 val matchTipo = when (current.filtroTipo) {
                     TipoTransaccionFiltro.TODAS -> true
                     TipoTransaccionFiltro.DEBITO -> tx.tipo == TipoTransaccion.DEBITO
@@ -342,12 +387,12 @@ class TransaccionesViewModel @Inject constructor(
                     tx.bancoCodigo.normalizarDescripcion().contains(queryNormalizada) ||
                     tx.monto.toPlainString().contains(montoBuscado)
                 val matchMonto =
-                    (current.montoMin == null || tx.monto >= current.montoMin) &&
-                    (current.montoMax == null || tx.monto <= current.montoMax)
+                    (filtros.rangoMonto.minimo == null || tx.monto >= filtros.rangoMonto.minimo) &&
+                    (filtros.rangoMonto.maximo == null || tx.monto <= filtros.rangoMonto.maximo)
                 val matchCategoria = when {
-                    current.soloSinCategorizar -> tx.categoriaId == null
-                    current.categoriasFiltro.isEmpty() -> true
-                    else -> tx.categoriaId in current.categoriasFiltro
+                    filtros.soloSinCategorizar -> tx.categoriaId == null
+                    filtros.categorias.isEmpty() -> true
+                    else -> tx.categoriaId in filtros.categorias
                 }
 
                 matchBanco && matchTipo && matchQuery && matchMonto && matchCategoria
@@ -360,9 +405,8 @@ class TransaccionesViewModel @Inject constructor(
     }
 
     private fun restaurarEstado(): TransaccionesState {
-        val periodo = savedStateHandle.get<String>(KEY_PERIODO)
-            ?.takeIf { it in PERIODOS_TRANSACCIONES }
-            ?: PERIODOS_TRANSACCIONES.first()
+        val label = savedStateHandle.get<String>(KEY_PERIODO) ?: FiltroPeriodo.ESTE_MES.label
+        val periodoSel = FiltroPeriodo.fromLabel(label) ?: FiltroPeriodo.ESTE_MES
         val tipo = savedStateHandle.get<String>(KEY_TIPO)
             ?.let { runCatching { TipoTransaccionFiltro.valueOf(it) }.getOrNull() }
             ?: TipoTransaccionFiltro.TODAS
@@ -370,34 +414,38 @@ class TransaccionesViewModel @Inject constructor(
         return TransaccionesState(
             searchQuery = savedStateHandle[KEY_BUSQUEDA] ?: "",
             filtroTipo = tipo,
-            bancoFiltro = savedStateHandle[KEY_BANCO],
-            periodo = periodo,
-            montoMin = savedStateHandle.get<String>(KEY_MONTO_MIN)?.toBigDecimalOrNull(),
-            montoMax = savedStateHandle.get<String>(KEY_MONTO_MAX)?.toBigDecimalOrNull(),
-            categoriasFiltro = savedStateHandle
-                .get<ArrayList<String>>(KEY_CATEGORIAS)
-                ?.toSet()
-                .orEmpty(),
-            soloSinCategorizar = savedStateHandle[KEY_SIN_CATEGORIA] ?: false,
+            periodo = PeriodoState(seleccionado = periodoSel),
+            filtros = FiltrosAvanzadosState(
+                bancoId = savedStateHandle[KEY_BANCO],
+                rangoMonto = RangoMonto(
+                    minimo = savedStateHandle.get<String>(KEY_MONTO_MIN)?.toBigDecimalOrNull(),
+                    maximo = savedStateHandle.get<String>(KEY_MONTO_MAX)?.toBigDecimalOrNull(),
+                ),
+                categorias = savedStateHandle
+                    .get<ArrayList<String>>(KEY_CATEGORIAS)
+                    ?.toSet()
+                    .orEmpty(),
+                soloSinCategorizar = savedStateHandle[KEY_SIN_CATEGORIA] ?: false,
+            ),
         )
     }
 
-    private fun rangoParaPeriodo(periodo: String): Pair<Instant, Instant> {
+    private fun rangoParaPeriodo(periodo: FiltroPeriodo): Pair<Instant, Instant> {
         val zona = ZoneId.of("America/Santo_Domingo")
         val ahora = LocalDate.now(zona)
         return when (periodo) {
-            "Mes pasado" -> {
+            FiltroPeriodo.MES_PASADO -> {
                 val yearMonth = YearMonth.from(ahora).minusMonths(1)
                 yearMonth.atDay(1).atStartOfDay(zona).toInstant() to
                     yearMonth.atEndOfMonth().atTime(23, 59, 59).atZone(zona).toInstant()
             }
-            "Últimos 3 meses" ->
+            FiltroPeriodo.ULTIMOS_3_MESES ->
                 ahora.minusMonths(3).withDayOfMonth(1).atStartOfDay(zona).toInstant() to
                     ahora.atTime(23, 59, 59).atZone(zona).toInstant()
-            "Este año" ->
+            FiltroPeriodo.ESTE_ANIO ->
                 ahora.withDayOfYear(1).atStartOfDay(zona).toInstant() to
                     ahora.atTime(23, 59, 59).atZone(zona).toInstant()
-            else ->
+            FiltroPeriodo.ESTE_MES ->
                 ahora.withDayOfMonth(1).atStartOfDay(zona).toInstant() to
                     ahora.atTime(23, 59, 59).atZone(zona).toInstant()
         }

@@ -161,6 +161,8 @@ class OfflineStore @Inject constructor(
         revision.value = revisionCounter.incrementAndGet()
     }
 
+    fun observeRevision(): Flow<Long> = revision
+
     private suspend fun <T> io(block: SQLiteDatabase.() -> T): T = withContext(Dispatchers.IO) {
         helper.writableDatabase.block()
     }

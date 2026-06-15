@@ -78,6 +78,27 @@ class TransaccionRepository @Inject constructor(
         }
     }
 
+    suspend fun obtenerTransaccionesPageLocal(
+        uid: String,
+        lastVisible: TransaccionesCursor? = null,
+        pageSize: Int = 50,
+        inicio: Instant? = null,
+        fin: Instant? = null,
+    ): AppResult<TransaccionesPage> {
+        return try {
+            val (localPage, localCursor) = offlineStore.getTransaccionesPage(
+                uid = uid,
+                inicio = inicio,
+                fin = fin,
+                cursor = lastVisible,
+                pageSize = pageSize,
+            )
+            AppResult.Success(TransaccionesPage(localPage, localCursor, localCursor != null))
+        } catch (e: Exception) {
+            AppResult.Error(ErrorApp.FirestoreError("Error al cargar página local: ${e.message}", e))
+        }
+    }
+
     override suspend fun obtenerTransacciones(
         uid: String,
         inicio: Instant?,
@@ -162,6 +183,8 @@ class TransaccionRepository @Inject constructor(
             AppResult.Error(ErrorApp.FirestoreError("Error al eliminar transacción: ${e.message}", e))
         }
     }
+
+    fun observarRevisionLocal(): Flow<Long> = offlineStore.observeRevision()
 
     override suspend fun guardarTransaccionesEnLote(uid: String, transacciones: List<Transaccion>): AppResult<Unit> {
         return try {
