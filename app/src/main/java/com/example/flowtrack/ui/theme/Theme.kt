@@ -139,3 +139,6 @@ fun FlowTrackTheme(
         )
     }
 }
+
+fun resolverTemaOscuro(temaGuardado: Boolean?, sistemaOscuro: Boolean): Boolean =
+    temaGuardado ?: sistemaOscuro

@@ -23,11 +23,11 @@ class ConfiguracionRepository @Inject constructor(
         .collection("usuarios").document(uid)
         .collection("configuracion").document("preferencias")
 
-    fun observarConfiguracion(uid: String): Flow<ConfiguracionUsuario> =
+    fun observarConfiguracion(uid: String, temaOscuroInicial: Boolean? = null): Flow<ConfiguracionUsuario> =
         offlineStore.observeConfiguracion(uid)
             .onStart {
                 if (!offlineStore.hasRecords("CONFIGURACION", uid)) {
-                    syncRemote(uid)
+                    syncRemote(uid, temaOscuroInicial)
                 }
             }
 
@@ -39,14 +39,17 @@ class ConfiguracionRepository @Inject constructor(
         AppResult.Error(ErrorApp.FirestoreError("Error guardando configuracion: ${e.message}", e))
     }
 
-    private suspend fun syncRemote(uid: String) {
+    private suspend fun syncRemote(uid: String, temaOscuroInicial: Boolean? = null) {
         runCatching {
             val snapshot = docRef(uid).get().await()
             val config = snapshot
                 .takeIf { it.exists() }
                 ?.toConfiguracionUsuarioDto()
                 ?.toDomain()
-                ?: ConfiguracionUsuario(uidUsuario = uid)
+                ?: ConfiguracionUsuario(
+                    uidUsuario = uid,
+                    temaOscuro = temaOscuroInicial ?: false,
+                )
             offlineStore.upsertConfiguracion(config)
         }
     }

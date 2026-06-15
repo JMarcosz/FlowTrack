@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -21,11 +23,13 @@ import com.example.flowtrack.data.firestore.repositories.DispositivoPushReposito
 import com.example.flowtrack.presentation.navigation.AppNavGraph
 import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.FlowTrackTheme
+import com.example.flowtrack.ui.theme.resolverTemaOscuro
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.tasks.await
+import androidx.core.view.WindowCompat
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -50,18 +54,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = androidx.activity.SystemBarStyle.light(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT
-            ),
-            navigationBarStyle = androidx.activity.SystemBarStyle.light(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT
-            )
-        )
+        enableEdgeToEdge()
         pendingRoute = intent?.getStringExtra(NotificationRoute.EXTRA_ROUTE)
         setContent {
+            val systemDarkTheme = isSystemInDarkTheme()
             var uid by remember { mutableStateOf(auth.currentUser?.uid) }
             var lastUid by remember { mutableStateOf(auth.currentUser?.uid) }
             DisposableEffect(Unit) {
@@ -72,11 +68,19 @@ class MainActivity : ComponentActivity() {
                 onDispose { auth.removeAuthStateListener(listener) }
             }
 
-            val configFlow = remember(uid) {
-                if (uid != null) configuracionRepository.observarConfiguracion(uid!!) else emptyFlow()
+            val configFlow = remember(uid, systemDarkTheme) {
+                if (uid != null) configuracionRepository.observarConfiguracion(uid!!, systemDarkTheme) else emptyFlow()
             }
             val config by configFlow.collectAsState(initial = null)
-            val isDarkTheme = config?.temaOscuro ?: false
+            val isDarkTheme = resolverTemaOscuro(config?.temaOscuro, systemDarkTheme)
+
+            SideEffect {
+                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                controller.isAppearanceLightStatusBars = !isDarkTheme
+                controller.isAppearanceLightNavigationBars = !isDarkTheme
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            }
 
             LaunchedEffect(uid, config) {
                 if (uid == null) {
