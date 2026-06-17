@@ -37,12 +37,20 @@ fun FinanzasBottomNav(navController: NavController) {
             NavigationBarItem(
                 selected = current == item.screen.route,
                 onClick = {
-                    navController.navigate(item.screen.route) {
-                        popUpTo(Screen.Dashboard.route) {
-                            saveState = true
+                    if (item.screen == Screen.Dashboard) {
+                        if (!navController.popBackStack(Screen.Dashboard.route, inclusive = false)) {
+                            navController.navigate(Screen.Dashboard.route) {
+                                launchSingleTop = true
+                            }
                         }
-                        launchSingleTop = true
-                        restoreState = true
+                    } else {
+                        navController.navigate(item.screen.route) {
+                            popUpTo(Screen.Dashboard.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
                 icon = { Icon(item.icon, contentDescription = item.label) },

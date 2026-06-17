@@ -113,8 +113,9 @@ Derivado de hallazgos del tester, requieren mitigaciÃ³n en repositorios:
 
 ### Issue #13 â€” Back navigation distinto para Sidebar y Configuración
 - **Contexto:** El retorno con `Back` debe comportarse distinto según el origen de la pantalla. Si una pantalla se abrió desde el sidebar, el retorno debe reabrir el sidebar y volver a la pantalla principal previa. Si la pantalla se abrió desde Configuración, el retorno debe volver a Configuración con el sidebar cerrado.
-- **Pendiente:** Separar la lógica de navegación de retorno para distinguir origen `Sidebar` vs `Configuración`, sin romper el flujo actual de las pantallas principales.
-- **Objetivo:** Evitar que pantallas abiertas desde Configuración hereden el comportamiento de reabrir drawer, y mantener el contrato actual del sidebar solo para accesos desde el menú lateral.
+- **Estado:** Reabierto / pendiente. El caso `Dashboard -> Resumen -> Inicio` seguía restaurando `Resumen` al tocar el tab de `Inicio`.
+- **Pendiente:** Separar la lógica de navegación de retorno para distinguir origen `Sidebar` vs `Configuración`, sin romper el flujo actual de las pantallas principales, y evitar la restauración de estado en `Inicio`.
+- **Objetivo:** Evitar que pantallas abiertas desde Configuración hereden el comportamiento de reabrir drawer, y asegurar que `Inicio` vuelva a `Dashboard` sin rehidratar `Resumen`.
 - **Riesgo:** Medio-alto. Toca navegación global y puede afectar backstack si no se acota correctamente el origen de la pantalla.
 
 ### Issue #14 â€” Botón de retroceso en Convertor de divisas
@@ -188,6 +189,12 @@ Derivado de hallazgos del tester, requieren mitigaciÃ³n en repositorios:
 - **Estado:** Completado. La selección de banco ahora usa los mismos logos locales y fondo claro que el resto de la app.
 - **Objetivo:** Mantener consistencia visual entre importación, inicio y resumen.
 - **Riesgo:** Bajo. Es un cambio de UI reutilizando el componente de logo ya corregido.
+
+### Issue #26 — Textos ilegibles en Tarjetas
+- **Contexto:** En la pantalla de `Tarjetas`, varios textos visibles aparecían con mojibake o caracteres corruptos, dando la impresión de no estar codificados en UTF-8.
+- **Estado:** Completado. Los literales visibles afectados en `TarjetasScreen` fueron corregidos.
+- **Objetivo:** Restaurar la legibilidad completa de la pantalla de tarjetas sin tocar su lógica de negocio.
+- **Riesgo:** Bajo. El cambio es acotado a cadenas visibles, pero conviene validar que no quede ningún literal corrupto residual.
 
 ---
 

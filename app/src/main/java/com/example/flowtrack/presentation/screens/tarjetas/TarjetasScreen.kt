@@ -126,7 +126,7 @@ fun TarjetasScreen(
                     onClick = onMenuClick,
                     modifier = Modifier.size(36.dp),
                 ) {
-                    Icon(Icons.Outlined.Menu, contentDescription = "MenÃº", tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 Column {
                     Text(
@@ -137,7 +137,7 @@ fun TarjetasScreen(
                         letterSpacing = (-0.5).sp,
                     )
                     Text(
-                        "CrÃ©dito y pagos",
+                        "Crédito y pagos",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Normal,
@@ -261,7 +261,7 @@ fun TarjetasScreen(
                         if (pagosProximos.isNotEmpty()) {
                             item {
                                 SectionLabel(
-                                    "PrÃ³ximos pagos",
+                                    "Próximos pagos",
                                     modifier = Modifier.padding(
                                         start = Spacing.xxl, end = Spacing.xxl,
                                         top = Spacing.xxl, bottom = Spacing.sm,
@@ -410,14 +410,14 @@ fun WhiteCreditCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        "â€¢â€¢â€¢â€¢ ${tarjeta.ultimos4}",
+                        "•••• ${tarjeta.ultimos4}",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 0.8.sp,
                     )
                 }
                 // Status badge
-                StatusBadge("Al dÃ­a")
+                StatusBadge("Al día")
                 Spacer(Modifier.width(4.dp))
                 // More menu
                 if (onEliminar != null) {
@@ -443,8 +443,8 @@ fun WhiteCreditCard(
 
             // â”€â”€ Dates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxl)) {
-                CardInfoItem("Corte", "dÃ­a ${tarjeta.diaCorte}")
-                CardInfoItem("Pago", "dÃ­a ${tarjeta.diaPago}")
+                CardInfoItem("Corte", "día ${tarjeta.diaCorte}")
+                CardInfoItem("Pago", "día ${tarjeta.diaPago}")
             }
 
             Spacer(Modifier.height(Spacing.lg))
@@ -466,7 +466,7 @@ fun WhiteCreditCard(
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Pago mÃ­nimo", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
+                    Text("Pago mínimo", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(3.dp))
                     Text(
                         formatMoney(pagoMinimo, tarjeta.moneda),
@@ -485,7 +485,7 @@ fun WhiteCreditCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("UtilizaciÃ³n", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Utilización", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("${"%.0f".format(utilizacionFrac * 100)}%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(6.dp))
@@ -506,7 +506,7 @@ fun WhiteCreditCard(
             }
             Spacer(Modifier.height(Spacing.sm))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("LÃ­mite disponible", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Límite disponible", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     formatMoney(limiteDisponible, tarjeta.moneda),
                     fontSize = 12.sp,
@@ -520,7 +520,7 @@ fun WhiteCreditCard(
 
             // â”€â”€ Ver detalle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Text(
-                "Ver detalle â€º",
+                "Ver detalle ›",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
@@ -563,7 +563,7 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "Vence ${formatDate(fechaLocal)} â€¢ $diasRestantes dÃ­a${if (diasRestantes == 1) "" else "s"}",
+                "Vence ${formatDate(fechaLocal)} • $diasRestantes día${if (diasRestantes == 1) "" else "s"}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -623,7 +623,7 @@ private fun OtraTarjetaRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap?) {
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "â€¢â€¢â€¢â€¢ ${tarjeta.ultimos4} Â· Corte dÃ­a ${tarjeta.diaCorte}",
+                "•••• ${tarjeta.ultimos4} · Corte día ${tarjeta.diaCorte}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -828,7 +828,7 @@ private fun NuevaTarjetaSheet(
         OutlinedTextField(
             value = ultimos4,
             onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) ultimos4 = it },
-            label = { Text("Ãšltimos 4 dÃ­gitos") },
+            label = { Text("Últimos 4 dígitos") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -846,7 +846,7 @@ private fun NuevaTarjetaSheet(
         OutlinedTextField(
             value = limite,
             onValueChange = { limite = it },
-            label = { Text("LÃ­mite de crÃ©dito (RD\$)") },
+            label = { Text("Límite de crédito (RD\$)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -855,7 +855,7 @@ private fun NuevaTarjetaSheet(
         OutlinedTextField(
             value = diaCorte,
             onValueChange = { if (it.length <= 2 && it.all(Char::isDigit)) diaCorte = it },
-            label = { Text("DÃ­a de corte (1-31)") },
+            label = { Text("Día de corte (1-31)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
