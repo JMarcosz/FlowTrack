@@ -70,11 +70,31 @@ class ProcesarArchivoUseCase @Inject constructor(
         fechaLimitePagoManual: LocalDate? = null,
         claveDocumento: String? = null,
     ): ResultadoImportacion {
-
         val archivo = leerArchivo(uri) ?: return ResultadoImportacion.Error(
             AppResult.Error(ErrorApp.ParseError("No se pudo leer el archivo seleccionado."))
         )
+        return ejecutar(
+            archivo = archivo,
+            uid = uid,
+            bancoCodigo = bancoCodigo,
+            productoTipo = productoTipo,
+            formato = formato,
+            fechaCorteManual = fechaCorteManual,
+            fechaLimitePagoManual = fechaLimitePagoManual,
+            claveDocumento = claveDocumento,
+        )
+    }
 
+    suspend fun ejecutar(
+        archivo: ArchivoEntrada,
+        uid: String,
+        bancoCodigo: String,
+        productoTipo: ProductoTipo,
+        formato: FileFormat,
+        fechaCorteManual: LocalDate? = null,
+        fechaLimitePagoManual: LocalDate? = null,
+        claveDocumento: String? = null,
+    ): ResultadoImportacion {
         if (archivo.tamanioBytes > LIMITE_BYTES) {
             return ResultadoImportacion.Error(
                 AppResult.Error(ErrorApp.ArchivoMuyGrande(archivo.tamanioBytes, LIMITE_BYTES))
@@ -112,10 +132,14 @@ class ProcesarArchivoUseCase @Inject constructor(
         )
         return when (val resultado = parser.parse(request)) {
             is ParseResult.Success -> mapearYPersistir(
-                resultado, uid, archivo, parser.version,
-                fechaCorteManual, fechaLimitePagoManual,
+                resultado,
+                uid,
+                archivo,
+                parser.version,
+                fechaCorteManual,
+                fechaLimitePagoManual,
             )
-            is ParseResult.Error   -> ResultadoImportacion.Error(
+            is ParseResult.Error -> ResultadoImportacion.Error(
                 AppResult.Error(ErrorApp.ParseError(resultado.message, resultado.cause))
             )
             ParseResult.ClaveRequerida -> ResultadoImportacion.ClaveRequerida

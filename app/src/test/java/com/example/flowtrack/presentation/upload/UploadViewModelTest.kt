@@ -1,17 +1,17 @@
 package com.example.flowtrack.presentation.upload
 
-import android.net.Uri
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.core.result.ErrorApp
+import com.example.flowtrack.data.parsers.core.ArchivoEntrada
 import com.example.flowtrack.domain.model.Carga
 import com.example.flowtrack.domain.model.EstadoCarga
 import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.domain.model.TipoDocumento
+import com.example.flowtrack.domain.usecase.ObtenerBancosSoportadosUseCase
 import com.example.flowtrack.domain.usecase.ProcesarArchivoUseCase
 import com.example.flowtrack.domain.usecase.ResultadoImportacion
 import com.example.flowtrack.presentation.screens.upload.BancoOpcion
-import com.example.flowtrack.presentation.screens.upload.BANCOS_DISPONIBLES
 import com.example.flowtrack.presentation.screens.upload.UploadEstado
 import com.example.flowtrack.presentation.screens.upload.UploadViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -46,10 +46,17 @@ class UploadViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var procesarArchivoUseCase: ProcesarArchivoUseCase
+    private lateinit var bancosUseCase: ObtenerBancosSoportadosUseCase
     private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var viewModel: UploadViewModel
 
-    private val uriSintetica: Uri = mock()
+    private val archivoSintetico = ArchivoEntrada(
+        nombre = "estado_prueba.pdf",
+        extension = "pdf",
+        tamanioBytes = 1024L,
+        bytes = byteArrayOf(1, 2, 3, 4),
+        mimeType = "application/pdf",
+    )
 
     private val bancoTest = BancoOpcion(
         codigo = "BANRESERVAS",
@@ -83,9 +90,10 @@ class UploadViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         procesarArchivoUseCase = mock()
+        bancosUseCase = ObtenerBancosSoportadosUseCase()
         val firebaseUser: FirebaseUser = mock { on { uid } doReturn "uid-test" }
         firebaseAuth = mock { on { currentUser } doReturn firebaseUser }
-        viewModel = UploadViewModel(procesarArchivoUseCase, firebaseAuth)
+        viewModel = UploadViewModel(procesarArchivoUseCase, bancosUseCase, firebaseAuth)
     }
 
     @After
@@ -115,7 +123,7 @@ class UploadViewModelTest {
 
     @Test
     fun `seleccionarBanco permite BHD como banco disponible`() = runTest {
-        val bhd = BANCOS_DISPONIBLES.first { it.codigo == "BHD" }
+        val bhd = viewModel.bancosDisponibles.first().first { it.codigo == "BHD" }
 
         viewModel.seleccionarBanco(bhd)
 
@@ -124,7 +132,7 @@ class UploadViewModelTest {
 
     @Test
     fun `procesarArchivo sin banco seleccionado emite Error`() = runTest {
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         val estado = viewModel.estado.first()
@@ -137,12 +145,12 @@ class UploadViewModelTest {
     fun `procesarArchivo - resultado Exito emite UploadEstado Exito con datos correctos`() = runTest {
         val carga = cargaDePrueba("BANRESERVAS")
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
+            onBlocking { ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Exito(carga, transaccionesInsertadas = 5)
         }
 
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         val estado = viewModel.estado.first()
@@ -157,14 +165,14 @@ class UploadViewModelTest {
     @Test
     fun `procesarArchivo - error de Firestore emite UploadEstado Error con mensaje legible`() = runTest {
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
+            onBlocking { ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Error(
                     AppResult.Error(ErrorApp.FirestoreError("PERMISSION_DENIED: Missing permissions"))
                 )
         }
 
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         val estado = viewModel.estado.first()
@@ -175,14 +183,14 @@ class UploadViewModelTest {
     @Test
     fun `procesarArchivo - error de parseo emite UploadEstado Error`() = runTest {
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
+            onBlocking { ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Error(
                     AppResult.Error(ErrorApp.ParseError("Formato de PDF no reconocido"))
                 )
         }
 
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         val estado = viewModel.estado.first()
@@ -193,7 +201,7 @@ class UploadViewModelTest {
     @Test
     fun `procesarArchivo - archivo muy grande emite error con tamanio`() = runTest {
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
+            onBlocking { ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Error(
                     AppResult.Error(
                         ErrorApp.ArchivoMuyGrande(
@@ -205,7 +213,7 @@ class UploadViewModelTest {
         }
 
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         val estado = viewModel.estado.first()
@@ -222,10 +230,10 @@ class UploadViewModelTest {
     @Test
     fun `procesarArchivo - sin usuario autenticado emite error de sesion`() = runTest {
         val authSinUsuario: FirebaseAuth = mock { on { currentUser } doReturn null }
-        val vmSinAuth = UploadViewModel(procesarArchivoUseCase, authSinUsuario)
+        val vmSinAuth = UploadViewModel(procesarArchivoUseCase, bancosUseCase, authSinUsuario)
 
         vmSinAuth.seleccionarBanco(bancoTest)
-        vmSinAuth.procesarArchivo(uriSintetica)
+        vmSinAuth.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         val estado = vmSinAuth.estado.first()
@@ -244,11 +252,11 @@ class UploadViewModelTest {
     fun `resetear vuelve el estado a Idle y limpia banco seleccionado`() = runTest {
         val carga = cargaDePrueba()
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
+            onBlocking { ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Exito(carga, 3)
         }
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
         assertTrue(viewModel.estado.first() is UploadEstado.Exito)
 
@@ -263,7 +271,7 @@ class UploadViewModelTest {
     fun `procesarArchivo - estado Procesando se emite antes del resultado`() = runTest {
         val carga = cargaDePrueba()
         procesarArchivoUseCase.stub {
-            onBlocking { ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
+            onBlocking { ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull()) } doReturn
                 ResultadoImportacion.Exito(carga, 2)
         }
 
@@ -273,7 +281,7 @@ class UploadViewModelTest {
         }
 
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
         job.cancel()
 
@@ -285,12 +293,12 @@ class UploadViewModelTest {
     fun `documento cifrado muestra dialogo de clave y conserva formulario`() = runTest {
         procesarArchivoUseCase.stub {
             onBlocking {
-                ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
+                ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
             } doReturn ResultadoImportacion.ClaveRequerida
         }
 
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         assertEquals(UploadEstado.Idle, viewModel.estado.first())
@@ -302,16 +310,16 @@ class UploadViewModelTest {
     fun `clave incorrecta mantiene dialogo y muestra error`() = runTest {
         procesarArchivoUseCase.stub {
             onBlocking {
-                ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
+                ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
             } doReturn ResultadoImportacion.ClaveRequerida
         }
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         procesarArchivoUseCase.stub {
             onBlocking {
-                ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), eq("incorrecta"))
+                ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), eq("incorrecta"))
             } doReturn ResultadoImportacion.ClaveIncorrecta
         }
         viewModel.desbloquearDocumento("incorrecta")
@@ -328,16 +336,16 @@ class UploadViewModelTest {
         val carga = cargaDePrueba()
         procesarArchivoUseCase.stub {
             onBlocking {
-                ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
+                ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
             } doReturn ResultadoImportacion.ClaveRequerida
         }
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         procesarArchivoUseCase.stub {
             onBlocking {
-                ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), eq("correcta"))
+                ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), eq("correcta"))
             } doReturn ResultadoImportacion.Exito(carga, 5)
         }
         viewModel.desbloquearDocumento("correcta")
@@ -351,11 +359,11 @@ class UploadViewModelTest {
     fun `cancelar desbloqueo cierra dialogo y conserva banco`() = runTest {
         procesarArchivoUseCase.stub {
             onBlocking {
-                ejecutar(any(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
+                ejecutar(any<ArchivoEntrada>(), eq("uid-test"), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())
             } doReturn ResultadoImportacion.ClaveRequerida
         }
         viewModel.seleccionarBanco(bancoTest)
-        viewModel.procesarArchivo(uriSintetica)
+        viewModel.procesarArchivo(archivoSintetico)
         advanceUntilIdle()
 
         viewModel.cancelarDesbloqueo()

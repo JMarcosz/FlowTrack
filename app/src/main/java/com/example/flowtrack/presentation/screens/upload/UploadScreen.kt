@@ -1,5 +1,6 @@
 package com.example.flowtrack.presentation.screens.upload
 
+import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,6 +64,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -71,12 +73,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import com.example.flowtrack.presentation.navigation.Screen
+import com.example.flowtrack.R
+import com.example.flowtrack.data.parsers.core.ArchivoEntrada
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.presentation.components.BankLogo
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
+import java.io.InputStream
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -84,17 +89,21 @@ import java.time.format.DateTimeParseException
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UploadScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
+    onNavigateToHistorial: () -> Unit,
+    onNavigateToDashboard: () -> Unit,
     viewModel: UploadViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val estado by viewModel.estado.collectAsState()
     val bancoSeleccionado by viewModel.bancoSeleccionado.collectAsState()
     val dialogoClave by viewModel.dialogoClave.collectAsState()
+    val bancosDisponibles by viewModel.bancosDisponibles.collectAsState()
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { viewModel.procesarArchivo(it) }
+        uri?.let { resolverArchivoSeleccionado(context, it)?.let(viewModel::procesarArchivo) }
     }
 
     dialogoClave?.let { dialogo ->
@@ -113,8 +122,8 @@ fun UploadScreen(
                     Text("Importar estado", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -141,6 +150,7 @@ fun UploadScreen(
                     is UploadEstado.Idle, is UploadEstado.Error -> {
                         UploadFormContent(
                             bancoSeleccionado = bancoSeleccionado,
+                            bancosDisponibles = bancosDisponibles,
                             errorMensaje = (estadoActual as? UploadEstado.Error)?.mensaje,
                             onSeleccionarBanco = { viewModel.seleccionarBanco(it) },
                             onFechaCorteChange = { viewModel.setFechaCorte(it) },
@@ -153,16 +163,8 @@ fun UploadScreen(
                         transaccionesInsertadas = estadoActual.transaccionesInsertadas,
                         banco = estadoActual.banco,
                         onNuevoArchivo = { viewModel.resetear() },
-                        onVerHistorial = { navController.navigate("historial") },
-                        onIrInicio = {
-                            navController.navigate(Screen.Dashboard.route) {
-                                popUpTo(Screen.Dashboard.route) {
-                                    inclusive = false
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
+                        onVerHistorial = onNavigateToHistorial,
+                        onIrInicio = onNavigateToDashboard,
                     )
                 }
             }
@@ -192,11 +194,11 @@ private fun DocumentoProtegidoDialog(
             if (!estado.procesando) onCancelar()
         },
         icon = {
-            Icon(
-                imageVector = Icons.Outlined.Lock,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = stringResource(R.string.upload_document_protected_title),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
         },
         title = {
             Text(
@@ -245,9 +247,9 @@ private fun DocumentoProtegidoDialog(
                                     Icons.Outlined.Visibility
                                 },
                                 contentDescription = if (mostrarClave) {
-                                    "Ocultar clave"
+                                    stringResource(R.string.cd_hide_password)
                                 } else {
-                                    "Mostrar clave"
+                                    stringResource(R.string.cd_show_password)
                                 },
                             )
                         }
@@ -302,6 +304,7 @@ private fun parseFecha(texto: String): LocalDate? = try {
 @Composable
 private fun UploadFormContent(
     bancoSeleccionado: BancoOpcion?,
+    bancosDisponibles: List<BancoOpcion>,
     errorMensaje: String?,
     onSeleccionarBanco: (BancoOpcion) -> Unit,
     onFechaCorteChange: (LocalDate?) -> Unit,
@@ -322,7 +325,7 @@ private fun UploadFormContent(
             color = MaterialTheme.colorScheme.onSurface,
         )
 
-        BANCOS_DISPONIBLES.forEach { banco ->
+        bancosDisponibles.forEach { banco ->
             val seleccionado = bancoSeleccionado?.codigo == banco.codigo
             BancoCard(
                 banco = banco,
@@ -372,7 +375,7 @@ private fun UploadFormContent(
             ) {
                 Icon(
                     Icons.Outlined.CloudUpload,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_upload),
                     tint = if (bancoSeleccionado != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(32.dp),
                 )
@@ -404,7 +407,7 @@ private fun UploadFormContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                Icon(Icons.Outlined.Error, contentDescription = stringResource(R.string.cd_error), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                 Text(errorMensaje, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
         }
@@ -525,7 +528,7 @@ private fun BancoCard(banco: BancoOpcion, seleccionado: Boolean, onClick: () -> 
             )
         }
         if (seleccionado) {
-            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            Icon(Icons.Outlined.CheckCircle, contentDescription = stringResource(R.string.cd_success), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -556,10 +559,10 @@ private fun UploadExitoContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(
-            modifier = Modifier.size(72.dp).background(ExtendedTheme.colors.successContainer, CircleShape),
+            modifier = Modifier.size(72.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = ExtendedTheme.colors.success, modifier = Modifier.size(36.dp))
+            Icon(Icons.Outlined.CheckCircle, contentDescription = stringResource(R.string.cd_success), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
         }
         Text("¡Importación exitosa!", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Text("$transaccionesInsertadas transacciones importadas desde $banco", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -573,5 +576,33 @@ private fun UploadExitoContent(
         Button(onClick = onNuevoArchivo, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface), shape = Radii.md, modifier = Modifier.fillMaxWidth()) {
             Text("Importar otro archivo", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
         }
+    }
+}
+
+private fun resolverArchivoSeleccionado(context: Context, uri: Uri): ArchivoEntrada? {
+    return try {
+        val contentResolver = context.contentResolver
+        var nombre = "archivo"
+        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (nameIndex != -1 && cursor.moveToFirst()) {
+                nombre = cursor.getString(nameIndex)
+            }
+        }
+        if (nombre == "archivo") {
+            nombre = uri.lastPathSegment?.substringAfterLast('/') ?: "archivo"
+        }
+        val extension = nombre.substringAfterLast('.', "").lowercase()
+        val mimeType = contentResolver.getType(uri)
+        val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
+        ArchivoEntrada(
+            nombre = nombre,
+            extension = extension,
+            tamanioBytes = bytes.size.toLong(),
+            bytes = bytes,
+            mimeType = mimeType,
+        )
+    } catch (_: Exception) {
+        null
     }
 }

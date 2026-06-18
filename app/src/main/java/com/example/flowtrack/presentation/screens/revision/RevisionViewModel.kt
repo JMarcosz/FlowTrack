@@ -1,7 +1,6 @@
 package com.example.flowtrack.presentation.screens.revision
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.data.parsers.core.TransaccionNormalizada
 import com.example.flowtrack.domain.model.TipoTransaccion
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,20 +25,18 @@ class RevisionViewModel @Inject constructor() : ViewModel() {
         duplicados: Int,
         periodo: String,
     ) {
-        viewModelScope.launch {
-            val debitos = transacciones.filter { it.tipo == TipoTransaccion.DEBITO }
-            val creditos = transacciones.filter { it.tipo == TipoTransaccion.CREDITO }
-            _estado.value = RevisionEstado.Listo(
-                nombreArchivo = nombreArchivo,
-                banco = banco,
-                transacciones = transacciones,
-                advertencias = advertencias,
-                duplicados = duplicados,
-                periodo = periodo,
-                totalDebitos = debitos.fold(BigDecimal.ZERO) { a, t -> a + t.monto },
-                totalCreditos = creditos.fold(BigDecimal.ZERO) { a, t -> a + t.monto },
-            )
-        }
+        val debitos = transacciones.filter { it.tipo == TipoTransaccion.DEBITO }
+        val creditos = transacciones.filter { it.tipo == TipoTransaccion.CREDITO }
+        _estado.value = RevisionEstado.Listo(
+            nombreArchivo = nombreArchivo,
+            banco = banco,
+            transacciones = transacciones,
+            advertencias = advertencias,
+            duplicados = duplicados,
+            periodo = periodo,
+            totalDebitos = debitos.fold(BigDecimal.ZERO) { a, t -> a + t.monto },
+            totalCreditos = creditos.fold(BigDecimal.ZERO) { a, t -> a + t.monto },
+        )
     }
 
     fun confirmar() {

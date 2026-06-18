@@ -1,21 +1,24 @@
 package com.example.flowtrack.presentation.screens.upload
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.flowtrack.data.parsers.core.ArchivoEntrada
+import com.example.flowtrack.domain.model.BancoSoportado
 import com.example.flowtrack.domain.model.FileFormat
+import com.example.flowtrack.domain.model.FormatoArchivo
 import com.example.flowtrack.domain.model.ProductoTipo
+import com.example.flowtrack.domain.usecase.ObtenerBancosSoportadosUseCase
 import com.example.flowtrack.domain.usecase.ProcesarArchivoUseCase
 import com.example.flowtrack.domain.usecase.ResultadoImportacion
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
-/** Catálogo estático de bancos. [disponible] = false indica "próximamente". */
 data class BancoOpcion(
     val codigo: String,
     val nombre: String,
@@ -26,29 +29,15 @@ data class BancoOpcion(
     val formatos: Set<FileFormat> = setOf(formato),
 )
 
-val BANCOS_DISPONIBLES = listOf(
-    BancoOpcion("BANRESERVAS", "BanReservas",      FileFormat.PDF, ProductoTipo.CUENTA,   "PDF"),
-    BancoOpcion(
-        "POPULAR",
-        "Banco Popular",
-        FileFormat.CSV,
-        ProductoTipo.CUENTA,
-        "CSV o PDF",
-        formatos = setOf(FileFormat.CSV, FileFormat.PDF),
-    ),
-    BancoOpcion("QIK",         "Qik",              FileFormat.PDF, ProductoTipo.TARJETA,  "PDF"),
-    BancoOpcion("CIBAO",       "Asociación Cibao", FileFormat.XLS, ProductoTipo.TARJETA,  "XLS"),
-    BancoOpcion("BHD",         "BHD León",         FileFormat.PDF, ProductoTipo.CUENTA,   "PDF"),
-)
-
 @HiltViewModel
 class UploadViewModel @Inject constructor(
     private val procesarArchivoUseCase: ProcesarArchivoUseCase,
+    private val obtenerBancosSoportadosUseCase: ObtenerBancosSoportadosUseCase,
     private val auth: FirebaseAuth,
 ) : ViewModel() {
 
     private data class ImportacionPendiente(
-        val uri: Uri,
+        val archivo: ArchivoEntrada,
         val uid: String,
         val banco: BancoOpcion,
         val fechaCorteManual: LocalDate?,
@@ -56,19 +45,22 @@ class UploadViewModel @Inject constructor(
     )
 
     private val _estado = MutableStateFlow<UploadEstado>(UploadEstado.Idle)
-    val estado: StateFlow<UploadEstado> = _estado
+    val estado: StateFlow<UploadEstado> = _estado.asStateFlow()
 
     private val _dialogoClave = MutableStateFlow<DialogoClaveEstado?>(null)
-    val dialogoClave: StateFlow<DialogoClaveEstado?> = _dialogoClave
+    val dialogoClave: StateFlow<DialogoClaveEstado?> = _dialogoClave.asStateFlow()
 
     private val _bancoSeleccionado = MutableStateFlow<BancoOpcion?>(null)
-    val bancoSeleccionado: StateFlow<BancoOpcion?> = _bancoSeleccionado
+    val bancoSeleccionado: StateFlow<BancoOpcion?> = _bancoSeleccionado.asStateFlow()
 
     private val _fechaCorteManual = MutableStateFlow<LocalDate?>(null)
-    val fechaCorteManual: StateFlow<LocalDate?> = _fechaCorteManual
+    val fechaCorteManual: StateFlow<LocalDate?> = _fechaCorteManual.asStateFlow()
 
     private val _fechaLimitePagoManual = MutableStateFlow<LocalDate?>(null)
-    val fechaLimitePagoManual: StateFlow<LocalDate?> = _fechaLimitePagoManual
+    val fechaLimitePagoManual: StateFlow<LocalDate?> = _fechaLimitePagoManual.asStateFlow()
+
+    private val _bancosDisponibles = MutableStateFlow(obtenerBancos())
+    val bancosDisponibles: StateFlow<List<BancoOpcion>> = _bancosDisponibles.asStateFlow()
 
     private var importacionPendiente: ImportacionPendiente? = null
 
@@ -84,10 +76,15 @@ class UploadViewModel @Inject constructor(
         if (_estado.value is UploadEstado.Error) _estado.value = UploadEstado.Idle
     }
 
-    fun setFechaCorte(fecha: LocalDate?) { _fechaCorteManual.value = fecha }
-    fun setFechaLimitePago(fecha: LocalDate?) { _fechaLimitePagoManual.value = fecha }
+    fun setFechaCorte(fecha: LocalDate?) {
+        _fechaCorteManual.value = fecha
+    }
 
-    fun procesarArchivo(uri: Uri) {
+    fun setFechaLimitePago(fecha: LocalDate?) {
+        _fechaLimitePagoManual.value = fecha
+    }
+
+    fun procesarArchivo(archivo: ArchivoEntrada) {
         val uid = auth.currentUser?.uid ?: run {
             _estado.value = UploadEstado.Error("Debes iniciar sesión para importar archivos.")
             return
@@ -98,7 +95,7 @@ class UploadViewModel @Inject constructor(
         }
 
         val pendiente = ImportacionPendiente(
-            uri = uri,
+            archivo = archivo,
             uid = uid,
             banco = banco,
             fechaCorteManual = _fechaCorteManual.value,
@@ -139,14 +136,14 @@ class UploadViewModel @Inject constructor(
             _estado.value = UploadEstado.Procesando("Procesando archivo...")
 
             when (val resultado = procesarArchivoUseCase.ejecutar(
-                uri                   = pendiente.uri,
-                uid                   = pendiente.uid,
-                bancoCodigo           = pendiente.banco.codigo,
-                productoTipo          = pendiente.banco.productoTipo,
-                formato               = pendiente.banco.formato,
-                fechaCorteManual      = pendiente.fechaCorteManual,
+                archivo = pendiente.archivo,
+                uid = pendiente.uid,
+                bancoCodigo = pendiente.banco.codigo,
+                productoTipo = pendiente.banco.productoTipo,
+                formato = pendiente.banco.formato,
+                fechaCorteManual = pendiente.fechaCorteManual,
                 fechaLimitePagoManual = pendiente.fechaLimitePagoManual,
-                claveDocumento        = claveDocumento,
+                claveDocumento = claveDocumento,
             )) {
                 is ResultadoImportacion.Exito -> {
                     limpiarImportacionPendiente()
@@ -185,12 +182,42 @@ class UploadViewModel @Inject constructor(
         _fechaCorteManual.value = null
         _fechaLimitePagoManual.value = null
     }
+
+    private fun obtenerBancos(): List<BancoOpcion> {
+        return obtenerBancosSoportadosUseCase().map { banco ->
+            banco.toOpcion()
+        }
+    }
+
+    private fun BancoSoportado.toOpcion(): BancoOpcion {
+        val formatoPrincipal = when (formatosPermitidos.firstOrNull() ?: FormatoArchivo.PDF) {
+            FormatoArchivo.PDF -> FileFormat.PDF
+            FormatoArchivo.CSV -> FileFormat.CSV
+            FormatoArchivo.XLS -> FileFormat.XLS
+            FormatoArchivo.XLSX -> FileFormat.XLSX
+        }
+        val formatos = formatosPermitidos.map {
+            when (it) {
+                FormatoArchivo.PDF -> FileFormat.PDF
+                FormatoArchivo.CSV -> FileFormat.CSV
+                FormatoArchivo.XLS -> FileFormat.XLS
+                FormatoArchivo.XLSX -> FileFormat.XLSX
+            }
+        }.toSet()
+        return BancoOpcion(
+            codigo = codigo,
+            nombre = nombre,
+            formato = formatoPrincipal,
+            productoTipo = productoTipo,
+            formatoLabel = formatos.joinToString(" o ") { it.name },
+            disponible = disponible,
+            formatos = formatos,
+        )
+    }
 }
 
-// ─── Estados de pantalla ──────────────────────────────────────────────────────
-
 sealed class UploadEstado {
-    object Idle : UploadEstado()
+    data object Idle : UploadEstado()
     data class Procesando(val mensaje: String = "Procesando archivo...") : UploadEstado()
     data class Exito(val transaccionesInsertadas: Int, val banco: String) : UploadEstado()
     data class Error(val mensaje: String) : UploadEstado()

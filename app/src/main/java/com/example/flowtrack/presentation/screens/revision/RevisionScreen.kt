@@ -50,17 +50,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.data.parsers.core.TransaccionNormalizada
 import com.example.flowtrack.domain.model.TipoTransaccion
-import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.TabularNumber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RevisionScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
+    onNavigateToDuplicados: () -> Unit,
+    onNavigateToHistorial: () -> Unit,
     viewModel: RevisionViewModel = hiltViewModel(),
 ) {
     val estado by viewModel.estado.collectAsState()
@@ -71,7 +73,7 @@ fun RevisionScreen(
             TopAppBar(
                 title = { Text("Revisar importación", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
@@ -88,7 +90,7 @@ fun RevisionScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         OutlinedButton(
-                            onClick = { navController.popBackStack() },
+                            onClick = onNavigateBack,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                         ) { Text("Cancelar") }
@@ -107,12 +109,12 @@ fun RevisionScreen(
             is RevisionEstado.Cargando -> LoadingContent(Modifier.padding(padding))
             is RevisionEstado.Listo -> RevisionContent(
                 estado = s,
-                onVerDuplicados = { navController.navigate(Screen.Duplicados.route) },
+                onVerDuplicados = onNavigateToDuplicados,
                 modifier = Modifier.padding(padding),
             )
             is RevisionEstado.Confirmado -> {
                 LaunchedEffect(estado) {
-                    navController.navigate(Screen.Historial.route) { popUpTo(Screen.Upload.route) }
+                    onNavigateToHistorial()
                     viewModel.consumirConfirmacion()
                 }
             }
@@ -228,18 +230,18 @@ private fun StatMini(label: String, value: String) {
 
 @Composable
 private fun DuplicadosAlertCard(duplicados: Int, onVer: () -> Unit) {
-    Surface(shape = RoundedCornerShape(12.dp), color = ExtendedTheme.colors.warningContainer) {
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
         Row(
             Modifier.fillMaxWidth().padding(12.dp).clickable(onClick = onVer),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(Icons.Outlined.Warning, null, tint = ExtendedTheme.colors.onWarningContainer, modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(20.dp))
             Column(Modifier.weight(1f)) {
-                Text("Posibles duplicados: $duplicados", fontWeight = FontWeight.SemiBold, color = ExtendedTheme.colors.onWarningContainer, fontSize = 13.sp)
-                Text("Toca para ver detalles", style = MaterialTheme.typography.bodySmall, color = ExtendedTheme.colors.onWarningContainer.copy(alpha = 0.8f))
+                Text("Posibles duplicados: $duplicados", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onTertiaryContainer, fontSize = 13.sp)
+                Text("Toca para ver detalles", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f))
             }
-            Icon(Icons.Outlined.ChevronRight, null, tint = ExtendedTheme.colors.onWarningContainer, modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -257,8 +259,8 @@ private fun AdvertenciasCard(advertencias: List<String>) {
 @Composable
 private fun TransaccionRevisionRow(tx: TransaccionNormalizada) {
     val esCredito = tx.tipo == TipoTransaccion.CREDITO
-    val colorMonto = if (esCredito) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error
-    val colorBg = if (esCredito) ExtendedTheme.colors.successContainer else MaterialTheme.colorScheme.errorContainer
+    val colorMonto = if (esCredito) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    val colorBg = if (esCredito) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
     val signo = if (esCredito) "+" else "-"
 
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 0.5.dp) {
