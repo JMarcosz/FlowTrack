@@ -143,6 +143,7 @@ class FinancialComparisonService @Inject constructor() {
         movActuales: List<MovimientoTarjeta>,
         txAnteriores: List<Transaccion>,
         movAnteriores: List<MovimientoTarjeta>,
+        requiereCoberturaCompleta: Boolean = true,
     ): ResultadoComparacion {
         val (gastoActual, ingresoActual) = calculateIncomeExpenseTotals(txActuales, movActuales)
         val (gastoAnterior, ingresoAnterior) = calculateIncomeExpenseTotals(txAnteriores, movAnteriores)
@@ -166,7 +167,7 @@ class FinancialComparisonService @Inject constructor() {
         }
 
         val coberturaOk = validatePeriodCoverage(periodoAnterior, txAnteriores, movAnteriores)
-        if (!coberturaOk) {
+        if (requiereCoberturaCompleta && !coberturaOk) {
             return ResultadoComparacion(
                 comparisonAvailable   = false,
                 coverageWarning       = true,
@@ -187,7 +188,7 @@ class FinancialComparisonService @Inject constructor() {
 
         return ResultadoComparacion(
             comparisonAvailable   = true,
-            coverageWarning       = false,
+            coverageWarning       = requiereCoberturaCompleta.not() && !coberturaOk,
             reason                = null,
             gastoActual           = gastoActual,
             ingresoActual         = ingresoActual,

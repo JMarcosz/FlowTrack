@@ -33,6 +33,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -56,9 +59,11 @@ import com.example.flowtrack.presentation.components.DonutSlice
 import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.components.bancoPorCodigo
-import com.example.flowtrack.ui.theme.*
 import androidx.compose.material3.MaterialTheme
 import com.example.flowtrack.presentation.components.categoriaPorId
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.TabularNumber
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -67,16 +72,20 @@ import com.example.flowtrack.presentation.components.FiltrosSheet
 import com.example.flowtrack.presentation.components.PeriodoDropdown
 import com.example.flowtrack.presentation.model.FiltroPeriodo
 import com.example.flowtrack.presentation.components.DesignPill
+import com.example.flowtrack.ui.theme.ExtendedTheme
+import java.math.BigDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResumenScreen(
     viewModel: ResumenViewModel = hiltViewModel(),
-    onVerPorPeriodo: () -> Unit = {},
     onMenuClick: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
+    val periodoViewModel: ResumenPeriodoViewModel = hiltViewModel()
+    val periodoState by periodoViewModel.state.collectAsState()
     var showFiltrosSheet by remember { mutableStateOf(false) }
+    var showDetallePeriodo by remember { mutableStateOf(false) }
     val filtrosSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Box(
@@ -109,8 +118,12 @@ fun ResumenScreen(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onVerPorPeriodo) {
-                    Icon(Icons.Outlined.BarChart, contentDescription = "Resumen por período", tint = MaterialTheme.colorScheme.primary)
+                IconButton(onClick = { showDetallePeriodo = !showDetallePeriodo }) {
+                    Icon(
+                        Icons.Outlined.BarChart,
+                        contentDescription = "Resumen por período",
+                        tint = if (showDetallePeriodo) ExtendedTheme.colors.success else MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
 
@@ -154,6 +167,14 @@ fun ResumenScreen(
             Spacer(Modifier.height(Spacing.md))
 
             // ── Controles de Filtro ────────────────────────────────
+            if (showDetallePeriodo) {
+                PeriodoDetailSection(
+                    state = periodoState,
+                    onTipoSelected = periodoViewModel::setTipo,
+                )
+                Spacer(Modifier.height(Spacing.md))
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -305,7 +326,7 @@ private fun BancoCard(b: ResumenBanco) {
                 BancoStat(
                     label = "Balance",
                     value = formatMoney(b.balance.abs()),
-                    color = if (b.balance >= java.math.BigDecimal.ZERO) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
+                    color = if (b.balance >= java.math.BigDecimal.ZERO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     prefix = if (b.balance < java.math.BigDecimal.ZERO) "-" else "",
                     align = Alignment.End,
                 )
@@ -431,7 +452,7 @@ private fun BalancePeriodoCard(
                     (if (positivo) "" else "-") + formatMoney(balanceNeto.abs()),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (positivo) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
+                    color = if (positivo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     style = TabularNumber,
                 )
             }
@@ -491,5 +512,111 @@ private fun CategoriaRow(nombre: String, color: Color, monto: String, pct: Float
             fontWeight = FontWeight.Medium,
             modifier = Modifier.width(36.dp),
         )
+    }
+}
+
+@Composable
+private fun PeriodoDetailSection(
+    state: ResumenPeriodoState,
+    onTipoSelected: (com.example.flowtrack.domain.usecase.TipoPeriodo) -> Unit,
+) {
+    val opciones = listOf(
+        com.example.flowtrack.domain.usecase.TipoPeriodo.DIA to "Día",
+        com.example.flowtrack.domain.usecase.TipoPeriodo.SEMANA to "Semana",
+        com.example.flowtrack.domain.usecase.TipoPeriodo.MES to "Mes",
+    )
+    val resumen = state.resumen
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xl),
+    ) {
+        Text(
+            text = "Resumen por período",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        Spacer(Modifier.height(Spacing.sm))
+
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            opciones.forEachIndexed { index, (tipo, label) ->
+                SegmentedButton(
+                    selected = state.tipo == tipo,
+                    onClick = { onTipoSelected(tipo) },
+                    shape = SegmentedButtonDefaults.itemShape(index, opciones.size),
+                ) {
+                    Text(label)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(Spacing.md))
+
+        when {
+            state.isLoading -> Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+
+            state.error != null -> Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
+
+            resumen == null || resumen.buckets.isEmpty() -> EmptyState(
+                icon = Icons.Outlined.BarChart,
+                title = "Sin datos en el período",
+                description = "Importa estados de cuenta para ver tus resúmenes.",
+            )
+
+            else -> {
+                Card(
+                    shape = Radii.lg,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, Radii.lg),
+                ) {
+                    Column(modifier = Modifier.padding(Spacing.xl)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Ingresos", color = ExtendedTheme.colors.success)
+                            Text(formatMoney(resumen.totalIngresos), style = MaterialTheme.typography.titleMedium.merge(TabularNumber))
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Gastos", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(formatMoney(resumen.totalGastos), style = MaterialTheme.typography.titleMedium.merge(TabularNumber))
+                        }
+                        Text(
+                            text = "Balance final del período: ${formatMoney(resumen.balanceFinal)}",
+                            color = if (resumen.balanceFinal >= BigDecimal.ZERO) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
+                        )
+
+                        Spacer(Modifier.height(Spacing.md))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(Spacing.md))
+
+                        LazyColumn(
+                            modifier = Modifier.height(240.dp),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            contentPadding = PaddingValues(bottom = Spacing.md),
+                        ) {
+                            items(resumen.buckets.asReversed()) { bucket ->
+                                Text(
+                                    text = "${bucket.etiqueta} - ${formatMoney(bucket.balance)}",
+                                    modifier = Modifier.padding(vertical = Spacing.xxs),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

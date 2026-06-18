@@ -4,35 +4,29 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flowtrack.core.result.AppResult
-import com.example.flowtrack.data.store.AppDataStore
-import com.example.flowtrack.domain.model.Cuenta
+import com.example.flowtrack.domain.usecase.ObservarRevisionLocalUseCase
 import com.example.flowtrack.domain.usecase.ObtenerResumenDashboardUseCase
 import com.example.flowtrack.domain.usecase.ResumenDashboard
 import com.example.flowtrack.presentation.model.FiltroPeriodo
 import com.example.flowtrack.presentation.model.PeriodoState
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import java.math.BigDecimal
+import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val auth: FirebaseAuth,
-    private val store: AppDataStore,
     private val resumenUseCase: ObtenerResumenDashboardUseCase,
-    private val transaccionRepository: com.example.flowtrack.data.firestore.repositories.TransaccionRepository,
+    private val observarRevisionLocalUseCase: ObservarRevisionLocalUseCase,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -52,32 +46,29 @@ class DashboardViewModel @Inject constructor(
 
             val filtroPeriodo = FiltroPeriodo.fromLabel(label) ?: FiltroPeriodo.ESTE_MES
 
-            combine(
-                flowOf(uid),
-                store.cuentas,
-                transaccionRepository.observarRevisionLocal().onStart { emit(0L) },
-            ) { u, cuentas, _ ->
-                val result = withContext(Dispatchers.Default) {
-                    resumenUseCase.ejecutar(u, filtroPeriodo.label)
-                }
-                when (result) {
-                    is AppResult.Success -> DashboardEstado.Exito(
-                        resumen       = result.data,
-                        cuentas       = cuentas.filter { it.mostrarEnDashboard },
-                        periodo       = PeriodoState(seleccionado = filtroPeriodo),
-                        nombreUsuario = auth.currentUser?.displayName
-                            ?.substringBefore(" ")
-                            ?.ifBlank { null }
-                            ?: "ahí",
-                    )
+            observarRevisionLocalUseCase().map {
+                when (val result = resumenUseCase.ejecutar(uid, filtroPeriodo.label)) {
+                    is AppResult.Success -> {
+                        val resumen = result.data
+                        if (resumen.esVacio()) {
+                            DashboardEstado.Vacio
+                        } else {
+                            val nombreUsuario = auth.currentUser?.displayName
+                                ?.substringBefore(" ")
+                                ?.ifBlank { null }
+                                ?: "ahí"
+                            DashboardEstado.Exito(
+                                data = resumen.toDashboardUiState(nombreUsuario),
+                                periodo = PeriodoState(seleccionado = filtroPeriodo),
+                            )
+                        }
+                    }
                     is AppResult.Error -> DashboardEstado.Error(
                         result.error.toMensajeUsuario()
                     )
                 }
             }
         }
-        .onStart { emit(DashboardEstado.Cargando) }
-        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.Lazily, DashboardEstado.Cargando)
 
     fun seleccionarPeriodo(p: FiltroPeriodo) {
@@ -98,12 +89,18 @@ class DashboardViewModel @Inject constructor(
 }
 
 sealed class DashboardEstado {
-    object Cargando : DashboardEstado()
+    data object Cargando : DashboardEstado()
+    data object Vacio : DashboardEstado()
     data class Exito(
-        val resumen: ResumenDashboard,
-        val cuentas: List<Cuenta>,
+        val data: DashboardUiState,
         val periodo: PeriodoState,
-        val nombreUsuario: String,
     ) : DashboardEstado()
     data class Error(val mensaje: String) : DashboardEstado()
+}
+
+private fun ResumenDashboard.esVacio(): Boolean {
+    val sinMontos = gastoTotal == BigDecimal.ZERO &&
+        ingresoTotal == BigDecimal.ZERO &&
+        balanceNeto == BigDecimal.ZERO
+    return sinMontos && gastosPorBanco.isEmpty() && gastosPorCategoria.isEmpty()
 }

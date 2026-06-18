@@ -51,9 +51,9 @@ class ObtenerResumenDashboardUseCaseTest {
             whenever(tasaCambioRepository.obtenerTasaDelDia()).thenReturn(
                 AppResult.Success(
                     TasaCambio(
-                        compra = java.math.BigDecimal("58.50"),
-                        venta = java.math.BigDecimal("59.10"),
-                        fecha = java.time.LocalDate.now(zona),
+                        compra = BigDecimal("58.50"),
+                        venta = BigDecimal("59.10"),
+                        fecha = LocalDate.now(zona),
                         fuente = "Mock",
                     )
                 )
@@ -107,6 +107,8 @@ class ObtenerResumenDashboardUseCaseTest {
         assertEquals(BigDecimal("100.00"), data.gastoTotal)
         assertEquals(BigDecimal("500.00"), data.ingresoTotal)
         assertEquals(BigDecimal("1400.00"), data.balanceNeto)
+        assertTrue(data.deltaBalance.esIncremento)
+        assertEquals(0, data.deltaBalance.porcentaje?.compareTo(BigDecimal("40.0")) ?: -1)
     }
 
     @Test
@@ -183,6 +185,71 @@ class ObtenerResumenDashboardUseCaseTest {
         assertTrue(result is AppResult.Success)
         val data = (result as AppResult.Success).data
         assertTrue(data.gastosPorCategoria.any { it.categoriaId == CategoriaCatalogo.COMPRAS })
+    }
+
+    @Test
+    fun `balance neto usa ultima transaccion previa por cada cuenta`() = runBlocking {
+        val ahora = LocalDate.now(zona)
+        val rango = comparisonService.getCurrentComparisonPeriod("Este mes", ahora, zona)
+
+        whenever(transaccionRepository.obtenerTransacciones(eq(uid), anyOrNull(), anyOrNull(), eq(0), anyOrNull()))
+            .thenReturn(AppResult.Success(emptyList()))
+        whenever(transaccionRepository.obtenerTransacciones(eq(uid), anyOrNull(), anyOrNull(), eq(1), eq("bhd-cuenta")))
+            .thenReturn(
+                AppResult.Success(
+                    listOf(
+                        crearTx(
+                            id = "bhd-previa",
+                            monto = BigDecimal("1.00"),
+                            tipo = TipoTransaccion.CREDITO,
+                            fecha = rango.inicio.minusSeconds(100),
+                            balance = BigDecimal("8.43"),
+                        ).copy(cuentaId = "bhd-cuenta", bancoCodigo = "BHD")
+                    )
+                )
+            )
+        whenever(transaccionRepository.obtenerTransacciones(eq(uid), anyOrNull(), anyOrNull(), eq(1), eq("popular-cuenta")))
+            .thenReturn(
+                AppResult.Success(
+                    listOf(
+                        crearTx(
+                            id = "popular-previa",
+                            monto = BigDecimal("1.00"),
+                            tipo = TipoTransaccion.CREDITO,
+                            fecha = rango.inicio.minusSeconds(100),
+                            balance = BigDecimal("100.00"),
+                        ).copy(cuentaId = "popular-cuenta", bancoCodigo = "POPULAR")
+                    )
+                )
+            )
+        whenever(movimientoTarjetaRepository.obtenerMovimientos(eq(uid), any(), any()))
+            .thenReturn(AppResult.Success(emptyList()))
+        whenever(cuentaRepository.obtenerCuentas(eq(uid))).thenReturn(
+            AppResult.Success(
+                listOf(
+                    Cuenta(
+                        id = "bhd-cuenta", uidUsuario = uid, bancoCodigo = "BHD", numeroCuenta = "001",
+                        numeroCuentaCompleto = null, alias = "BHD", tipoCuenta = TipoCuenta.CORRIENTE,
+                        moneda = Moneda.DOP, balanceActual = BigDecimal("9999.00"), balanceAlCorte = null,
+                        titular = "T", activa = true, mostrarEnDashboard = true,
+                        ultimaSincronizacion = null, creadoEn = Instant.now()
+                    ),
+                    Cuenta(
+                        id = "popular-cuenta", uidUsuario = uid, bancoCodigo = "POPULAR", numeroCuenta = "002",
+                        numeroCuentaCompleto = null, alias = "Popular", tipoCuenta = TipoCuenta.CORRIENTE,
+                        moneda = Moneda.DOP, balanceActual = BigDecimal("9999.00"), balanceAlCorte = null,
+                        titular = "T", activa = true, mostrarEnDashboard = true,
+                        ultimaSincronizacion = null, creadoEn = Instant.now()
+                    )
+                )
+            )
+        )
+
+        val result = useCase.ejecutar(uid, "Este mes")
+
+        assertTrue(result is AppResult.Success)
+        val data = (result as AppResult.Success).data
+        assertEquals(0, data.balanceNeto.compareTo(BigDecimal("108.43")))
     }
 
     private fun crearTx(id: String, monto: BigDecimal, tipo: TipoTransaccion, fecha: Instant, balance: BigDecimal? = null) = Transaccion(

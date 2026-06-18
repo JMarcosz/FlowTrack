@@ -145,6 +145,73 @@ class ObtenerResumenUseCaseFiltrosTest {
     }
 
     @Test
+    fun `Resumen por banco usa balance real de la cuenta y no ingresos menos gastos`() = runTest {
+        val inicio = Instant.parse("2026-06-01T00:00:00Z")
+        val fin = Instant.parse("2026-06-30T23:59:59Z")
+        val fechaMovimiento = Instant.parse("2026-06-15T12:00:00Z")
+
+        val transacciones = listOf(
+            baseTx.copy(
+                id = "bhd-1",
+                cuentaId = "cta-bhd",
+                bancoCodigo = "BHD",
+                tipo = TipoTransaccion.DEBITO,
+                monto = BigDecimal("100.00"),
+                fecha = fechaMovimiento,
+                balanceDespues = BigDecimal("4447.56"),
+                creadoEn = Instant.parse("2026-06-15T12:00:01Z"),
+            ),
+            baseTx.copy(
+                id = "bhd-2",
+                cuentaId = "cta-bhd",
+                bancoCodigo = "BHD",
+                tipo = TipoTransaccion.CREDITO,
+                monto = BigDecimal("105.00"),
+                fecha = fechaMovimiento,
+                balanceDespues = BigDecimal("8.43"),
+                creadoEn = Instant.parse("2026-06-15T12:00:02Z"),
+            ),
+        )
+        val cuentas = listOf(
+            baseCuenta.copy(
+                id = "cta-bhd",
+                bancoCodigo = "BHD",
+                balanceActual = BigDecimal("8.43"),
+                fechaUltimoCorte = fin,
+            ),
+        )
+
+        transaccionRepository = mock {
+            onBlocking {
+                obtenerTransacciones(
+                    any(),
+                    org.mockito.kotlin.anyOrNull(),
+                    any(),
+                    org.mockito.kotlin.anyOrNull(),
+                    org.mockito.kotlin.anyOrNull(),
+                )
+            } doReturn AppResult.Success(transacciones)
+        }
+        movimientoTarjetaRepository = mock {
+            onBlocking { obtenerMovimientos(any(), any(), any()) } doReturn AppResult.Success(emptyList())
+        }
+        cuentaRepository = mock {
+            onBlocking { obtenerCuentas(any()) } doReturn AppResult.Success(cuentas)
+        }
+        flujoUnificadoUseCase = ObtenerFlujoUnificadoUseCase(transaccionRepository, movimientoTarjetaRepository)
+        useCase = ObtenerResumenUseCase(flujoUnificadoUseCase, transaccionRepository, cuentaRepository, tasaCambioRepository)
+
+        val result = useCase.ejecutar("uid", inicio, fin, FiltrosAvanzadosState())
+
+        assertTrue(result is AppResult.Success)
+        val data = (result as AppResult.Success).data
+        val bancoBhd = data.gastosPorBanco.single { it.bancoCodigo == "BHD" }
+        assertEquals(0, bancoBhd.flujoNeto.compareTo(BigDecimal("5.00")))
+        assertEquals(0, bancoBhd.balance.compareTo(BigDecimal("8.43")))
+        assertEquals(0, data.balanceNeto.compareTo(BigDecimal("8.43")))
+    }
+
+    @Test
     fun `UseCase normaliza la categoria Compra como compras`() = runTest {
         val transacciones = listOf(baseTx.copy(id = "4", categoriaId = "Compra", monto = BigDecimal("150")))
         val movimientos = listOf(baseMov.copy(id = "2", categoriaId = "Compra", monto = BigDecimal("50")))

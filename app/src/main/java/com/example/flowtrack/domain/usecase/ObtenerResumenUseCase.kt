@@ -5,7 +5,10 @@ import com.example.flowtrack.data.firestore.repositories.CuentaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.data.firestore.repositories.TasaCambioRepository
 import com.example.flowtrack.domain.model.CategoriaCatalogo
+import com.example.flowtrack.domain.model.Cuenta
+import com.example.flowtrack.domain.model.TasaCambio
 import com.example.flowtrack.domain.model.TipoTransaccion
+import com.example.flowtrack.domain.model.Transaccion
 import com.example.flowtrack.presentation.model.FiltrosAvanzadosState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -21,8 +24,9 @@ data class ResumenBanco(
     val gastos: BigDecimal,
     val ingresos: BigDecimal,
     val porcentaje: Float,
+    val balance: BigDecimal = ingresos - gastos,
 ) {
-    val balance: BigDecimal get() = ingresos - gastos
+    val flujoNeto: BigDecimal get() = ingresos - gastos
 }
 
 data class ResumenGeneral(
@@ -61,7 +65,8 @@ class ObtenerResumenUseCase @Inject constructor(
         val tasaCambio = (tasaDeferred.await() as? AppResult.Success)?.data
 
         val flujo = (resFlujo as AppResult.Success).data
-        var transacciones = flujo.transacciones.map { it.normalizarMoneda(tasaCambio) }
+        val transaccionesBase = flujo.transacciones.map { it.normalizarMoneda(tasaCambio) }
+        var transacciones = transaccionesBase
         var movimientos = flujo.movimientos.map { it.normalizarMoneda(tasaCambio) }
         var cuentasVisibles = (resCuentas as AppResult.Success).data.filter { it.activa && it.mostrarEnDashboard }
 
@@ -99,15 +104,22 @@ class ObtenerResumenUseCase @Inject constructor(
         withContext(Dispatchers.Default) {
             val totales = calcularTotalesFinancieros(transacciones, movimientos)
 
-            val balanceNeto = cuentasVisibles.fold(BigDecimal.ZERO) { acc, cuenta ->
-                val resPrevia = transaccionRepository.obtenerTransacciones(uid, null, fin, 1, cuenta.id)
-                val balanceCuenta = if (resPrevia is AppResult.Success) {
-                    resPrevia.data.firstOrNull()?.normalizarMoneda(tasaCambio)?.balanceDespues ?: BigDecimal.ZERO
-                } else {
-                    BigDecimal.ZERO
-                }
-                acc + balanceCuenta
+            val balancesPorCuenta = mutableMapOf<String, BigDecimal>()
+            for (cuenta in cuentasVisibles) {
+                balancesPorCuenta[cuenta.id] = balanceCuentaAlCierre(
+                    uid = uid,
+                    cuenta = cuenta,
+                    fin = fin,
+                    tasaCambio = tasaCambio,
+                    transaccionesBase = transaccionesBase,
+                )
             }
+            val balancesPorBanco = cuentasVisibles.groupBy { it.bancoCodigo }.mapValues { (_, cuentasBanco) ->
+                cuentasBanco.fold(BigDecimal.ZERO) { acc, cuenta ->
+                    acc + (balancesPorCuenta[cuenta.id] ?: BigDecimal.ZERO)
+                }
+            }
+            val balanceNeto = balancesPorCuenta.values.fold(BigDecimal.ZERO) { acc, balance -> acc + balance }
 
             val totalFloat = totales.gastos.toFloat().coerceAtLeast(1f)
 
@@ -142,11 +154,17 @@ class ObtenerResumenUseCase @Inject constructor(
                 }
             }
 
-            val todosBancos = (gastosPorBancoMap.keys + ingresosPorBanco.keys).toSet()
+            val todosBancos = (gastosPorBancoMap.keys + ingresosPorBanco.keys + balancesPorBanco.keys).toSet()
             val porBanco = todosBancos.map { banco ->
                 val g = gastosPorBancoMap[banco] ?: BigDecimal.ZERO
                 val i = ingresosPorBanco[banco] ?: BigDecimal.ZERO
-                ResumenBanco(banco, g, i, (g.toFloat() / totalFloat) * 100f)
+                ResumenBanco(
+                    bancoCodigo = banco,
+                    gastos = g,
+                    ingresos = i,
+                    porcentaje = (g.toFloat() / totalFloat) * 100f,
+                    balance = balancesPorBanco[banco] ?: BigDecimal.ZERO,
+                )
             }.sortedByDescending { it.gastos }
 
             AppResult.Success(
@@ -160,5 +178,40 @@ class ObtenerResumenUseCase @Inject constructor(
                 )
             )
         }
+    }
+
+    private suspend fun balanceCuentaAlCierre(
+        uid: String,
+        cuenta: Cuenta,
+        fin: Instant,
+        tasaCambio: TasaCambio?,
+        transaccionesBase: List<Transaccion>,
+    ): BigDecimal {
+        val balanceDeCuentaActual = cuenta.balanceActual
+        val fechaUltimoCorte = cuenta.fechaUltimoCorte
+        if (balanceDeCuentaActual != null && fechaUltimoCorte != null && !fechaUltimoCorte.isAfter(fin)) {
+            return balanceDeCuentaActual
+        }
+
+        val ultimaTxRango = transaccionesBase
+            .filter { it.cuentaId == cuenta.id && it.balanceDespues != null && !it.fecha.isAfter(fin) }
+            .maxWithOrNull(compareBy<Transaccion> { it.fecha }.thenBy { it.creadoEn }.thenBy { it.id })
+        if (ultimaTxRango?.balanceDespues != null) {
+            return ultimaTxRango.balanceDespues
+        }
+
+        val resPrevia = transaccionRepository.obtenerTransacciones(
+            uid = uid,
+            inicio = null,
+            fin = fin,
+            limite = 1,
+            cuentaId = cuenta.id,
+        )
+        if (resPrevia is AppResult.Success) {
+            val txPrevia = resPrevia.data.firstOrNull { it.balanceDespues != null }?.normalizarMoneda(tasaCambio)
+            if (txPrevia?.balanceDespues != null) return txPrevia.balanceDespues
+        }
+
+        return balanceDeCuentaActual ?: BigDecimal.ZERO
     }
 }

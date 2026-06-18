@@ -116,6 +116,7 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
             movActuales     = movActuales,
             txAnteriores    = txAnteriores,
             movAnteriores   = movAnteriores,
+            requiereCoberturaCompleta = periodo == "Este mes",
         )
 
         // ── Balance Neto Real (Suma de balances finales de cuentas) ──────────
@@ -124,15 +125,26 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         // 2. Si no hay, buscamos la ultima transaccion antes del rango.
         var totalBalanceFinal = BigDecimal.ZERO
         cuentasVisibles.forEach { cuenta ->
-            val ultimaTxRango = txActuales.filter { it.cuentaId == cuenta.id }.maxByOrNull { it.fecha }
+            val ultimaTxRango = txActuales
+                .filter { it.cuentaId == cuenta.id && it.balanceDespues != null }
+                .maxByOrNull { it.fecha }
             if (ultimaTxRango != null) {
-                totalBalanceFinal += (ultimaTxRango.balanceDespues ?: BigDecimal.ZERO)
+                totalBalanceFinal += ultimaTxRango.balanceDespues!!
             } else {
-                // Consultar ultima transaccion historica previa al rango
-                val resPrevia = transaccionRepository.obtenerTransacciones(uid, null, rangoActual.inicio, 1)
+                // Consultar la ultima transaccion historica previa por cuenta, no global.
+                val resPrevia = transaccionRepository.obtenerTransacciones(
+                    uid = uid,
+                    inicio = null,
+                    fin = rangoActual.inicio,
+                    limite = 1,
+                    cuentaId = cuenta.id,
+                )
+                val balanceFallback = cuenta.balanceActual ?: BigDecimal.ZERO
                 if (resPrevia is AppResult.Success) {
-                    val txPrevia = resPrevia.data.filter { it.cuentaId == cuenta.id }.firstOrNull()?.normalizarMoneda(tasaCambio)
-                    totalBalanceFinal += (txPrevia?.balanceDespues ?: BigDecimal.ZERO)
+                    val txPrevia = resPrevia.data.firstOrNull { it.balanceDespues != null }?.normalizarMoneda(tasaCambio)
+                    totalBalanceFinal += (txPrevia?.balanceDespues ?: balanceFallback)
+                } else {
+                    totalBalanceFinal += balanceFallback
                 }
             }
         }
