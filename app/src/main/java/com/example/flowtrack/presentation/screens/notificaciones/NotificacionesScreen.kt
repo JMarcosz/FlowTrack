@@ -17,7 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.core.notifications.NotificationHelper
 import com.example.flowtrack.presentation.components.FinanzasSwitch
 import com.example.flowtrack.ui.theme.Spacing
@@ -25,7 +24,7 @@ import com.example.flowtrack.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificacionesScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     viewModel: NotificacionesViewModel = hiltViewModel(),
 ) {
     val config by viewModel.config.collectAsState()
@@ -59,7 +58,7 @@ fun NotificacionesScreen(
             TopAppBar(
                 title = { Text("Notificaciones", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },

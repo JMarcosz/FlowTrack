@@ -40,14 +40,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacidadSeguridadScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
+    onNavigateToExportar: () -> Unit = {},
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -55,7 +54,7 @@ fun PrivacidadSeguridadScreen(
             TopAppBar(
                 title = { Text("Privacidad y seguridad", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
                     }
                 },
@@ -101,14 +100,14 @@ fun PrivacidadSeguridadScreen(
             Spacer(Modifier.height(Spacing.sm))
 
             Button(
-                onClick = { navController.navigate(Screen.Exportar.route) },
+                onClick = onNavigateToExportar,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Ir a exportar datos")
             }
 
             TextButton(
-                onClick = { navController.popBackStack() },
+                onClick = onNavigateBack,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Volver a configuracion")

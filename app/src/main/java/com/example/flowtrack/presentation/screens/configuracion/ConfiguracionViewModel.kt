@@ -10,8 +10,11 @@ import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.usecase.ObtenerBalanceNetoUseCase
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -22,9 +25,12 @@ data class ConfiguracionState(
     val isLoading: Boolean = false,
     val isDeleting: Boolean = false,
     val balanceNeto: BigDecimal = BigDecimal.ZERO,
-    val error: String? = null,
-    val exito: String? = null,
 )
+
+sealed interface ConfiguracionEvent {
+    data class MostrarError(val mensaje: String) : ConfiguracionEvent
+    data class MostrarExito(val mensaje: String) : ConfiguracionEvent
+}
 
 @HiltViewModel
 class ConfiguracionViewModel @Inject constructor(
@@ -36,6 +42,9 @@ class ConfiguracionViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(ConfiguracionState())
     val state: StateFlow<ConfiguracionState> = _state
+
+    private val _events = MutableSharedFlow<ConfiguracionEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<ConfiguracionEvent> = _events.asSharedFlow()
 
     init {
         observarConfig()
@@ -79,37 +88,47 @@ class ConfiguracionViewModel @Inject constructor(
 
     private fun guardarConfiguracion(config: ConfiguracionUsuario) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.value = _state.value.copy(isLoading = true)
             val res = configuracionRepository.actualizarConfiguracion(config)
-            _state.value = _state.value.copy(
-                isLoading = false,
-                error = if (res is AppResult.Error) "Error al guardar preferencias" else null,
-            )
-        }
-    }
-
-    fun borrarTodosMisDatos() {
-        val uid = auth.currentUser?.uid ?: run {
-            _state.value = _state.value.copy(error = "No hay sesiÃ³n activa.")
-            return
-        }
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isDeleting = true, error = null, exito = null)
-            val res = limpiezaRepository.borrarTodosMisDatos(uid)
-            _state.value = when (res) {
-                is AppResult.Success -> _state.value.copy(
-                    isDeleting = false,
-                    exito = "Datos eliminados correctamente (${res.data} documentos).",
+            _state.value = _state.value.copy(isLoading = false)
+            if (res is AppResult.Error) {
+                _events.tryEmit(
+                    ConfiguracionEvent.MostrarError("Error al guardar preferencias"),
                 )
-                is AppResult.Error -> _state.value.copy(
-                    isDeleting = false,
-                    error = res.error.toMensajeUsuario(),
+            } else {
+                _events.tryEmit(
+                    ConfiguracionEvent.MostrarExito("Configuración guardada"),
                 )
             }
         }
     }
 
-    fun clearMensajes() {
-        _state.value = _state.value.copy(error = null, exito = null)
+    fun borrarTodosMisDatos() {
+        val uid = auth.currentUser?.uid ?: run {
+            _events.tryEmit(
+                ConfiguracionEvent.MostrarError("No hay sesión activa."),
+            )
+            return
+        }
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isDeleting = true)
+            val res = limpiezaRepository.borrarTodosMisDatos(uid)
+            _state.value = _state.value.copy(isDeleting = false)
+            when (res) {
+                is AppResult.Success -> {
+                    _events.tryEmit(
+                        ConfiguracionEvent.MostrarExito(
+                            "Datos eliminados correctamente (${res.data} documentos).",
+                        ),
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _events.tryEmit(
+                        ConfiguracionEvent.MostrarError(res.error.toMensajeUsuario()),
+                    )
+                }
+            }
+        }
     }
 }

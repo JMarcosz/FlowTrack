@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.Rule
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,34 +52,54 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.R
+import com.example.flowtrack.ui.theme.Spacing
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.collect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfiguracionScreen(
-    navController: NavController,
     onMenuClick: () -> Unit = {},
+    onNavigateToPerfil: () -> Unit = {},
+    onNavigateToNotificaciones: () -> Unit = {},
+    onNavigateToCategorias: () -> Unit = {},
+    onNavigateToReglas: () -> Unit = {},
+    onNavigateToHistorial: () -> Unit = {},
+    onNavigateToSugerencias: () -> Unit = {},
+    onNavigateToExportar: () -> Unit = {},
+    onNavigateToPrivacidad: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {},
     viewModel: ConfiguracionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is ConfiguracionEvent.MostrarError -> snackbarHostState.showSnackbar(event.mensaje)
+                is ConfiguracionEvent.MostrarExito -> snackbarHostState.showSnackbar(event.mensaje)
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Configuración",
+                        stringResource(R.string.configuracion_title),
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = (-0.3).sp,
@@ -87,7 +108,7 @@ fun ConfiguracionScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
-                        Icon(Icons.Outlined.Menu, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.Outlined.Menu, contentDescription = stringResource(R.string.cd_menu), tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -109,13 +130,13 @@ fun ConfiguracionScreen(
                 ConfigItem(
                     icon = Icons.Outlined.AccountCircle,
                     label = "Perfil",
-                    onClick = { navController.navigate(Screen.Perfil.route) },
+                    onClick = onNavigateToPerfil,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 ConfigItem(
                     icon = Icons.Outlined.NotificationsNone,
                     label = "Notificaciones",
-                    onClick = { navController.navigate(Screen.Notificaciones.route) },
+                    onClick = onNavigateToNotificaciones,
                 )
             }
 
@@ -155,37 +176,37 @@ fun ConfiguracionScreen(
                 ConfigItem(
                     icon = Icons.Outlined.Category,
                     label = "Categorías",
-                    onClick = { navController.navigate(Screen.Categorias.route) },
+                    onClick = onNavigateToCategorias,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 ConfigItem(
                     icon = Icons.Outlined.Rule,
                     label = "Reglas de categorización",
-                    onClick = { navController.navigate(Screen.Reglas.route) },
+                    onClick = onNavigateToReglas,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 ConfigItem(
                     icon = Icons.Outlined.History,
                     label = "Historial de importaciones",
-                    onClick = { navController.navigate(Screen.Historial.route) },
+                    onClick = onNavigateToHistorial,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 ConfigItem(
                     icon = Icons.Outlined.AutoAwesome,
                     label = "Sugerencias de limpieza",
-                    onClick = { navController.navigate(Screen.Sugerencias.route) },
+                    onClick = onNavigateToSugerencias,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 ConfigItem(
                     icon = Icons.Outlined.IosShare,
                     label = "Exportar datos",
-                    onClick = { navController.navigate(Screen.Exportar.route) },
+                    onClick = onNavigateToExportar,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 ConfigItem(
                     icon = Icons.Outlined.Shield,
                     label = "Privacidad y seguridad",
-                    onClick = { navController.navigate(Screen.Privacidad.route) },
+                    onClick = onNavigateToPrivacidad,
                 )
             }
 
@@ -244,9 +265,7 @@ fun ConfiguracionScreen(
                 TextButton(onClick = {
                     FirebaseAuth.getInstance().signOut()
                     showLogoutDialog = false
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    onNavigateToLogin()
                 }) { Text("Cerrar sesión", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {

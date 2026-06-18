@@ -66,12 +66,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.Carga
 import com.example.flowtrack.domain.model.EstadoCarga
 import com.example.flowtrack.presentation.components.BankLogo
-import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.ExtendedTheme
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -81,9 +79,10 @@ private val ZONA = ZoneId.of("America/Santo_Domingo")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistorialScreen(
-    navController: NavController,
-    fromSidebar: Boolean = false,
+    onNavigateBack: () -> Unit,
+    onNavigateToUpload: () -> Unit,
     onDrawerReopen: () -> Unit = {},
+    fromSidebar: Boolean = false,
     viewModel: HistorialViewModel = hiltViewModel(),
 ) {
     val estado by viewModel.estado.collectAsState()
@@ -91,7 +90,7 @@ fun HistorialScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmarEliminarTodo by remember { mutableStateOf(false) }
     val volver = {
-        navController.popBackStack()
+        onNavigateBack()
         if (fromSidebar) {
             onDrawerReopen()
         }
@@ -127,14 +126,14 @@ fun HistorialScreen(
             TopAppBar(
                 title = { Text("Historial de importaciones", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = volver) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
-                    }
+            IconButton(onClick = volver) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
+            }
                 },
                 actions = {
-                    if (estado is HistorialEstado.ConDatos) {
-                        IconButton(onClick = { confirmarEliminarTodo = true }) {
-                            Icon(Icons.Outlined.DeleteSweep, "Eliminar todo", tint = MaterialTheme.colorScheme.error)
+            if (estado is HistorialEstado.ConDatos) {
+                IconButton(onClick = { confirmarEliminarTodo = true }) {
+                    Icon(Icons.Outlined.DeleteSweep, "Eliminar todo", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 },
@@ -144,7 +143,7 @@ fun HistorialScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate(Screen.Upload.route) },
+                onClick = onNavigateToUpload,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ) { Icon(Icons.Outlined.Add, "Importar nuevo") }
@@ -152,7 +151,7 @@ fun HistorialScreen(
     ) { padding ->
         when (val s = estado) {
             is HistorialEstado.Cargando -> LoadingHistorial(Modifier.padding(padding))
-            is HistorialEstado.Vacio -> EmptyHistorial(navController, Modifier.padding(padding))
+            is HistorialEstado.Vacio -> EmptyHistorial(onNavigateToUpload, Modifier.padding(padding))
             is HistorialEstado.ConDatos -> HistorialContent(
                 cargas = s.cargas,
                 onEliminar = { cargaId -> viewModel.eliminar(cargaId) },
@@ -171,14 +170,14 @@ private fun LoadingHistorial(modifier: Modifier) {
 }
 
 @Composable
-private fun EmptyHistorial(navController: NavController, modifier: Modifier) {
+private fun EmptyHistorial(onNavigateToUpload: () -> Unit, modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(Icons.Outlined.Inbox, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(56.dp))
             Text("Sin importaciones aún", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Importa tu primer estado de cuenta para empezar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             Button(
-                onClick = { navController.navigate(Screen.Upload.route) },
+                onClick = onNavigateToUpload,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(12.dp),
             ) { Text("Importar ahora", color = MaterialTheme.colorScheme.onPrimary) }
@@ -282,10 +281,10 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
                     }
 
                     if (carga.advertencias.isNotEmpty()) {
-                        Surface(color = ExtendedTheme.colors.warningContainer, shape = RoundedCornerShape(8.dp)) {
+                        Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(8.dp)) {
                             Column(Modifier.fillMaxWidth().padding(8.dp)) {
                                 carga.advertencias.forEach { adv ->
-                                    Text("• $adv", style = MaterialTheme.typography.bodySmall, color = ExtendedTheme.colors.onWarningContainer)
+                                    Text("• $adv", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
                                 }
                             }
                         }
@@ -315,8 +314,8 @@ private fun CargaCard(carga: Carga, onEliminar: () -> Unit) {
 @Composable
 private fun EstadoBadge(estado: EstadoCarga) {
     val (bgColor, textColor, texto) = when (estado) {
-        EstadoCarga.EXITOSO  -> Triple(ExtendedTheme.colors.successContainer, ExtendedTheme.colors.onSuccessContainer, "Exitoso")
-        EstadoCarga.PARCIAL  -> Triple(ExtendedTheme.colors.warningContainer, ExtendedTheme.colors.onWarningContainer, "Parcial")
+        EstadoCarga.EXITOSO  -> Triple(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer, "Exitoso")
+        EstadoCarga.PARCIAL  -> Triple(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, "Parcial")
         EstadoCarga.FALLIDO  -> Triple(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.error, "Fallido")
         EstadoCarga.ELIMINADO -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "Eliminado")
     }

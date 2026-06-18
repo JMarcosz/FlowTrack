@@ -21,7 +21,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.activity.compose.BackHandler
-import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.model.Moneda
@@ -63,7 +62,7 @@ private fun StableDropdown(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BancosYCuentasScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     fromSidebar: Boolean = false,
     onDrawerReopen: () -> Unit = {},
     viewModel: BancosYCuentasViewModel = hiltViewModel(),
@@ -73,7 +72,7 @@ fun BancosYCuentasScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val volver = {
-        navController.popBackStack()
+        onNavigateBack()
         if (fromSidebar) {
             onDrawerReopen()
         }

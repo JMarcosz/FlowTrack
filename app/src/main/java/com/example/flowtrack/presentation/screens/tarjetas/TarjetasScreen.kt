@@ -70,7 +70,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatDate
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.core.extensions.toBigDecimalSafe
@@ -83,7 +82,9 @@ import com.example.flowtrack.presentation.components.CreditCardShimmerItem
 import com.example.flowtrack.presentation.components.EmptyState
 import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.presentation.components.bankBadge
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.TabularNumber
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
@@ -501,7 +502,7 @@ fun WhiteCreditCard(
                         .fillMaxWidth(utilizacionFrac)
                         .fillMaxHeight()
                         .clip(Radii.pill)
-                        .background(if (utilizacionFrac > 0.6f) MaterialTheme.colorScheme.error else ExtendedTheme.colors.success),
+                        .background(if (utilizacionFrac > 0.6f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary),
                 )
             }
             Spacer(Modifier.height(Spacing.sm))
@@ -541,8 +542,8 @@ private fun PagoProximoRow(tarjeta: Tarjeta, snap: EstadoTarjetaSnap, ahora: Ins
 
     val (urgenciaColor, urgenciaLabel) = when {
         diasRestantes <= 2  -> MaterialTheme.colorScheme.error to "Vence pronto"
-        diasRestantes <= 6  -> ExtendedTheme.colors.warning to "Esta semana"
-        else                -> ExtendedTheme.colors.success to "A tiempo"
+        diasRestantes <= 6  -> MaterialTheme.colorScheme.tertiary to "Esta semana"
+        else                -> MaterialTheme.colorScheme.primary to "A tiempo"
     }
 
     Row(
@@ -673,7 +674,7 @@ private fun MovimientoTarjetaRow(mov: MovimientoTarjeta) {
     val esIngreso = mov.tipoMovimiento == TipoMovimientoTarjeta.PAGO ||
         mov.tipoMovimiento == TipoMovimientoTarjeta.CASHBACK
     val signo = if (esIngreso) "+" else "-"
-    val color = if (esIngreso) ExtendedTheme.colors.success else MaterialTheme.colorScheme.onSurface
+    val color = if (esIngreso) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
 
     Row(
         modifier = Modifier
@@ -733,10 +734,10 @@ fun StatusBadge(label: String) {
     Box(
         modifier = Modifier
             .clip(Radii.pill)
-            .background(ExtendedTheme.colors.successContainer)
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ExtendedTheme.colors.onSuccessContainer)
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
     }
 }
 

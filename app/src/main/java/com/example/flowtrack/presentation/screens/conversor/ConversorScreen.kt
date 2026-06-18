@@ -55,16 +55,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.activity.compose.BackHandler
-import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.TasaCambio
 import com.example.flowtrack.domain.usecase.PuntoHistoricoTasa
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.Spacing
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversorScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     fromSidebar: Boolean = false,
     onMenuClick: () -> Unit = {},
     viewModel: ConversorViewModel = hiltViewModel(),
@@ -72,7 +71,7 @@ fun ConversorScreen(
     val state by viewModel.state.collectAsState()
     val resultado = viewModel.calcularResultado()
     val volver = {
-        navController.popBackStack()
+        onNavigateBack()
         if (fromSidebar) {
             onMenuClick()
         }
@@ -221,7 +220,7 @@ fun HistoricoSection(serie: List<PuntoHistoricoTasa>) {
             serie.forEach { h ->
                 val actual = h.venta.toDouble()
                 val diff = actual - base
-                val color = if (diff >= 0) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error
+                val color = if (diff >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         Modifier

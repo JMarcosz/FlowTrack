@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatDate
 import com.example.flowtrack.core.extensions.formatDateRelative
 import com.example.flowtrack.core.extensions.formatMoney
@@ -63,9 +62,12 @@ import com.example.flowtrack.presentation.components.bancoPorCodigo
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.presentation.components.categoriaPorId
 import com.example.flowtrack.presentation.components.TransactionShimmerItem
-import com.example.flowtrack.presentation.navigation.Screen
 import com.example.flowtrack.domain.usecase.esIngresoFinanciero
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.ExtendedTheme
+import com.example.flowtrack.ui.theme.CatSinCategorizar
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
+import com.example.flowtrack.ui.theme.TabularNumber
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
@@ -78,7 +80,7 @@ private sealed interface DetalleTransaccionState {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TransaccionesScreen(
-    navController: NavController,
+    onNavigateToUpload: () -> Unit,
     onMenuClick: () -> Unit = {},
     viewModel: TransaccionesViewModel = hiltViewModel(),
 ) {
@@ -127,7 +129,7 @@ fun TransaccionesScreen(
                         grouped = grouped,
                         movimientosGrouped = movimientosGrouped,
                         derivadasPorPadre = derivadasPorPadre,
-                        onImport = { navController.navigate(Screen.Upload.route) },
+                        onImport = onNavigateToUpload,
                         onFiltroTipoChange = { viewModel.setFiltroTipo(it) },
                         onSearchChange = { viewModel.setSearchQuery(it) },
                         onPeriodo = { viewModel.seleccionarPeriodo(it) },
@@ -983,7 +985,7 @@ private fun TransaccionDetalle(
                         onClick = onCambiarCategoria,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primaryContainer),
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primaryContainer),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.primary,
                             containerColor = MaterialTheme.colorScheme.surface,
@@ -997,7 +999,7 @@ private fun TransaccionDetalle(
                         onClick = onEliminar,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.errorContainer),
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.errorContainer),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error,
                             containerColor = MaterialTheme.colorScheme.surface,
@@ -1160,7 +1162,7 @@ private fun MovimientoTarjetaDetalle(
                     onClick = onCambiarCategoria,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primaryContainer),
+                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primaryContainer),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.primary,
                         containerColor = MaterialTheme.colorScheme.surface,

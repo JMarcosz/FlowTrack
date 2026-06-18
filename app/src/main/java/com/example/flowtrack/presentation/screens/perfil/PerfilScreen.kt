@@ -24,14 +24,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
+    onNavigateToLogin: () -> Unit,
     viewModel: PerfilViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -43,7 +41,7 @@ fun PerfilScreen(
             TopAppBar(
                 title = { Text("Perfil", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
@@ -137,9 +135,7 @@ fun PerfilScreen(
                 TextButton(onClick = {
                     viewModel.signOut()
                     showLogoutDialog = false
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    onNavigateToLogin()
                 }) { Text("Cerrar sesión", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {

@@ -58,18 +58,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.ReglaCategoria
 import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.domain.model.TipoMatch
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.presentation.components.categoriaPorId
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReglasScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     viewModel: ReglasViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -82,7 +81,7 @@ fun ReglasScreen(
             TopAppBar(
                 title = { Text("Reglas de Categorización", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },

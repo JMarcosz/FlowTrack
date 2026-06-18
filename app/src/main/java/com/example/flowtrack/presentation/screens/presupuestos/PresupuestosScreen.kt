@@ -36,19 +36,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.activity.compose.BackHandler
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.PeriodoPresupuesto
 import com.example.flowtrack.domain.usecase.PresupuestoConGasto
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.presentation.components.categoriaPorId
-import com.example.flowtrack.ui.theme.*
+import com.example.flowtrack.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PresupuestosScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     fromSidebar: Boolean = false,
     onDrawerReopen: () -> Unit = {},
     viewModel: PresupuestosViewModel = hiltViewModel(),
@@ -58,7 +57,7 @@ fun PresupuestosScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val volver = {
-        navController.popBackStack()
+        onNavigateBack()
         if (fromSidebar) {
             onDrawerReopen()
         }
@@ -172,8 +171,8 @@ private fun PresupuestoCard(pg: PresupuestoConGasto, onEliminar: () -> Unit) {
 
     val barColor = when {
         pg.excedido        -> MaterialTheme.colorScheme.error
-        pg.porcentaje > 0.7f -> ExtendedTheme.colors.warning
-        else               -> ExtendedTheme.colors.success
+        pg.porcentaje > 0.7f -> MaterialTheme.colorScheme.tertiary
+        else               -> MaterialTheme.colorScheme.primary
     }
 
     Surface(

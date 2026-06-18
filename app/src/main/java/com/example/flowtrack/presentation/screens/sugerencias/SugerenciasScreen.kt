@@ -35,7 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.presentation.components.categoriaRegistry
 import com.example.flowtrack.ui.theme.Spacing
@@ -43,7 +42,7 @@ import com.example.flowtrack.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SugerenciasScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     fromSidebar: Boolean = false,
     onDrawerReopen: () -> Unit = {},
     viewModel: SugerenciasViewModel = hiltViewModel()
@@ -53,7 +52,7 @@ fun SugerenciasScreen(
     var showCategorySheetFor by remember { mutableStateOf<ReglaSugerida?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val volver = {
-        navController.popBackStack()
+        onNavigateBack()
         if (fromSidebar) {
             onDrawerReopen()
         }

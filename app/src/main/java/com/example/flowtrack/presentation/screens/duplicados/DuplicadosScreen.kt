@@ -28,11 +28,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.core.extensions.formatMoney
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
-import com.example.flowtrack.ui.theme.*
 
 /**
  * Pantalla de detalle de duplicados detectados.
@@ -42,7 +40,7 @@ import com.example.flowtrack.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DuplicadosScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     viewModel: DuplicadosViewModel = hiltViewModel(),
 ) {
     val estado by viewModel.estado.collectAsState()
@@ -53,7 +51,7 @@ fun DuplicadosScreen(
             TopAppBar(
                 title = { Text("Duplicados detectados", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
                     }
                 },
@@ -87,12 +85,12 @@ private fun DuplicadosContent(pares: List<ParDuplicado>, modifier: Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Surface(shape = RoundedCornerShape(12.dp), color = ExtendedTheme.colors.warningContainer) {
+            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Outlined.Info, null, tint = ExtendedTheme.colors.onWarningContainer, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.Info, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(18.dp))
                     Text(
                         "Estas transacciones ya existen en Firestore con el mismo ID determinístico. Se sobreescribirán de forma idempotente.",
-                        style = MaterialTheme.typography.bodySmall, color = ExtendedTheme.colors.onWarningContainer,
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
                 }
             }
@@ -131,7 +129,7 @@ private fun TransaccionMiniRow(etiqueta: String, tx: Transaccion) {
         Text(
             "${if (esCredito) "+" else "-"} ${formatMoney(tx.monto)}",
             fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-            color = if (esCredito) ExtendedTheme.colors.success else MaterialTheme.colorScheme.error,
+            color = if (esCredito) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
         )
     }
 }

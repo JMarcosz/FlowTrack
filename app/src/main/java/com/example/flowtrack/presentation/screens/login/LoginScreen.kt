@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,30 +30,22 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.R
-import com.example.flowtrack.presentation.navigation.Screen
-import com.example.flowtrack.ui.theme.BgDark
-import com.example.flowtrack.ui.theme.Ink
-import com.example.flowtrack.ui.theme.Muted
-import com.example.flowtrack.ui.theme.Primary
-import com.example.flowtrack.ui.theme.Primary100
-import com.example.flowtrack.ui.theme.Primary600
 
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 
 // ── Colores exclusivos de la pantalla de login ───────────────────
-private val BgLogin       = BgDark
 
 @Composable
 fun LoginScreen(
-    navController: NavController,
+    onLoginSuccess: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
     val isLoading = uiState is LoginUiState.Loading
 
     DisposableEffect(Unit) {
@@ -77,16 +70,14 @@ fun LoginScreen(
 
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
-            navController.navigate(Screen.Dashboard.route) {
-                popUpTo(Screen.Login.route) { inclusive = true }
-            }
+            onLoginSuccess()
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgLogin)
+            .background(colorScheme.background)
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -102,7 +93,7 @@ fun LoginScreen(
             fontSize = 36.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = (-1.2).sp,
-            color = Color.White,
+            color = colorScheme.onBackground,
             textAlign = TextAlign.Center,
         )
 
@@ -111,7 +102,7 @@ fun LoginScreen(
         Text(
             text = "Tus finanzas, claras y\nbajo control",
             fontSize = 17.sp,
-            color = Color.White.copy(alpha = 0.65f),
+            color = colorScheme.onBackground.copy(alpha = 0.70f),
             textAlign = TextAlign.Center,
             lineHeight = (17 * 1.4).sp,
             fontWeight = FontWeight.Normal,
@@ -138,10 +129,10 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .height(54.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color.White)
+                .background(colorScheme.surface)
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = ripple(color = Ink.copy(alpha = 0.08f)),
+                    indication = ripple(color = colorScheme.primary.copy(alpha = 0.08f)),
                     enabled = !isLoading,
                 ) {
                     val clientId = context.getString(R.string.default_web_client_id)
@@ -156,16 +147,16 @@ fun LoginScreen(
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
-                        color = Ink.copy(alpha = 0.55f),
+                        color = colorScheme.onSurface.copy(alpha = 0.65f),
                         strokeWidth = 2.5.dp,
-                        trackColor = Ink.copy(alpha = 0.12f),
+                        trackColor = colorScheme.onSurface.copy(alpha = 0.12f),
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = "Conectando…",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Muted,
+                        color = colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
@@ -184,7 +175,7 @@ fun LoginScreen(
                         text = "Continuar con Google",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Ink,
+                        color = colorScheme.onSurface,
                     )
                 }
             }
@@ -194,12 +185,12 @@ fun LoginScreen(
         Spacer(Modifier.height(18.dp))
         Text(
             text = buildAnnotatedString {
-                withStyle(SpanStyle(color = Color.White.copy(alpha = 0.5f))) {
+                withStyle(SpanStyle(color = colorScheme.onBackground.copy(alpha = 0.5f))) {
                     append("Al continuar, aceptas nuestros\n")
                 }
                 withStyle(
                     SpanStyle(
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = colorScheme.onBackground.copy(alpha = 0.85f),
                         textDecoration = TextDecoration.Underline,
                     )
                 ) {
@@ -221,6 +212,7 @@ fun LoginScreen(
 // Los Spacer() del padre se calculan desde el borde del Box, no desde el glow.
 @Composable
 private fun LogoBox() {
+    val colorScheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
             .size(140.dp)
@@ -233,9 +225,9 @@ private fun LogoBox() {
                 drawRect(
                     brush = Brush.radialGradient(
                         colorStops = arrayOf(
-                            0.00f to Primary.copy(alpha = 0.60f),
-                            0.38f to Primary.copy(alpha = 0.28f),
-                            0.65f to Primary.copy(alpha = 0.09f),
+                            0.00f to colorScheme.primary.copy(alpha = 0.60f),
+                            0.38f to colorScheme.primary.copy(alpha = 0.28f),
+                            0.65f to colorScheme.primary.copy(alpha = 0.09f),
                             1.00f to Color.Transparent,
                         ),
                         center = Offset(cx, cy),
@@ -251,19 +243,19 @@ private fun LogoBox() {
                 drawRect(
                     brush = Brush.radialGradient(
                         colorStops = arrayOf(
-                            0.00f to Primary.copy(alpha = 0.38f),
-                            0.60f to Primary600.copy(alpha = 0.60f),
-                            1.00f to BgDark,
+                            0.00f to colorScheme.primary.copy(alpha = 0.38f),
+                            0.60f to colorScheme.primaryContainer.copy(alpha = 0.60f),
+                            1.00f to colorScheme.background,
                         ),
                         center = Offset(size.width * 0.20f, size.height * 0.20f),
                         radius = size.width * 1.20f,
                     ),
                 )
             }
-            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(32.dp)),
+            .border(1.dp, colorScheme.outline.copy(alpha = 0.18f), RoundedCornerShape(32.dp)),
         contentAlignment = Alignment.Center,
     ) {
-        ChartIcon()
+        ChartIcon(colorScheme)
     }
 }
 
@@ -275,13 +267,13 @@ private fun LogoBox() {
 //   dots: r=3 at (28,60),(40,46),(52,52); r=4 at (66,30)
 //   arrow: (60,30)→(66,24)→(72,30), stroke #5E8BFF
 @Composable
-private fun ChartIcon() {
+private fun ChartIcon(colorScheme: ColorScheme) {
     Canvas(modifier = Modifier.size(92.dp)) {
         val s = size.width / 92f
 
         // Círculo exterior semitransparente
         drawCircle(
-            color = Primary.copy(alpha = 0.5f),
+            color = colorScheme.primary.copy(alpha = 0.5f),
             radius = 32f * s,
             center = Offset(46f * s, 46f * s),
             style = Stroke(width = 2.4f * s),
@@ -295,15 +287,15 @@ private fun ChartIcon() {
                 lineTo(52f * s, 52f * s)
                 lineTo(66f * s, 30f * s)
             },
-            color = Primary100,
+            color = colorScheme.primaryContainer,
             style = Stroke(width = 3f * s, cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
 
         // Puntos en cada vértice
-        drawCircle(color = Primary100, radius = 3f * s, center = Offset(28f * s, 60f * s))
-        drawCircle(color = Primary100, radius = 3f * s, center = Offset(40f * s, 46f * s))
-        drawCircle(color = Primary100, radius = 3f * s, center = Offset(52f * s, 52f * s))
-        drawCircle(color = Primary,      radius = 4f * s, center = Offset(66f * s, 30f * s))
+        drawCircle(color = colorScheme.primaryContainer, radius = 3f * s, center = Offset(28f * s, 60f * s))
+        drawCircle(color = colorScheme.primaryContainer, radius = 3f * s, center = Offset(40f * s, 46f * s))
+        drawCircle(color = colorScheme.primaryContainer, radius = 3f * s, center = Offset(52f * s, 52f * s))
+        drawCircle(color = colorScheme.primary,      radius = 4f * s, center = Offset(66f * s, 30f * s))
 
         // Flecha hacia arriba
         drawPath(
@@ -312,7 +304,7 @@ private fun ChartIcon() {
                 lineTo(66f * s, 24f * s)
                 lineTo(72f * s, 30f * s)
             },
-            color = Primary,
+            color = colorScheme.primary,
             style = Stroke(width = 2.2f * s, cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }

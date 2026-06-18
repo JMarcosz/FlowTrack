@@ -52,12 +52,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.presentation.components.BankLogo
 import com.example.flowtrack.presentation.components.MerchantLogo
-import com.example.flowtrack.ui.theme.*
 import com.example.flowtrack.domain.usecase.FormatoExportacion
 import com.example.flowtrack.domain.usecase.SeccionExportacionXlsx
+import com.example.flowtrack.ui.theme.Radii
+import com.example.flowtrack.ui.theme.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.time.Duration.Companion.milliseconds
@@ -67,7 +67,7 @@ private val FMT_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ExportarScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     fromSidebar: Boolean = false,
     onDrawerReopen: () -> Unit = {},
     viewModel: ExportarViewModel = hiltViewModel(),
@@ -76,7 +76,7 @@ fun ExportarScreen(
     var showInicioPicker by remember { mutableStateOf(false) }
     var showFinPicker by remember { mutableStateOf(false) }
     val volver = {
-        navController.popBackStack()
+        onNavigateBack()
         if (fromSidebar) {
             onDrawerReopen()
         }
@@ -275,7 +275,7 @@ fun ExportarScreen(
                 item { StatusBanner(text = state.error!!, background = MaterialTheme.colorScheme.errorContainer, color = MaterialTheme.colorScheme.error) }
             }
             if (state.exito != null) {
-                item { StatusBanner(text = state.exito!!, background = ExtendedTheme.colors.successContainer, color = ExtendedTheme.colors.onSuccessContainer) }
+                item { StatusBanner(text = state.exito!!, background = MaterialTheme.colorScheme.primaryContainer, color = MaterialTheme.colorScheme.onPrimaryContainer) }
             }
         }
     }

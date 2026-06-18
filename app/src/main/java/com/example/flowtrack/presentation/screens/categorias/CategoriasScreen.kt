@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.flowtrack.presentation.components.CategoriaUI
 import com.example.flowtrack.ui.theme.CatAlimentacion
 import com.example.flowtrack.ui.theme.CatCompras
@@ -30,7 +29,7 @@ import com.example.flowtrack.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriasScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     viewModel: CategoriasViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -41,7 +40,7 @@ fun CategoriasScreen(
             TopAppBar(
                 title = { Text("Gestión de Categorías", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
                 },
