@@ -3,9 +3,11 @@ package com.example.flowtrack.data.local
 import android.content.ContentValues
 import androidx.compose.ui.graphics.Color
 import com.example.flowtrack.domain.model.Carga
+import com.example.flowtrack.domain.model.CategoriaMeta
 import com.example.flowtrack.domain.model.ConfiguracionUsuario
 import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.model.EstadoCarga
+import com.example.flowtrack.domain.model.EstadoMeta
 import com.example.flowtrack.domain.model.EstadoTarjeta
 import com.example.flowtrack.domain.model.EstadoTarjetaSnap
 import com.example.flowtrack.domain.model.Meta
@@ -603,6 +605,12 @@ fun Meta.toRecordValues(): ContentValues {
         putInstant("fechaLimite", fechaLimite)
         put("activa", activa)
         putInstant("creadoEn", creadoEn)
+        put("descripcion", descripcion)
+        putEnum("categoria", categoria)
+        put("cuentaId", cuentaId)
+        putInstant("fechaObjetivo", fechaObjetivo)
+        putEnum("estado", estado)
+        putInstant("actualizadaEn", actualizadaEn)
     }.toString()
 
     return baseRecordValues(
@@ -628,6 +636,12 @@ fun String.toMeta(): Meta = JSONObject(this).run {
         fechaLimite = optInstant("fechaLimite"),
         activa = optBoolean("activa", true),
         creadoEn = optInstant("creadoEn") ?: Instant.now(),
+        descripcion = optString("descripcion").takeIf { it.isNotBlank() },
+        categoria = optEnum("categoria", CategoriaMeta.OTRO),
+        cuentaId = optString("cuentaId").takeIf { it.isNotBlank() },
+        fechaObjetivo = optInstant("fechaObjetivo") ?: optInstant("fechaLimite"),
+        estado = optEnum("estado", EstadoMeta.ACTIVA),
+        actualizadaEn = optInstant("actualizadaEn") ?: optInstant("creadoEn") ?: Instant.now(),
     )
 }
 

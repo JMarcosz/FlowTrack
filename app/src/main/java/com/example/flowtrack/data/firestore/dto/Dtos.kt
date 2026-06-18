@@ -61,6 +61,27 @@ data class MetaDto(
     val fechaLimite: Timestamp? = null,
     val activa: Boolean = true,
     val creadoEn: Timestamp? = null,
+    val descripcion: String? = null,
+    val categoria: String = "OTRO",
+    val cuentaId: String? = null,
+    val fechaObjetivo: Timestamp? = null,
+    val estado: String = "ACTIVA",
+    val actualizadaEn: Timestamp? = null,
+)
+
+/** DTO de movimiento de meta para Firestore. */
+data class MovimientoMetaDto(
+    val id: String = "",
+    val uidUsuario: String = "",
+    val metaId: String = "",
+    val cuentaId: String? = null,
+    val tipo: String = "",
+    val monto: String = "0.00",
+    val balanceAntes: String = "0.00",
+    val balanceDespues: String = "0.00",
+    val metaDestinoId: String? = null,
+    val requestId: String = "",
+    val creadoEn: Timestamp? = null,
 )
 
 /** DTO de Presupuesto para Firestore. */

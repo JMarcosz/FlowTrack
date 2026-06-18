@@ -1,9 +1,11 @@
 package com.example.flowtrack.core.di
 
 import com.example.flowtrack.data.firestore.repositories.CuentaRepository
+import com.example.flowtrack.data.firestore.repositories.MetaRepository
 import com.example.flowtrack.data.firestore.repositories.TarjetaRepository
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.domain.repository.ICuentaRepository
+import com.example.flowtrack.domain.repository.IMetaRepository
 import com.example.flowtrack.domain.repository.ITarjetaRepository
 import com.example.flowtrack.domain.repository.ITransaccionRepository
 import dagger.Binds
@@ -33,4 +35,10 @@ abstract class RepositoryModule {
     abstract fun bindTarjetaRepository(
         impl: TarjetaRepository
     ): ITarjetaRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMetaRepository(
+        impl: MetaRepository
+    ): IMetaRepository
 }

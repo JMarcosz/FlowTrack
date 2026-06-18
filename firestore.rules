@@ -45,7 +45,23 @@ service cloud.firestore {
       match /movimientosTarjeta/{docId} { allow read, write: if isOwner(uid); }
       match /transacciones/{docId} { allow read, write: if isOwner(uid); }
       match /presupuestos/{docId} { allow read, write: if isOwner(uid); }
-      match /metas/{docId} { allow read, write: if isOwner(uid); }
+      match /metas/{docId} {
+        allow read, write: if isOwner(uid);
+
+        match /movimientos/{movimientoId} {
+          allow read, write: if isOwner(uid);
+        }
+
+        match /reglas/{reglaId} {
+          allow read, write: if isOwner(uid);
+        }
+
+        match /participantes/{participanteId} {
+          allow read, write: if isOwner(uid);
+        }
+      }
+      match /operacionesMeta/{docId} { allow read, write: if isOwner(uid); }
+      match /auditoria/{docId} { allow read, write: if isOwner(uid); }
       match /cargas/{docId} { allow read, write: if isOwner(uid); }
       match /dispositivos/{docId} { allow read, write: if isOwner(uid); }
       match /configuracion/{docId} { allow read, write: if isOwner(uid); }
