@@ -10,6 +10,7 @@ import com.example.flowtrack.data.parsers.core.TipoMovimiento
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.ProductoTipo
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -75,19 +76,39 @@ internal class BhdTextParser {
             return ParseResult.Error("No se encontraron movimientos válidos en el PDF de BHD.")
         }
 
-        val ordenados = movimientos.sortedWith(compareBy({ it.fechaTransaccion }, { it.balancePosterior }))
-        
-        // Prioridad de balances segun el usuario:
-        // 1. Balance Inicial: metadata (fiel al resumen del banco)
-        // 2. Balance Final: El ultimo balance de la columna de movimientos (ignora resumen si es 0)
-        val balanceInicial = metadata.balanceInicial ?: ordenados.firstOrNull()?.let { first ->
+        val movimientosEnOrdenDocumento = movimientos.toList()
+        val ordenados = movimientos
+            .mapIndexed { ordenDocumento, movimiento -> ordenDocumento to movimiento }
+            .sortedWith(compareBy({ it.second.fechaTransaccion }, { it.first }))
+            .map { it.second }
+
+        val balanceInicial = metadata.balanceInicial ?: movimientosEnOrdenDocumento.firstOrNull()?.let { first ->
             // Revertir el primer movimiento si no tenemos balance inicial explicito
             val m = first.metadata["debito"]?.toBigDecimalOrNull() ?: BigDecimal.ZERO
             val c = first.metadata["credito"]?.toBigDecimalOrNull() ?: BigDecimal.ZERO
             first.balancePosterior?.subtract(c)?.add(m)
         }
-        
-        val balanceFinal = ordenados.lastOrNull()?.balancePosterior ?: metadata.balanceFinal
+
+        val balanceUltimaFila = movimientosEnOrdenDocumento.lastOrNull { it.balancePosterior != null }?.balancePosterior
+        val totalDebitos = movimientosEnOrdenDocumento.sumarMetadata("debito")
+        val totalCreditos = movimientosEnOrdenDocumento.sumarMetadata("credito")
+        val balancePorFormula = balanceInicial?.let { inicial ->
+            // Para cuentas bancarias: debitos reducen el saldo y creditos lo aumentan.
+            inicial + totalCreditos - totalDebitos
+        }
+        val diferenciaFormula = if (balanceUltimaFila != null && balancePorFormula != null) {
+            (balanceUltimaFila - balancePorFormula).abs().setScale(2, RoundingMode.HALF_UP)
+        } else {
+            null
+        }
+        val formulaCuadra = diferenciaFormula != null && diferenciaFormula <= TOLERANCIA_BALANCE
+        val balanceFinal = balanceUltimaFila ?: balancePorFormula ?: metadata.balanceFinal
+        val balanceFinalFuente = when {
+            balanceUltimaFila != null -> "ULTIMA_FILA_BALANCE"
+            balancePorFormula != null -> "FORMULA_CREDITOS_MENOS_DEBITOS"
+            metadata.balanceFinal != null -> "RESUMEN_PDF"
+            else -> "NO_DETECTADO"
+        }
 
         val estado = EstadoCuentaNormalizado(
             bancoCodigo = "BHD",
@@ -101,11 +122,18 @@ internal class BhdTextParser {
             balanceFinal = balanceFinal,
             movimientos = ordenados,
             numeroCuentaCompleto = metadata.numeroCuentaRegional,
-            metadata = mapOf(
-                "origen" to "BHD_PDF",
-                "numeroCuentaRegional" to (metadata.numeroCuentaRegional ?: ""),
-                "versionDetectada" to if (metadata.isV2) "v2" else "v1"
-            ),
+            metadata = buildMap {
+                put("origen", "BHD_PDF")
+                put("numeroCuentaRegional", metadata.numeroCuentaRegional ?: "")
+                put("versionDetectada", if (metadata.isV2) "v2" else "v1")
+                put("balanceFinalFuente", balanceFinalFuente)
+                put("totalDebitos", totalDebitos.toPlainString())
+                put("totalCreditos", totalCreditos.toPlainString())
+                balanceUltimaFila?.let { put("balanceFinalUltimaFila", it.toPlainString()) }
+                balancePorFormula?.let { put("balanceCalculadoFormula", it.toPlainString()) }
+                diferenciaFormula?.let { put("diferenciaBalanceFormula", it.toPlainString()) }
+                metadata.balanceFinal?.let { put("balanceFinalResumenPdf", it.toPlainString()) }
+            },
         )
 
         val report = ParseReport(
@@ -116,6 +144,12 @@ internal class BhdTextParser {
             warnings = buildList {
                 if (metadata.balanceInicial == null) {
                     add("No se pudo leer el balance inicial desde el resumen del PDF de BHD.")
+                }
+                if (balanceUltimaFila != null && balancePorFormula != null && !formulaCuadra) {
+                    add("El balance calculado por formula no coincide con la ultima fila de balance de BHD.")
+                }
+                if (balanceUltimaFila != null && metadata.balanceFinal != null && balanceUltimaFila != metadata.balanceFinal) {
+                    add("El Balance Final del resumen BHD difiere de la ultima fila; se uso la ultima fila de movimientos.")
                 }
             },
             errors = emptyList(),
@@ -486,5 +520,11 @@ internal class BhdTextParser {
 
     private companion object {
         const val MAX_LINEAS_POR_MOVIMIENTO = 12
+        val TOLERANCIA_BALANCE: BigDecimal = BigDecimal("0.01")
     }
 }
+
+private fun List<MovimientoNormalizado>.sumarMetadata(campo: String): BigDecimal =
+    fold(BigDecimal.ZERO.setScale(2)) { acc, movimiento ->
+        acc + (movimiento.metadata[campo]?.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+    }

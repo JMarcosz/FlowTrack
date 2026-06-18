@@ -49,6 +49,34 @@ class BhdTextParserTest {
     }
 
     @Test
+    fun `BHD usa ultima fila fisica cuando hay varios movimientos en la misma fecha`() {
+        val texto = """
+            BHD
+            ESTADO DE CUENTA
+            Fecha de Corte
+            30/06/2026
+            Balance Inicial
+            ${'$'}3.43
+            Balance Final
+            ${'$'}0.00
+            Fecha Ref. Detalle Debitos Creditos Balance
+            ** Balance al inicial: 01/06/2026 ${'$'}3.43
+            10/06/2026 1111111 TRANSFERENCIA RECIBIDA ${'$'}0.00 ${'$'}4,444.13 ${'$'}4,447.56
+            10/06/2026 2222222 MARTE RIVERA, JE- ${'$'}4,439.13 ${'$'}0.00 ${'$'}8.43
+            Total: ${'$'}4,439.13 Total: ${'$'}4,444.13 Balance Final: ${'$'}0.00
+        """.trimIndent()
+
+        val resultado = parser.parse(texto)
+
+        assertTrue("Fallo parseo mismo dia: $resultado", resultado is ParseResult.Success)
+        val success = resultado as ParseResult.Success
+        assertEquals(BigDecimal("8.43"), success.estado.balanceFinal)
+        assertEquals("ULTIMA_FILA_BALANCE", success.estado.metadata["balanceFinalFuente"])
+        assertEquals("8.43", success.estado.metadata["balanceCalculadoFormula"])
+        assertEquals(BigDecimal("8.43"), success.estado.movimientos.last().balancePosterior)
+    }
+
+    @Test
     fun `BHD v2 valida balance inicial y final del ultimo movimiento`() {
         val texto = """
             BHD
