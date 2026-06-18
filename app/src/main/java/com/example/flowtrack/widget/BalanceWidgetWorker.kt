@@ -8,6 +8,7 @@ import androidx.work.*
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.domain.model.TipoTransaccion
+import com.example.flowtrack.domain.model.esContabilizable
 import com.google.firebase.auth.FirebaseAuth
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -35,7 +36,7 @@ class BalanceWidgetWorker @AssistedInject constructor(
         val res = transaccionRepository.obtenerTransacciones(uid, inicio, fin, limite = 0)
         if (res !is AppResult.Success) return Result.retry()
 
-        val txs = res.data.filter { !it.esDerivada }
+        val txs = res.data.filter { it.esContabilizable }
         val ingresos = txs.filter { it.tipo == TipoTransaccion.CREDITO }
             .fold(java.math.BigDecimal.ZERO) { acc, t -> acc + t.monto }
         val gastos = txs.filter { it.tipo == TipoTransaccion.DEBITO }

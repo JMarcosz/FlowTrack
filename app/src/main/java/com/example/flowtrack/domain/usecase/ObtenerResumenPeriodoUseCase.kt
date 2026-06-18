@@ -7,6 +7,7 @@ import com.example.flowtrack.data.firestore.repositories.CuentaRepository
 import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
+import com.example.flowtrack.domain.model.esContabilizable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -90,7 +91,7 @@ class ObtenerResumenPeriodoUseCase @Inject constructor(
         var total = BigDecimal.ZERO
         cuentas.forEach { cuenta ->
             val ultimaPrevia = todasTxs
-                .filter { it.cuentaId == cuenta.id && !it.fecha.isAfter(fechaCorte) }
+                .filter { it.cuentaId == cuenta.id && !it.fecha.isAfter(fechaCorte) && it.esContabilizable }
                 .maxByOrNull { it.fecha }
             total += (ultimaPrevia?.balanceDespues ?: BigDecimal.ZERO)
         }
@@ -114,7 +115,7 @@ class ObtenerResumenPeriodoUseCase @Inject constructor(
             mapa[k] = (mapa[k] ?: BigDecimal.ZERO) + monto
         }
 
-        transacciones.filter { !it.esDerivada }.forEach { tx ->
+        transacciones.filter { it.esContabilizable }.forEach { tx ->
             when (tx.tipo) {
                 TipoTransaccion.CREDITO -> sumar(ingresosPorBucket, tx.fecha, tx.monto)
                 TipoTransaccion.DEBITO  -> sumar(gastosPorBucket, tx.fecha, tx.monto)

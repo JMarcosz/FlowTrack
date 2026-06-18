@@ -5,6 +5,7 @@ import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.domain.model.PeriodoPresupuesto
 import com.example.flowtrack.domain.model.Presupuesto
 import com.example.flowtrack.domain.model.TipoTransaccion
+import com.example.flowtrack.domain.model.esContabilizable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import java.math.BigDecimal
@@ -49,7 +50,7 @@ class ObtenerPresupuestosConGastoUseCase @Inject constructor(
             presupuestos.map { presupuesto ->
                 val txs = if (presupuesto.periodo == PeriodoPresupuesto.MENSUAL) txsMensuales else txsAnuales
                 val gasto = txs
-                    .filter { it.categoriaId == presupuesto.categoriaId && it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
+                    .filter { it.categoriaId == presupuesto.categoriaId && it.tipo == TipoTransaccion.DEBITO && it.esContabilizable }
                     .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.monto }
                 PresupuestoConGasto(presupuesto = presupuesto, gastoActual = gasto)
             }

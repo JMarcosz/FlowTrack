@@ -32,9 +32,11 @@ import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.NotificacionConfig
 import com.example.flowtrack.domain.model.OrigenTasa
+import com.example.flowtrack.domain.model.OrigenTransaccion
 import com.example.flowtrack.domain.model.ReglaCategoria
 import com.example.flowtrack.domain.model.ReglaSugerida
 import com.example.flowtrack.domain.model.Tarjeta
+import com.example.flowtrack.domain.model.EstadoTransaccion
 import com.example.flowtrack.domain.model.TipoCuenta
 import com.example.flowtrack.domain.model.TipoDocumento
 import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
@@ -53,6 +55,8 @@ private val ZONA_RD = ZoneId.of("America/Santo_Domingo")
 
 // --- Métodos de Ayuda para Conversión ---
 private fun BigDecimal.toFirestoreString(): String = setScale(2).toPlainString()
+private inline fun <reified T : Enum<T>> String?.toEnumOrDefault(default: T): T =
+    runCatching { enumValueOf<T>(this?.takeIf { it.isNotBlank() } ?: default.name) }.getOrDefault(default)
 
 fun Any?.toBigDecimalCompat(): BigDecimal? = when (this) {
     null -> null
@@ -251,6 +255,15 @@ fun TransaccionNormalizada.toDomain(
         esDerivada = esDerivada,
         transaccionPadreId = null, // se vincula en una segunda pasada
         derivadasIds = emptyList(),
+        origen = OrigenTransaccion.IMPORTACION_ARCHIVO,
+        sourceEventId = null,
+        sourceMessageId = null,
+        sourceTransactionId = null,
+        actualizadoEn = Instant.now(),
+        estado = EstadoTransaccion.APROBADA,
+        afectaBalance = true,
+        posibleDuplicado = false,
+        motivoRechazo = null,
         cargaId = cargaId,
         metadataBanco = metadataBanco,
         creadoEn = Instant.now(),
@@ -278,6 +291,15 @@ fun Transaccion.toDto(): TransaccionDto = TransaccionDto(
     esDerivada = esDerivada,
     transaccionPadreId = transaccionPadreId,
     derivadasIds = derivadasIds,
+    origen = origen.name,
+    sourceEventId = sourceEventId,
+    sourceMessageId = sourceMessageId,
+    sourceTransactionId = sourceTransactionId,
+    actualizadoEn = actualizadoEn.toTimestamp(),
+    estado = estado.name,
+    afectaBalance = afectaBalance,
+    posibleDuplicado = posibleDuplicado,
+    motivoRechazo = motivoRechazo,
     cargaId = cargaId,
     notaUsuario = notaUsuario,
     metadataBanco = metadataBanco,
@@ -305,6 +327,15 @@ fun TransaccionDto.toDomain(): Transaccion = Transaccion(
     esDerivada = esDerivada,
     transaccionPadreId = transaccionPadreId,
     derivadasIds = derivadasIds,
+    origen = origen.toEnumOrDefault(OrigenTransaccion.IMPORTACION_ARCHIVO),
+    sourceEventId = sourceEventId,
+    sourceMessageId = sourceMessageId,
+    sourceTransactionId = sourceTransactionId,
+    actualizadoEn = actualizadoEn?.toDate()?.toInstant() ?: creadoEn?.toDate()?.toInstant() ?: Instant.now(),
+    estado = estado.toEnumOrDefault(EstadoTransaccion.APROBADA),
+    afectaBalance = afectaBalance,
+    posibleDuplicado = posibleDuplicado,
+    motivoRechazo = motivoRechazo,
     cargaId = cargaId,
     notaUsuario = notaUsuario,
     metadataBanco = metadataBanco,
@@ -696,6 +727,15 @@ fun MovimientoNormalizado.toDomainTransaccion(
         esDerivada = false,
         transaccionPadreId = null,
         derivadasIds = emptyList(),
+        origen = OrigenTransaccion.IMPORTACION_ARCHIVO,
+        sourceEventId = null,
+        sourceMessageId = null,
+        sourceTransactionId = null,
+        actualizadoEn = Instant.now(),
+        estado = EstadoTransaccion.APROBADA,
+        afectaBalance = true,
+        posibleDuplicado = false,
+        motivoRechazo = null,
         cargaId = cargaId,
         metadataBanco = metadata,
         creadoEn = Instant.now(),

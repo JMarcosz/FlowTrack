@@ -9,6 +9,7 @@ import com.example.flowtrack.domain.model.Cuenta
 import com.example.flowtrack.domain.model.TasaCambio
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
+import com.example.flowtrack.domain.model.esContabilizable
 import com.example.flowtrack.presentation.model.FiltrosAvanzadosState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -124,7 +125,7 @@ class ObtenerResumenUseCase @Inject constructor(
             val totalFloat = totales.gastos.toFloat().coerceAtLeast(1f)
 
             val gastosPorCat = mutableMapOf<String, BigDecimal>()
-            transacciones.filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }.forEach { tx ->
+            transacciones.filter { it.tipo == TipoTransaccion.DEBITO && it.esContabilizable }.forEach { tx ->
                 val cat = categoriaNormalizada(tx.categoriaId) ?: CategoriaCatalogo.SIN_CATEGORIZAR
                 gastosPorCat[cat] = (gastosPorCat[cat] ?: BigDecimal.ZERO) + tx.monto
             }
@@ -139,7 +140,7 @@ class ObtenerResumenUseCase @Inject constructor(
             val ingresosPorBanco = mutableMapOf<String, BigDecimal>()
             val gastosPorBancoMap = mutableMapOf<String, BigDecimal>()
 
-            transacciones.filter { !it.esDerivada }.forEach { tx ->
+            transacciones.filter { it.esContabilizable }.forEach { tx ->
                 if (tx.tipo == TipoTransaccion.CREDITO) {
                     ingresosPorBanco[tx.bancoCodigo] = (ingresosPorBanco[tx.bancoCodigo] ?: BigDecimal.ZERO) + tx.monto
                 } else {
@@ -194,7 +195,7 @@ class ObtenerResumenUseCase @Inject constructor(
         }
 
         val ultimaTxRango = transaccionesBase
-            .filter { it.cuentaId == cuenta.id && it.balanceDespues != null && !it.fecha.isAfter(fin) }
+            .filter { it.cuentaId == cuenta.id && it.balanceDespues != null && !it.fecha.isAfter(fin) && it.esContabilizable }
             .maxWithOrNull(compareBy<Transaccion> { it.fecha }.thenBy { it.creadoEn }.thenBy { it.id })
         if (ultimaTxRango?.balanceDespues != null) {
             return ultimaTxRango.balanceDespues
@@ -208,7 +209,8 @@ class ObtenerResumenUseCase @Inject constructor(
             cuentaId = cuenta.id,
         )
         if (resPrevia is AppResult.Success) {
-            val txPrevia = resPrevia.data.firstOrNull { it.balanceDespues != null }?.normalizarMoneda(tasaCambio)
+            val txPrevia = resPrevia.data.firstOrNull { it.balanceDespues != null && it.esContabilizable }
+                ?.normalizarMoneda(tasaCambio)
             if (txPrevia?.balanceDespues != null) return txPrevia.balanceDespues
         }
 

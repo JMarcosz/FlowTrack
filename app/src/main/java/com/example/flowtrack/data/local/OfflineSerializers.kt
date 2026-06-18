@@ -15,10 +15,12 @@ import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.NotificacionConfig
 import com.example.flowtrack.domain.model.OrigenTasa
+import com.example.flowtrack.domain.model.OrigenTransaccion
 import com.example.flowtrack.domain.model.PeriodoPresupuesto
 import com.example.flowtrack.domain.model.Presupuesto
 import com.example.flowtrack.domain.model.ReglaCategoria
 import com.example.flowtrack.domain.model.ReglaSugerida
+import com.example.flowtrack.domain.model.EstadoTransaccion
 import com.example.flowtrack.domain.model.TipoCuenta
 import com.example.flowtrack.domain.model.TipoMatch
 import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
@@ -57,6 +59,7 @@ private fun baseRecordValues(
     activo: Boolean = true,
     mostrarEnDashboard: Boolean = true,
     deletedAtMillis: Long? = null,
+    updatedAtMillis: Long? = null,
 ): ContentValues = ContentValues().apply {
     put("entity_type", entityType)
     put("uid_usuario", uid)
@@ -75,7 +78,7 @@ private fun baseRecordValues(
     put("activo", if (activo) 1 else 0)
     put("mostrar_en_dashboard", if (mostrarEnDashboard) 1 else 0)
     if (deletedAtMillis != null) put("deleted_at_millis", deletedAtMillis) else putNull("deleted_at_millis")
-    put("updated_at_millis", System.currentTimeMillis())
+    put("updated_at_millis", updatedAtMillis ?: System.currentTimeMillis())
     put("payload", payload)
 }
 
@@ -182,6 +185,15 @@ fun Transaccion.toRecordValues(): ContentValues {
         put("esDerivada", esDerivada)
         put("transaccionPadreId", transaccionPadreId)
         putStringList("derivadasIds", derivadasIds)
+        putEnum("origen", origen)
+        put("sourceEventId", sourceEventId)
+        put("sourceMessageId", sourceMessageId)
+        put("sourceTransactionId", sourceTransactionId)
+        putInstant("actualizadoEn", actualizadoEn)
+        putEnum("estado", estado)
+        put("afectaBalance", afectaBalance)
+        put("posibleDuplicado", posibleDuplicado)
+        put("motivoRechazo", motivoRechazo)
         put("cargaId", cargaId)
         put("notaUsuario", notaUsuario)
         putStringMap("metadataBanco", metadataBanco)
@@ -201,7 +213,9 @@ fun Transaccion.toRecordValues(): ContentValues {
         categoriaId = categoriaId,
         transaccionPadreId = transaccionPadreId,
         tipo = tipo.name,
+        estado = estado.name,
         deletedAtMillis = null,
+        updatedAtMillis = actualizadoEn.toEpochMilli(),
     )
 }
 
@@ -227,6 +241,15 @@ fun String.toTransaccion(): Transaccion = JSONObject(this).run {
         esDerivada = optBoolean("esDerivada", false),
         transaccionPadreId = optString("transaccionPadreId", null),
         derivadasIds = optStringList("derivadasIds"),
+        origen = optEnum("origen", OrigenTransaccion.IMPORTACION_ARCHIVO),
+        sourceEventId = optString("sourceEventId", null),
+        sourceMessageId = optString("sourceMessageId", null),
+        sourceTransactionId = optString("sourceTransactionId", null),
+        actualizadoEn = optInstant("actualizadoEn") ?: Instant.now(),
+        estado = optEnum("estado", EstadoTransaccion.APROBADA),
+        afectaBalance = optBoolean("afectaBalance", true),
+        posibleDuplicado = optBoolean("posibleDuplicado", false),
+        motivoRechazo = optString("motivoRechazo", null),
         cargaId = optString("cargaId"),
         notaUsuario = optString("notaUsuario", null),
         metadataBanco = optStringMap("metadataBanco"),

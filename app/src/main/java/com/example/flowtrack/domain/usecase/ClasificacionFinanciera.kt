@@ -4,6 +4,7 @@ import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
+import com.example.flowtrack.domain.model.esContabilizable
 import java.math.BigDecimal
 
 internal fun TipoMovimientoTarjeta.esGastoFinanciero(): Boolean =
@@ -31,7 +32,7 @@ internal fun calcularTotalesFinancieros(
     movimientos: List<MovimientoTarjeta>,
 ): TotalesFinancieros {
     val gastosCuenta = transacciones
-        .filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
+        .filter { it.tipo == TipoTransaccion.DEBITO && it.esContabilizable }
         .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.monto }
 
     val gastosTarjeta = movimientos
@@ -39,7 +40,7 @@ internal fun calcularTotalesFinancieros(
         .fold(BigDecimal.ZERO) { acc, mv -> acc + mv.monto }
 
     val ingresosCuenta = transacciones
-        .filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }
+        .filter { it.tipo == TipoTransaccion.CREDITO && it.esContabilizable }
         .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.monto }
 
     val ingresosTarjeta = movimientos

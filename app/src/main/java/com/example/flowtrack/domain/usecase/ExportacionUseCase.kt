@@ -21,6 +21,7 @@ import com.example.flowtrack.domain.model.EstadoTarjetaSnap
 import com.example.flowtrack.domain.model.MovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
+import com.example.flowtrack.domain.model.esContabilizable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.ss.usermodel.BorderStyle
@@ -150,9 +151,9 @@ class ExportacionUseCase @Inject constructor(
             val inicioStr = filtro.inicio.atZone(zona).toLocalDate().format(fmt)
             val finStr = filtro.fin.atZone(zona).toLocalDate().format(fmt)
 
-            val ingresos = datos.transacciones.filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }
+            val ingresos = datos.transacciones.filter { it.tipo == TipoTransaccion.CREDITO && it.esContabilizable }
                 .fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, t -> acc + t.monto }
-            val gastos = datos.transacciones.filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
+            val gastos = datos.transacciones.filter { it.tipo == TipoTransaccion.DEBITO && it.esContabilizable }
                 .fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, t -> acc + t.monto }
             val balance = ingresos - gastos
 
@@ -210,7 +211,7 @@ class ExportacionUseCase @Inject constructor(
             canvas.drawText(formatMoney(balance.abs()), 200f, y, if (balance >= java.math.BigDecimal.ZERO) paintIncome else paintExpense)
             y += 16f
             canvas.drawText("Transacciones:", 40f, y, paintBody)
-            canvas.drawText("${datos.transacciones.count { !it.esDerivada }}", 200f, y, paintBody)
+            canvas.drawText("${datos.transacciones.count { it.esContabilizable }}", 200f, y, paintBody)
             y += 16f
             canvas.drawText("Retenciones DGII:", 40f, y, paintBody)
             canvas.drawText("${datos.transacciones.count { it.esDerivada }}", 200f, y, paintBody)
@@ -224,7 +225,7 @@ class ExportacionUseCase @Inject constructor(
             canvas.drawText("Detalle de transacciones", 40f, y, paintHeader)
             y += 20f
             val grouped = datos.transacciones
-                .filter { !it.esDerivada }
+                .filter { it.esContabilizable }
                 .groupBy { it.fecha.atZone(zona).toLocalDate() }
                 .toSortedMap(compareByDescending { it })
             for ((fecha, txs) in grouped) {
@@ -324,11 +325,11 @@ class ExportacionUseCase @Inject constructor(
                     r.createCell(1).setCellValue(value)
                 }
                 put("Rango", "${formatFecha(filtro.inicio)} - ${formatFecha(filtro.fin)}")
-                put("Transacciones", "${datos.transacciones.count { !it.esDerivada }}")
+                put("Transacciones", "${datos.transacciones.count { it.esContabilizable }}")
                 put("Retenciones DGII", "${datos.transacciones.count { it.esDerivada }}")
                 put("Movimientos de tarjeta", "${datos.movimientos.size}")
-                put("Ingresos", formatMoney(datos.transacciones.filter { it.tipo == TipoTransaccion.CREDITO && !it.esDerivada }.fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, t -> acc + t.monto }))
-                put("Gastos", formatMoney(datos.transacciones.filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }.fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, t -> acc + t.monto }))
+                put("Ingresos", formatMoney(datos.transacciones.filter { it.tipo == TipoTransaccion.CREDITO && it.esContabilizable }.fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, t -> acc + t.monto }))
+                put("Gastos", formatMoney(datos.transacciones.filter { it.tipo == TipoTransaccion.DEBITO && it.esContabilizable }.fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, t -> acc + t.monto }))
                 autosize(sheet, 2)
             }
 
@@ -355,7 +356,7 @@ class ExportacionUseCase @Inject constructor(
             if (SeccionExportacionXlsx.RESUMEN_POR_CATEGORIA in filtro.seccionesXlsx) {
                 val sheet = workbook.createSheet("Resumen por categoria")
                 writeHeader(sheet, listOf("Categoria", "Monto"), styleHeader)
-                val porCategoria = datos.transacciones.filter { !it.esDerivada && it.tipo == TipoTransaccion.DEBITO }
+                val porCategoria = datos.transacciones.filter { it.esContabilizable && it.tipo == TipoTransaccion.DEBITO }
                     .groupBy { it.categoriaId ?: "sin_categorizar" }
                     .mapValues { (_, txs) -> txs.fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, tx -> acc + tx.monto } }
                 var row = 1
@@ -373,9 +374,9 @@ class ExportacionUseCase @Inject constructor(
                 val bancos = mutableMapOf<String, Pair<java.math.BigDecimal, java.math.BigDecimal>>()
                 datos.transacciones.forEach { tx ->
                     val current = bancos[tx.bancoCodigo] ?: (java.math.BigDecimal.ZERO.setScale(2) to java.math.BigDecimal.ZERO.setScale(2))
-                    bancos[tx.bancoCodigo] = if (tx.tipo == TipoTransaccion.CREDITO && !tx.esDerivada) {
+                    bancos[tx.bancoCodigo] = if (tx.tipo == TipoTransaccion.CREDITO && tx.esContabilizable) {
                         (current.first + tx.monto) to current.second
-                    } else if (tx.tipo == TipoTransaccion.DEBITO && !tx.esDerivada) {
+                    } else if (tx.tipo == TipoTransaccion.DEBITO && tx.esContabilizable) {
                         current.first to (current.second + tx.monto)
                     } else {
                         current
@@ -400,7 +401,7 @@ class ExportacionUseCase @Inject constructor(
                 writeHeader(sheet, listOf("Cuenta", "Banco", "Ingresos", "Gastos"), styleHeader)
                 var row = 1
                 datos.cuentas.forEach { cuenta ->
-                    val txs = datos.transacciones.filter { it.cuentaId == cuenta.id && !it.esDerivada }
+                    val txs = datos.transacciones.filter { it.cuentaId == cuenta.id && it.esContabilizable }
                     val ingresos = txs.filter { it.tipo == TipoTransaccion.CREDITO }.fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, tx -> acc + tx.monto }
                     val gastos = txs.filter { it.tipo == TipoTransaccion.DEBITO }.fold(java.math.BigDecimal.ZERO.setScale(2)) { acc, tx -> acc + tx.monto }
                     val r = sheet.createRow(row++)

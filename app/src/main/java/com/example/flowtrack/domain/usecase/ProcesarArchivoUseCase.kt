@@ -28,6 +28,7 @@ import com.example.flowtrack.domain.model.FileFormat
 import com.example.flowtrack.domain.model.ProductoTipo
 import com.example.flowtrack.domain.model.TipoDocumento
 import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
+import com.example.flowtrack.domain.model.esContabilizable
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -318,7 +319,7 @@ class ProcesarArchivoUseCase @Inject constructor(
         if (!config.alertasGastosAltos) return
 
         val gastosCuenta = transacciones.filter { tx ->
-            tx.tipo == com.example.flowtrack.domain.model.TipoTransaccion.DEBITO && !tx.esDerivada &&
+            tx.tipo == com.example.flowtrack.domain.model.TipoTransaccion.DEBITO && tx.esContabilizable &&
                 tx.monto >= config.umbralGastoAlto
         }
         val gastosTarjeta = movimientos.filter { mov ->

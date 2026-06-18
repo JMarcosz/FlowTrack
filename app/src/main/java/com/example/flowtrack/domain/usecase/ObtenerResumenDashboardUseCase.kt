@@ -6,6 +6,7 @@ import com.example.flowtrack.data.firestore.repositories.CuentaRepository
 import com.example.flowtrack.data.firestore.repositories.TasaCambioRepository
 import com.example.flowtrack.domain.model.CategoriaCatalogo
 import com.example.flowtrack.domain.model.TipoTransaccion
+import com.example.flowtrack.domain.model.esContabilizable
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
@@ -126,7 +127,7 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
         var totalBalanceFinal = BigDecimal.ZERO
         cuentasVisibles.forEach { cuenta ->
             val ultimaTxRango = txActuales
-                .filter { it.cuentaId == cuenta.id && it.balanceDespues != null }
+                .filter { it.cuentaId == cuenta.id && it.balanceDespues != null && it.esContabilizable }
                 .maxByOrNull { it.fecha }
             if (ultimaTxRango != null) {
                 totalBalanceFinal += ultimaTxRango.balanceDespues!!
@@ -141,7 +142,8 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
                 )
                 val balanceFallback = cuenta.balanceActual ?: BigDecimal.ZERO
                 if (resPrevia is AppResult.Success) {
-                    val txPrevia = resPrevia.data.firstOrNull { it.balanceDespues != null }?.normalizarMoneda(tasaCambio)
+                    val txPrevia = resPrevia.data.firstOrNull { it.balanceDespues != null && it.esContabilizable }
+                        ?.normalizarMoneda(tasaCambio)
                     totalBalanceFinal += (txPrevia?.balanceDespues ?: balanceFallback)
                 } else {
                     totalBalanceFinal += balanceFallback
@@ -169,7 +171,7 @@ class ObtenerResumenDashboardUseCase @Inject constructor(
 
         // ── Breakdown por categoría (top 5 gastos) ───────────────────────────
         val catCuenta = txActuales
-            .filter { it.tipo == TipoTransaccion.DEBITO && !it.esDerivada }
+            .filter { it.tipo == TipoTransaccion.DEBITO && it.esContabilizable }
             .groupBy { CategoriaCatalogo.normalizarId(it.categoriaId) ?: CategoriaCatalogo.SIN_CATEGORIZAR }
             .mapValues { (_, txs) -> txs.fold(BigDecimal.ZERO) { a, tx -> a + tx.monto } }
         val catTarjeta = movActuales

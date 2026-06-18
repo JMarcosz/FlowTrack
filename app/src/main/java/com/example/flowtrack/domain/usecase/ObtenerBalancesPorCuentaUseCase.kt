@@ -3,6 +3,7 @@ package com.example.flowtrack.domain.usecase
 import com.example.flowtrack.core.result.AppResult
 import com.example.flowtrack.data.firestore.repositories.TransaccionRepository
 import com.example.flowtrack.domain.model.Cuenta
+import com.example.flowtrack.domain.model.esContabilizable
 import java.math.BigDecimal
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,7 +26,7 @@ class ObtenerBalancesPorCuentaUseCase @Inject constructor(
         val transacciones = (result as AppResult.Success).data
 
         val mapa = transacciones
-            .filter { !it.esDerivada && it.balanceDespues != null }
+            .filter { it.esContabilizable && it.balanceDespues != null }
             .groupBy { it.cuentaId }
             .mapValues { (_, txs) ->
                 txs.maxByOrNull { it.fecha }!!.balanceDespues!!

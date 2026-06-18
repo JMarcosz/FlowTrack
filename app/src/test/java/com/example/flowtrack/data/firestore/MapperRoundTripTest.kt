@@ -7,9 +7,12 @@ import com.example.flowtrack.data.firestore.mappers.toDto
 import com.example.flowtrack.data.firestore.mappers.toTimestamp
 import com.example.flowtrack.domain.model.Moneda
 import com.example.flowtrack.domain.model.MovimientoTarjeta
+import com.example.flowtrack.domain.model.EstadoTransaccion
+import com.example.flowtrack.domain.model.OrigenTransaccion
 import com.example.flowtrack.domain.model.TipoMovimientoTarjeta
 import com.example.flowtrack.domain.model.TipoTransaccion
 import com.example.flowtrack.domain.model.Transaccion
+import com.example.flowtrack.domain.model.esContabilizable
 import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -51,6 +54,15 @@ class MapperRoundTripTest {
         esDerivada = false,
         transaccionPadreId = null,
         derivadasIds = emptyList(),
+        origen = OrigenTransaccion.IMPORTACION_ARCHIVO,
+        sourceEventId = "event-001",
+        sourceMessageId = "message-001",
+        sourceTransactionId = "source-tx-001",
+        actualizadoEn = instanteReferencia().plusSeconds(60),
+        estado = EstadoTransaccion.APROBADA,
+        afectaBalance = true,
+        posibleDuplicado = false,
+        motivoRechazo = null,
         cargaId = "carga-001",
         notaUsuario = "nota de prueba",
         metadataBanco = mapOf("campo1" to "valor1"),
@@ -98,6 +110,15 @@ class MapperRoundTripTest {
         assertEquals(original.esDerivada, dto.esDerivada)
         assertEquals(original.transaccionPadreId, dto.transaccionPadreId)
         assertEquals(original.derivadasIds, dto.derivadasIds)
+        assertEquals(original.origen.name, dto.origen)
+        assertEquals(original.sourceEventId, dto.sourceEventId)
+        assertEquals(original.sourceMessageId, dto.sourceMessageId)
+        assertEquals(original.sourceTransactionId, dto.sourceTransactionId)
+        assertEquals(original.actualizadoEn.epochSecond, dto.actualizadoEn?.seconds)
+        assertEquals(original.estado.name, dto.estado)
+        assertEquals(original.afectaBalance, dto.afectaBalance)
+        assertEquals(original.posibleDuplicado, dto.posibleDuplicado)
+        assertEquals(original.motivoRechazo, dto.motivoRechazo)
         assertEquals(original.cargaId, dto.cargaId)
         assertEquals(original.notaUsuario, dto.notaUsuario)
         assertEquals(original.metadataBanco, dto.metadataBanco)
@@ -206,9 +227,30 @@ class MapperRoundTripTest {
         assertEquals(original.categoriaId, dominio.categoriaId)
         assertEquals(original.categoriaAutomatica, dominio.categoriaAutomatica)
         assertEquals(original.esDerivada, dominio.esDerivada)
+        assertEquals(original.origen, dominio.origen)
+        assertEquals(original.sourceEventId, dominio.sourceEventId)
+        assertEquals(original.sourceMessageId, dominio.sourceMessageId)
+        assertEquals(original.sourceTransactionId, dominio.sourceTransactionId)
+        assertEquals(original.actualizadoEn.epochSecond, dominio.actualizadoEn.epochSecond)
+        assertEquals(original.estado, dominio.estado)
+        assertEquals(original.afectaBalance, dominio.afectaBalance)
+        assertEquals(original.posibleDuplicado, dominio.posibleDuplicado)
+        assertEquals(original.motivoRechazo, dominio.motivoRechazo)
         assertEquals(original.cargaId, dominio.cargaId)
         assertEquals(original.notaUsuario, dominio.notaUsuario)
         assertEquals(original.metadataBanco, dominio.metadataBanco)
+    }
+
+    @Test
+    fun `transaccion aprobada y activa cuenta como contabilizable`() {
+        val tx = transaccionBase()
+        assertEquals(true, tx.esContabilizable)
+    }
+
+    @Test
+    fun `transaccion rechazada deja de ser contabilizable`() {
+        val tx = transaccionBase().copy(estado = EstadoTransaccion.RECHAZADA, afectaBalance = false)
+        assertEquals(false, tx.esContabilizable)
     }
 
     @Test

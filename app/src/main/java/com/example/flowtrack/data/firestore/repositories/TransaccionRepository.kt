@@ -162,12 +162,24 @@ class TransaccionRepository @Inject constructor(
 
     override suspend fun actualizarTransaccion(tx: Transaccion): AppResult<Unit> {
         return try {
-            offlineStore.upsertTransaccion(tx)
+            val actualizada = tx.copy(actualizadoEn = Instant.now())
+            offlineStore.upsertTransaccion(actualizada)
             val updates = mapOf(
-                "categoriaId" to tx.categoriaId,
-                "categoriaAutomatica" to tx.categoriaAutomatica,
+                "categoriaId" to actualizada.categoriaId,
+                "categoriaAutomatica" to actualizada.categoriaAutomatica,
+                "origen" to actualizada.origen.name,
+                "sourceEventId" to actualizada.sourceEventId,
+                "sourceMessageId" to actualizada.sourceMessageId,
+                "sourceTransactionId" to actualizada.sourceTransactionId,
+                "actualizadoEn" to com.google.firebase.Timestamp.now(),
+                "estado" to actualizada.estado.name,
+                "afectaBalance" to actualizada.afectaBalance,
+                "posibleDuplicado" to actualizada.posibleDuplicado,
+                "motivoRechazo" to actualizada.motivoRechazo,
             )
-            colRef(tx.uidUsuario).document(tx.id).update(updates).await()
+            colRef(tx.uidUsuario).document(tx.id)
+                .set(updates, com.google.firebase.firestore.SetOptions.merge())
+                .await()
             AppResult.Success(Unit)
         } catch (e: Exception) {
             AppResult.Error(ErrorApp.FirestoreError("Error al actualizar transacción: ${e.message}", e))

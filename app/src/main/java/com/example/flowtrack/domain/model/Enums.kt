@@ -8,6 +8,8 @@ enum class EstadoCarga { EXITOSO, PARCIAL, FALLIDO, ELIMINADO }
 enum class TipoMatch { EXACTO, CONTIENE, EMPIEZA_CON, REGEX }
 enum class OrigenTasa { AUTO_EXTRAIDA, MANUAL }
 enum class EstadoTarjeta { ACTIVO, INACTIVO }
+enum class OrigenTransaccion { IMPORTACION_ARCHIVO, INGESTA_GMAIL, MANUAL }
+enum class EstadoTransaccion { APROBADA, RECHAZADA, DUPLICADA, PENDIENTE }
 
 enum class TipoMovimientoTarjeta {
     COMPRA, PAGO, INTERES, COMISION, CASHBACK, AJUSTE, AVANCE_EFECTIVO, DEVOLUCION
