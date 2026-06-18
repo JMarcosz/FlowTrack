@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
@@ -109,6 +110,7 @@ dependencies {
 
     // ── Navigation ───────────────────────────────────────────────────────────
     implementation(libs.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
 
     // ── Hilt ─────────────────────────────────────────────────────────────────
     implementation(libs.hilt.android)

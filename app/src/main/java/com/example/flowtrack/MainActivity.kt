@@ -21,7 +21,9 @@ import com.example.flowtrack.data.local.OfflineStore
 import com.example.flowtrack.data.firestore.repositories.ConfiguracionRepository
 import com.example.flowtrack.data.firestore.repositories.DispositivoPushRepository
 import com.example.flowtrack.presentation.navigation.AppNavGraph
-import com.example.flowtrack.presentation.navigation.Screen
+import com.example.flowtrack.presentation.navigation.DashboardRoute
+import com.example.flowtrack.presentation.navigation.LoginRoute
+import com.example.flowtrack.presentation.navigation.notificationRouteFromLegacyString
 import com.example.flowtrack.ui.theme.FlowTrackTheme
 import com.example.flowtrack.ui.theme.resolverTemaOscuro
 import com.google.firebase.auth.FirebaseAuth
@@ -50,12 +52,14 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var offlineStore: OfflineStore
 
-    private var pendingRoute by mutableStateOf<String?>(null)
+    private var pendingRoute by mutableStateOf<Any?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        pendingRoute = intent?.getStringExtra(NotificationRoute.EXTRA_ROUTE)
+        pendingRoute = notificationRouteFromLegacyString(
+            intent?.getStringExtra(NotificationRoute.EXTRA_ROUTE),
+        )
         setContent {
             val systemDarkTheme = isSystemInDarkTheme()
             var uid by remember { mutableStateOf(auth.currentUser?.uid) }
@@ -108,8 +112,8 @@ class MainActivity : ComponentActivity() {
                 lastUid = currentUid
             }
 
-            val startDestination = if (auth.currentUser != null) Screen.Dashboard.route
-                                   else Screen.Login.route
+            val startDestination = if (auth.currentUser != null) DashboardRoute
+                                   else LoginRoute
 
             FlowTrackTheme(darkTheme = isDarkTheme) {
                 AppNavGraph(
@@ -123,6 +127,8 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        pendingRoute = intent.getStringExtra(NotificationRoute.EXTRA_ROUTE)
+        pendingRoute = notificationRouteFromLegacyString(
+            intent.getStringExtra(NotificationRoute.EXTRA_ROUTE),
+        )
     }
 }

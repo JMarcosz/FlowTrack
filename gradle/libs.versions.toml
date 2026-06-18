@@ -25,6 +25,9 @@ firebaseBom         = "33.7.0"
 # Coroutines
 coroutines          = "1.9.0"
 
+# Kotlinx Serialization
+kotlinxSerialization = "1.7.3"
+
 # Google Sign-In (Credential Manager)
 credentials         = "1.6.0"
 googleid            = "1.1.1"
@@ -106,6 +109,7 @@ firebase-analytics                  = { group = "com.google.firebase", name = "f
 coroutines-core                     = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core",          version.ref = "coroutines" }
 coroutines-android                  = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android",       version.ref = "coroutines" }
 coroutines-play-services            = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
+kotlinx-serialization-json          = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json",       version.ref = "kotlinxSerialization" }
 
 # ── Google Sign-In (Credential Manager) ──────────────────────────────────────
 credentials                         = { group = "androidx.credentials", name = "credentials",                version.ref = "credentials" }
@@ -155,4 +159,5 @@ kotlin-android       = { id = "org.jetbrains.kotlin.android",          version.r
 kotlin-compose       = { id = "org.jetbrains.kotlin.plugin.compose",   version.ref = "kotlin" }
 hilt                 = { id = "com.google.dagger.hilt.android",        version.ref = "hilt" }
 ksp                  = { id = "com.google.devtools.ksp",               version.ref = "ksp" }
+kotlin-serialization  = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 google-services      = { id = "com.google.gms.google-services",        version = "4.4.2" }

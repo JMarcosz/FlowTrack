@@ -13,50 +13,75 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.flowtrack.presentation.navigation.Screen
+import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
+import com.example.flowtrack.R
+import com.example.flowtrack.presentation.navigation.ConfiguracionRoute
+import com.example.flowtrack.presentation.navigation.DashboardRoute
+import com.example.flowtrack.presentation.navigation.ResumenRoute
+import com.example.flowtrack.presentation.navigation.TarjetasRoute
+import com.example.flowtrack.presentation.navigation.TransaccionesRoute
 
-private data class NavItem(val screen: Screen, val label: String, val icon: ImageVector)
-
-private val navItems = listOf(
-    NavItem(Screen.Dashboard, "Inicio", Icons.Outlined.Home),
-    NavItem(Screen.Transacciones, "Transacciones", Icons.AutoMirrored.Outlined.List),
-    NavItem(Screen.Resumen, "Resumen", Icons.Outlined.BarChart),
-    NavItem(Screen.Tarjetas, "Tarjetas", Icons.Outlined.CreditCard),
-    NavItem(Screen.Configuracion, "Más", Icons.Outlined.Settings),
+private data class NavItem(
+    val labelResId: Int,
+    val icon: ImageVector,
+    val selected: Boolean,
+    val onClick: () -> Unit,
 )
 
 @Composable
-fun FinanzasBottomNav(navController: NavController) {
-    val backStack = navController.currentBackStackEntryAsState()
-    val current = backStack.value?.destination?.route
+fun FinanzasBottomNav(
+    currentDestination: NavDestination?,
+    onNavigateToDashboard: () -> Unit,
+    onNavigateToTransacciones: () -> Unit,
+    onNavigateToResumen: () -> Unit,
+    onNavigateToTarjetas: () -> Unit,
+    onNavigateToConfiguracion: () -> Unit,
+) {
+    val navItems = listOf(
+        NavItem(
+            labelResId = R.string.bottom_nav_inicio,
+            icon = Icons.Outlined.Home,
+            selected = currentDestination?.hasRoute<DashboardRoute>() == true,
+            onClick = onNavigateToDashboard,
+        ),
+        NavItem(
+            labelResId = R.string.bottom_nav_transacciones,
+            icon = Icons.AutoMirrored.Outlined.List,
+            selected = currentDestination?.hasRoute<TransaccionesRoute>() == true,
+            onClick = onNavigateToTransacciones,
+        ),
+        NavItem(
+            labelResId = R.string.bottom_nav_resumen,
+            icon = Icons.Outlined.BarChart,
+            selected = currentDestination?.hasRoute<ResumenRoute>() == true,
+            onClick = onNavigateToResumen,
+        ),
+        NavItem(
+            labelResId = R.string.bottom_nav_tarjetas,
+            icon = Icons.Outlined.CreditCard,
+            selected = currentDestination?.hasRoute<TarjetasRoute>() == true,
+            onClick = onNavigateToTarjetas,
+        ),
+        NavItem(
+            labelResId = R.string.bottom_nav_mas,
+            icon = Icons.Outlined.Settings,
+            selected = currentDestination?.hasRoute<ConfiguracionRoute>() == true,
+            onClick = onNavigateToConfiguracion,
+        ),
+    )
 
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
         navItems.forEach { item ->
+            val label = stringResource(item.labelResId)
             NavigationBarItem(
-                selected = current == item.screen.route,
-                onClick = {
-                    if (item.screen == Screen.Dashboard) {
-                        if (!navController.popBackStack(Screen.Dashboard.route, inclusive = false)) {
-                            navController.navigate(Screen.Dashboard.route) {
-                                launchSingleTop = true
-                            }
-                        }
-                    } else {
-                        navController.navigate(item.screen.route) {
-                            popUpTo(Screen.Dashboard.route) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
-                icon = { Icon(item.icon, contentDescription = item.label) },
+                selected = item.selected,
+                onClick = item.onClick,
+                icon = { Icon(item.icon, contentDescription = label) },
                 label = {
                     Text(
-                        text = item.label,
+                        text = label,
                         style = MaterialTheme.typography.labelSmall,
                     )
                 },

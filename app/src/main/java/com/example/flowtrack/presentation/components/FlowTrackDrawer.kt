@@ -3,14 +3,25 @@ package com.example.flowtrack.presentation.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CurrencyExchange
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,41 +35,85 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.flowtrack.presentation.navigation.Screen
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
+import com.example.flowtrack.R
+import com.example.flowtrack.presentation.navigation.BancosYCuentasRoute
+import com.example.flowtrack.presentation.navigation.ConversorRoute
+import com.example.flowtrack.presentation.navigation.ExportarRoute
+import com.example.flowtrack.presentation.navigation.HistorialRoute
+import com.example.flowtrack.presentation.navigation.MetasRoute
+import com.example.flowtrack.presentation.navigation.PresupuestosRoute
+import com.example.flowtrack.presentation.navigation.SugerenciasRoute
 import com.example.flowtrack.ui.theme.Radii
 import com.example.flowtrack.ui.theme.Spacing
 
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.IosShare
-
 private data class DrawerItem(
-    val route: String,
-    val label: String,
+    val labelResId: Int,
     val icon: ImageVector,
+    val isSelected: Boolean,
+    val onClick: () -> Unit,
 )
-
-private val drawerItems = listOf(
-    DrawerItem(Screen.Metas.route, "Metas de ahorro", Icons.Outlined.Flag),
-    DrawerItem(Screen.Presupuestos.route, "Presupuestos", Icons.Outlined.Savings),
-    DrawerItem(Screen.BancosYCuentas.route, "Bancos y cuentas", Icons.Outlined.AccountBalance),
-    DrawerItem(Screen.Historial.route, "Historial de importaciones", Icons.Outlined.History),
-    DrawerItem(Screen.Exportar.route, "Exportar estados", Icons.Outlined.IosShare),
-    DrawerItem(Screen.Sugerencias.route, "Sugerencias de limpieza", Icons.Outlined.AutoAwesome),
-    DrawerItem(Screen.Conversor.route, "Tasas de cambio", Icons.Outlined.CurrencyExchange),
-)
-
-private fun rutaDesdeSidebar(route: String): String = "$route?fromSidebar=true"
 
 @Composable
 fun FlowTrackDrawer(
-    currentRoute: String?,
-    onNavigate: (String) -> Unit,
+    currentDestination: NavDestination?,
+    onNavigateToMetas: () -> Unit,
+    onNavigateToPresupuestos: () -> Unit,
+    onNavigateToBancosYCuentas: () -> Unit,
+    onNavigateToHistorial: () -> Unit,
+    onNavigateToExportar: () -> Unit,
+    onNavigateToSugerencias: () -> Unit,
+    onNavigateToConversor: () -> Unit,
 ) {
-    val currentBaseRoute = currentRoute?.substringBefore("?")
+    val drawerItems = listOf(
+        DrawerItem(
+            labelResId = R.string.drawer_metas_ahorro,
+            icon = Icons.Outlined.Flag,
+            isSelected = currentDestination?.hasRoute<MetasRoute>() == true,
+            onClick = onNavigateToMetas,
+        ),
+        DrawerItem(
+            labelResId = R.string.drawer_presupuestos,
+            icon = Icons.Outlined.Savings,
+            isSelected = currentDestination?.hasRoute<PresupuestosRoute>() == true,
+            onClick = onNavigateToPresupuestos,
+        ),
+        DrawerItem(
+            labelResId = R.string.drawer_bancos_cuentas,
+            icon = Icons.Outlined.AccountBalance,
+            isSelected = currentDestination?.hasRoute<BancosYCuentasRoute>() == true,
+            onClick = onNavigateToBancosYCuentas,
+        ),
+        DrawerItem(
+            labelResId = R.string.drawer_historial_importaciones,
+            icon = Icons.Outlined.History,
+            isSelected = currentDestination?.hasRoute<HistorialRoute>() == true,
+            onClick = onNavigateToHistorial,
+        ),
+        DrawerItem(
+            labelResId = R.string.drawer_exportar_estados,
+            icon = Icons.Outlined.IosShare,
+            isSelected = currentDestination?.hasRoute<ExportarRoute>() == true,
+            onClick = onNavigateToExportar,
+        ),
+        DrawerItem(
+            labelResId = R.string.drawer_sugerencias_limpieza,
+            icon = Icons.Outlined.AutoAwesome,
+            isSelected = currentDestination?.hasRoute<SugerenciasRoute>() == true,
+            onClick = onNavigateToSugerencias,
+        ),
+        DrawerItem(
+            labelResId = R.string.drawer_tasas_cambio,
+            icon = Icons.Outlined.CurrencyExchange,
+            isSelected = currentDestination?.hasRoute<ConversorRoute>() == true,
+            onClick = onNavigateToConversor,
+        ),
+    )
 
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.background,
@@ -68,22 +123,24 @@ fun FlowTrackDrawer(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header
             Text(
-                text = "FlowTrack",
+                text = stringResource(R.string.app_name),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, top = Spacing.xxl, bottom = Spacing.md),
+                modifier = Modifier.padding(
+                    start = Spacing.xl,
+                    end = Spacing.xl,
+                    top = Spacing.xxl,
+                    bottom = Spacing.md,
+                ),
             )
-            
+
             Spacer(Modifier.height(Spacing.xl))
 
-            // Section Label
-            SectionLabel("ACCESOS RÁPIDOS")
+            SectionLabel(stringResource(R.string.drawer_section_rapidos))
             Spacer(Modifier.height(Spacing.sm))
 
-            // Menu Card
             Card(
                 shape = Radii.lg,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -97,8 +154,7 @@ fun FlowTrackDrawer(
                     drawerItems.forEachIndexed { index, item ->
                         DrawerRow(
                             item = item,
-                            isSelected = currentBaseRoute == item.route,
-                            onClick = { onNavigate(rutaDesdeSidebar(item.route)) }
+                            onClick = item.onClick,
                         )
                         if (index < drawerItems.size - 1) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
@@ -127,29 +183,32 @@ private fun SectionLabel(label: String) {
 @Composable
 private fun DrawerRow(
     item: DrawerItem,
-    isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    val iconColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-    val labelColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-    
+    val label = stringResource(item.labelResId)
+    val iconColor = if (item.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val labelColor = if (item.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .background(if (isSelected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+            .background(if (item.isSelected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         Icon(item.icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
         Text(
-            text = item.label,
+            text = label,
             fontSize = 15.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            fontWeight = if (item.isSelected) FontWeight.SemiBold else FontWeight.Normal,
             color = labelColor,
-            modifier = Modifier.weight(1f)
         )
-        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+        Icon(
+            Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = if (item.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        )
     }
 }

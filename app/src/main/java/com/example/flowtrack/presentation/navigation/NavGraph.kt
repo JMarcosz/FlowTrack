@@ -8,13 +8,13 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import androidx.navigation.NavHostController
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import androidx.compose.material3.rememberDrawerState
 import kotlinx.coroutines.launch
 import com.example.flowtrack.presentation.components.FinanzasBottomNav
@@ -33,7 +33,6 @@ import com.example.flowtrack.presentation.screens.duplicados.DuplicadosScreen
 import com.example.flowtrack.presentation.screens.historial.HistorialScreen
 import com.example.flowtrack.presentation.screens.login.LoginScreen
 import com.example.flowtrack.presentation.screens.resumen.ResumenScreen
-import com.example.flowtrack.presentation.screens.resumen.ResumenPeriodoScreen
 import com.example.flowtrack.presentation.screens.revision.RevisionScreen
 import com.example.flowtrack.presentation.screens.sugerencias.SugerenciasScreen
 import com.example.flowtrack.presentation.screens.tarjetas.TarjetasScreen
@@ -42,66 +41,31 @@ import com.example.flowtrack.presentation.screens.metas.MetasScreen
 import com.example.flowtrack.presentation.screens.presupuestos.PresupuestosScreen
 import com.example.flowtrack.presentation.screens.upload.UploadScreen
 
-sealed class Screen(val route: String) {
-    object Login           : Screen("login")
-    object Dashboard       : Screen("dashboard")
-    object Transacciones   : Screen("transacciones")
-    object Resumen         : Screen("resumen")
-    object ResumenPeriodo  : Screen("resumen_periodo")
-    object Tarjetas        : Screen("tarjetas")
-    object Configuracion   : Screen("configuracion")
-    object Exportar        : Screen("exportar")
-    object Upload          : Screen("upload")
-    object Historial       : Screen("historial")
-    object Revision        : Screen("revision")
-    object Duplicados      : Screen("duplicados")
-    object Conversor       : Screen("conversor")
-    object Sugerencias     : Screen("sugerencias")
-    object Categorias      : Screen("categorias")
-    object BancosYCuentas  : Screen("bancos_y_cuentas")
-    object Notificaciones  : Screen("notificaciones")
-    object Perfil          : Screen("perfil")
-    object Reglas          : Screen("reglas")
-    object Presupuestos    : Screen("presupuestos")
-    object Metas           : Screen("metas")
-    object Privacidad      : Screen("privacidad")
-}
-
-private val bottomNavRoutes = setOf(
-    Screen.Dashboard.route,
-    Screen.Transacciones.route,
-    Screen.Resumen.route,
-    Screen.Tarjetas.route,
-    Screen.Configuracion.route,
-)
-
 private val fadeSpec = tween<Float>(durationMillis = 240)
-private const val FROM_SIDEBAR_ARG = "fromSidebar"
-
-private fun rutaConOrigen(route: String): String = "$route?$FROM_SIDEBAR_ARG={$FROM_SIDEBAR_ARG}"
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
-    startDestination: String         = Screen.Login.route,
-    initialRoute: String? = null,
+    startDestination: Any             = LoginRoute,
+    initialRoute: Any? = null,
 ) {
     val backStack  = navController.currentBackStackEntryAsState()
-    val showBottom = backStack.value?.destination?.route in bottomNavRoutes
+    val destination = backStack.value?.destination
+    val showBottom = destination?.hasRoute<DashboardRoute>() == true ||
+        destination?.hasRoute<TransaccionesRoute>() == true ||
+        destination?.hasRoute<ResumenRoute>() == true ||
+        destination?.hasRoute<TarjetasRoute>() == true ||
+        destination?.hasRoute<ConfiguracionRoute>() == true
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val openDrawer: () -> Unit = {
         scope.launch { drawerState.open() }
     }
-    val currentRoute = backStack.value?.destination?.route
-
     LaunchedEffect(initialRoute) {
         initialRoute?.let { route ->
-            if (currentRoute != route) {
-                navController.navigate(route) {
-                    launchSingleTop = true
-                    restoreState = true
-                }
+            navController.navigate(route) {
+                launchSingleTop = true
+                restoreState = true
             }
         }
     }
@@ -110,19 +74,77 @@ fun AppNavGraph(
         drawerState = drawerState,
         drawerContent = {
             FlowTrackDrawer(
-                currentRoute = currentRoute,
-                onNavigate = { route ->
+                currentDestination = destination,
+                onNavigateToMetas = {
                     scope.launch { drawerState.close() }
-                    navController.navigate(route) {
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navController.navigate(MetasRoute(fromSidebar = true))
+                },
+                onNavigateToPresupuestos = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(PresupuestosRoute(fromSidebar = true))
+                },
+                onNavigateToBancosYCuentas = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(BancosYCuentasRoute(fromSidebar = true))
+                },
+                onNavigateToHistorial = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(HistorialRoute(fromSidebar = true))
+                },
+                onNavigateToExportar = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(ExportarRoute(fromSidebar = true))
+                },
+                onNavigateToSugerencias = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(SugerenciasRoute(fromSidebar = true))
+                },
+                onNavigateToConversor = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(ConversorRoute(fromSidebar = true))
                 },
             )
         },
     ) {
         Scaffold(
-            bottomBar = { if (showBottom) FinanzasBottomNav(navController) }
+            bottomBar = {
+                if (showBottom) {
+                    FinanzasBottomNav(
+                        currentDestination = destination,
+                        onNavigateToDashboard = {
+                            navController.navigate(DashboardRoute) {
+                                popUpTo(LoginRoute) { inclusive = false }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToTransacciones = {
+                            navController.navigate(TransaccionesRoute) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToResumen = {
+                            navController.navigate(ResumenRoute) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToTarjetas = {
+                            navController.navigate(TarjetasRoute) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToConfiguracion = {
+                            navController.navigate(ConfiguracionRoute) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                    )
+                }
+            }
         ) { innerPadding ->
             NavHost(
                 navController    = navController,
@@ -133,131 +155,141 @@ fun AppNavGraph(
                 popEnterTransition = { fadeIn(fadeSpec) + scaleIn(initialScale = 1.04f, animationSpec = fadeSpec) },
                 popExitTransition = { fadeOut(fadeSpec) + scaleOut(targetScale = 0.96f, animationSpec = fadeSpec) },
             ) {
-                composable(Screen.Login.route)         { LoginScreen(navController) }
-                composable(Screen.Dashboard.route)     { DashboardScreen(navController, onMenuClick = openDrawer) }
-                composable(Screen.Transacciones.route) { TransaccionesScreen(navController, onMenuClick = openDrawer) }
-                composable(Screen.Resumen.route)       {
+                composable<LoginRoute> {
+                    LoginScreen(
+                        onLoginSuccess = {
+                            navController.navigate(DashboardRoute) {
+                                popUpTo(LoginRoute) { inclusive = true }
+                            }
+                        },
+                    )
+                }
+                composable<DashboardRoute> {
+                    DashboardScreen(
+                        onMenuClick = openDrawer,
+                        onNavigateToUpload = { navController.navigate(UploadRoute) },
+                        onNavigateToNotificaciones = { navController.navigate(NotificacionesRoute) },
+                        onNavigateToResumen = { navController.navigate(ResumenRoute) },
+                    )
+                }
+                composable<TransaccionesRoute> {
+                    TransaccionesScreen(
+                        onNavigateToUpload = { navController.navigate(UploadRoute) },
+                        onMenuClick = openDrawer,
+                    )
+                }
+                composable<ResumenRoute> {
                     ResumenScreen(
-                        onVerPorPeriodo = { navController.navigate(Screen.ResumenPeriodo.route) },
                         onMenuClick = openDrawer,
                     )
                 }
-                composable(Screen.ResumenPeriodo.route) { ResumenPeriodoScreen(navController) }
-                composable(Screen.Tarjetas.route)      { TarjetasScreen(onMenuClick = openDrawer) }
-                composable(Screen.Configuracion.route) { ConfiguracionScreen(navController, onMenuClick = openDrawer) }
-                composable(
-                    route = rutaConOrigen(Screen.Exportar.route),
-                    arguments = listOf(
-                        navArgument(FROM_SIDEBAR_ARG) {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }
-                    ),
-                ) { entry ->
+                composable<TarjetasRoute> { TarjetasScreen(onMenuClick = openDrawer) }
+                composable<ConfiguracionRoute> {
+                    ConfiguracionScreen(
+                        onMenuClick = openDrawer,
+                        onNavigateToPerfil = { navController.navigate(PerfilRoute) },
+                        onNavigateToNotificaciones = { navController.navigate(NotificacionesRoute) },
+                        onNavigateToCategorias = { navController.navigate(CategoriasRoute) },
+                        onNavigateToReglas = { navController.navigate(ReglasRoute) },
+                        onNavigateToHistorial = { navController.navigate(HistorialRoute()) },
+                        onNavigateToSugerencias = { navController.navigate(SugerenciasRoute()) },
+                        onNavigateToExportar = { navController.navigate(ExportarRoute()) },
+                        onNavigateToPrivacidad = { navController.navigate(PrivacidadRoute) },
+                        onNavigateToLogin = { navController.navigate(LoginRoute) { popUpTo(0) { inclusive = true } } },
+                    )
+                }
+                composable<ExportarRoute> { entry ->
+                    val route = entry.toRoute<ExportarRoute>()
                     ExportarScreen(
-                        navController,
-                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onNavigateBack = { navController.popBackStack() },
+                        fromSidebar = route.fromSidebar,
                         onDrawerReopen = openDrawer,
                     )
                 }
-                composable(Screen.Upload.route)        { UploadScreen(navController) }
-                composable(
-                    route = rutaConOrigen(Screen.Historial.route),
-                    arguments = listOf(
-                        navArgument(FROM_SIDEBAR_ARG) {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }
-                    ),
-                ) { entry ->
+                composable<UploadRoute>        {
+                    UploadScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToHistorial = { navController.navigate(HistorialRoute()) },
+                        onNavigateToDashboard = {
+                            navController.navigate(DashboardRoute) {
+                                popUpTo(DashboardRoute) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                    )
+                }
+                composable<HistorialRoute> { entry ->
+                    val route = entry.toRoute<HistorialRoute>()
                     HistorialScreen(
-                        navController,
-                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToUpload = { navController.navigate(UploadRoute) },
                         onDrawerReopen = openDrawer,
+                        fromSidebar = route.fromSidebar,
                     )
                 }
-                composable(Screen.Revision.route)      { RevisionScreen(navController) }
-                composable(Screen.Duplicados.route)    { DuplicadosScreen(navController) }
-                composable(
-                    route = rutaConOrigen(Screen.Conversor.route),
-                    arguments = listOf(
-                        navArgument(FROM_SIDEBAR_ARG) {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }
-                    ),
-                ) { entry ->
+                composable<RevisionRoute>      {
+                    RevisionScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToDuplicados = { navController.navigate(DuplicadosRoute) },
+                        onNavigateToHistorial = {
+                            navController.navigate(HistorialRoute())
+                        },
+                    )
+                }
+                composable<DuplicadosRoute>    { DuplicadosScreen(onNavigateBack = { navController.popBackStack() }) }
+                composable<ConversorRoute> { entry ->
+                    val route = entry.toRoute<ConversorRoute>()
                     ConversorScreen(
-                        navController,
-                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onNavigateBack = { navController.popBackStack() },
+                        fromSidebar = route.fromSidebar,
                         onMenuClick = openDrawer,
                     )
                 }
-                composable(
-                    route = rutaConOrigen(Screen.Sugerencias.route),
-                    arguments = listOf(
-                        navArgument(FROM_SIDEBAR_ARG) {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }
-                    ),
-                ) { entry ->
+                composable<SugerenciasRoute> { entry ->
+                    val route = entry.toRoute<SugerenciasRoute>()
                     SugerenciasScreen(
-                        navController,
-                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onNavigateBack = { navController.popBackStack() },
+                        fromSidebar = route.fromSidebar,
                         onDrawerReopen = openDrawer,
                     )
                 }
-                composable(Screen.Categorias.route)    { CategoriasScreen(navController) }
-                composable(
-                    route = rutaConOrigen(Screen.BancosYCuentas.route),
-                    arguments = listOf(
-                        navArgument(FROM_SIDEBAR_ARG) {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }
-                    ),
-                ) { entry ->
+                composable<CategoriasRoute>    { CategoriasScreen(onNavigateBack = { navController.popBackStack() }) }
+                composable<BancosYCuentasRoute> { entry ->
+                    val route = entry.toRoute<BancosYCuentasRoute>()
                     BancosYCuentasScreen(
-                        navController,
-                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onNavigateBack = { navController.popBackStack() },
+                        fromSidebar = route.fromSidebar,
                         onDrawerReopen = openDrawer,
                     )
                 }
-                composable(Screen.Notificaciones.route) { NotificacionesScreen(navController) }
-                composable(Screen.Perfil.route)         { PerfilScreen(navController) }
-                composable(Screen.Reglas.route)         { ReglasScreen(navController) }
-                composable(
-                    route = rutaConOrigen(Screen.Presupuestos.route),
-                    arguments = listOf(
-                        navArgument(FROM_SIDEBAR_ARG) {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }
-                    ),
-                ) { entry ->
+                composable<NotificacionesRoute> { NotificacionesScreen(onNavigateBack = { navController.popBackStack() }) }
+                composable<PerfilRoute>         { PerfilScreen(onNavigateBack = { navController.popBackStack() }, onNavigateToLogin = { navController.navigate(LoginRoute) { popUpTo(0) { inclusive = true } } }) }
+                composable<ReglasRoute>         { ReglasScreen(onNavigateBack = { navController.popBackStack() }) }
+                composable<PresupuestosRoute> { entry ->
+                    val route = entry.toRoute<PresupuestosRoute>()
                     PresupuestosScreen(
-                        navController,
-                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onNavigateBack = { navController.popBackStack() },
+                        fromSidebar = route.fromSidebar,
                         onDrawerReopen = openDrawer,
                     )
                 }
-                composable(
-                    route = rutaConOrigen(Screen.Metas.route),
-                    arguments = listOf(
-                        navArgument(FROM_SIDEBAR_ARG) {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }
-                    ),
-                ) { entry ->
+                composable<MetasRoute> { entry ->
+                    val route = entry.toRoute<MetasRoute>()
                     MetasScreen(
-                        navController,
-                        fromSidebar = entry.arguments?.getBoolean(FROM_SIDEBAR_ARG) ?: false,
+                        onNavigateBack = { navController.popBackStack() },
+                        fromSidebar = route.fromSidebar,
                         onDrawerReopen = openDrawer,
                     )
                 }
-                composable(Screen.Privacidad.route)     { PrivacidadSeguridadScreen(navController) }
+                composable<PrivacidadRoute>     {
+                    PrivacidadSeguridadScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToExportar = { navController.navigate(ExportarRoute()) },
+                    )
+                }
             }
         }
     }
