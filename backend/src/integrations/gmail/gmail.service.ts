@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { isModeAllowed, currentServiceMode } from "../../common/service-mode";
 import { RequestAuthService } from "../../common/auth.service";
+import { GmailApiService } from "./gmail-api.service";
 import { GmailRepository } from "./gmail.repository";
+import { GmailSyncService } from "./gmail-sync.service";
 import { GmailDateRange, GmailReadFilter } from "./gmail.types";
 import { GmailStateService } from "./gmail-state.service";
 import { GmailIngestionService } from "./gmail-ingestion.service";
-import { randomUUID } from "crypto";
 
 export type GmailSyncState = "idle" | "connected" | "syncing" | "error" | "disconnected";
 
@@ -17,6 +18,8 @@ export class GmailService {
     private readonly authService: RequestAuthService,
     private readonly gmailRepository: GmailRepository,
     private readonly stateService: GmailStateService,
+    private readonly gmailApiService: GmailApiService,
+    private readonly gmailSyncService: GmailSyncService,
     private readonly ingestionService: GmailIngestionService,
   ) {}
 
@@ -64,7 +67,12 @@ export class GmailService {
     const dateRange = payload.dateRange ?? null;
 
     await this.gmailRepository.saveTokens(payload.uid, tokenResponse);
-    await this.gmailRepository.markConnected(payload.uid, readFilter, dateRange);
+    const watch = await this.gmailApiService.watch(payload.uid);
+    const profile = await this.gmailApiService.getProfile(payload.uid);
+    await this.gmailRepository.markConnected(payload.uid, readFilter, dateRange, watch.historyId ?? null, profile.emailAddress ?? null);
+    if (watch.expiration) {
+      await this.gmailRepository.markWatch(payload.uid, new Date(Number(watch.expiration)).toISOString(), watch.historyId ?? null);
+    }
 
     return {
       action: "oauth_callback",
@@ -85,8 +93,10 @@ export class GmailService {
       uid: identity.uid,
       state: doc?.estado ?? "idle",
       lastSyncAt: doc?.lastSyncAt ?? null,
+      lastHistoryId: doc?.lastHistoryId ?? null,
       readFilter: doc?.readFilter ?? "both",
       dateRange: doc?.dateRange ?? null,
+      emailAddress: doc?.emailAddress ?? null,
       watchExpirationAt: doc?.watchExpirationAt ?? null,
       connectedAt: doc?.connectedAt ?? null,
     };
@@ -111,36 +121,45 @@ export class GmailService {
       throw new BadRequestException("Gmail integration is not configured for this user.");
     }
 
-    await this.gmailRepository.upsertIntegration(identity.uid, {
-      uidUsuario: identity.uid,
-      estado: "syncing",
+    const syncResult = await this.gmailSyncService.syncNow(identity.uid, {
       readFilter: readFilter ?? current.readFilter,
       dateRange: dateRange ?? current.dateRange,
-    });
-
-    const requestId = randomUUID();
-    await this.gmailRepository.recordEvent(`sync:${identity.uid}:${requestId}`, {
-      kind: "sync_request",
-      uidUsuario: identity.uid,
-      readFilter: readFilter ?? current.readFilter,
-      dateRange: dateRange ?? current.dateRange,
-      requestedAt: new Date().toISOString(),
     });
 
     return {
       action: "sync_requested",
       uid: identity.uid,
-      requestId,
-      queued: true,
+      queued: false,
       source: "android",
       readFilter: readFilter ?? current.readFilter,
       dateRange: dateRange ?? current.dateRange,
+      syncResult,
     };
   }
 
   async handlePubSubGmail(payload: unknown) {
     this.assertMode("webhook");
-    return this.ingestionService.ingest(payload, "pubsub");
+    const event = normalizeUnknownRecord(payload);
+    const uid = readString(event.uidUsuario) ?? readString(event.uid);
+    const emailAddress = readString(event.emailAddress);
+    const historyId = readString(event.historyId);
+    const resolvedUid = uid ?? (emailAddress ? (await this.gmailRepository.findIntegrationByEmailAddress(emailAddress))?.uid : null);
+    if (!resolvedUid && !historyId) {
+      throw new BadRequestException("Missing uid or historyId in Gmail Pub/Sub payload.");
+    }
+
+    if (resolvedUid) {
+      return this.gmailSyncService.syncFromHistory(resolvedUid, historyId);
+    }
+
+    return {
+      action: "pubsub_gmail",
+      accepted: true,
+      uid: null,
+      emailAddress,
+      historyId,
+      warnings: ["Notification received without uid; awaiting backend correlation."],
+    };
   }
 
   async handleEmailIngestion(payload: unknown) {
@@ -152,19 +171,16 @@ export class GmailService {
     this.assertMode("worker");
     const event = normalizeUnknownRecord(payload);
     const uid = readString(event.uid) ?? readString(event.uidUsuario);
-    const watchExpirationAt = readString(event.watchExpirationAt);
-    if (!uid || !watchExpirationAt) {
-      throw new BadRequestException("Missing uid or watchExpirationAt.");
+    if (uid) {
+      return this.gmailSyncService.renewWatch(uid);
     }
 
-    const updated = await this.gmailRepository.markWatch(uid, watchExpirationAt);
-    await this.gmailRepository.recordEvent(`watch:${uid}:${watchExpirationAt}`, {
-      kind: "watch_renew",
-      payload: event,
-      receivedAt: new Date().toISOString(),
-    });
-
-    return { action: "watch_renew", accepted: true, uid, watchExpirationAt: updated.watchExpirationAt };
+    const integrations = await this.gmailRepository.listDueWatchIntegrations();
+    const renewed = [];
+    for (const item of integrations) {
+      renewed.push(await this.gmailSyncService.renewWatch(item.uid));
+    }
+    return { action: "watch_renew", accepted: true, renewed };
   }
 
   private async exchangeCodeForTokens(code: string) {

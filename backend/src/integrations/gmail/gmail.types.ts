@@ -11,7 +11,9 @@ export interface GmailIntegrationDoc {
   estado: GmailConnectionState;
   readFilter: GmailReadFilter;
   dateRange: GmailDateRange | null;
+  emailAddress: string | null;
   lastSyncAt: string | null;
+  lastHistoryId: string | null;
   watchExpirationAt: string | null;
   connectedAt: string | null;
   disconnectedAt: string | null;

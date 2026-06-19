@@ -39,7 +39,9 @@ export class GmailRepository {
       estado: patch.estado ?? current?.estado ?? "idle",
       readFilter: patch.readFilter ?? current?.readFilter ?? "both",
       dateRange: patch.dateRange ?? current?.dateRange ?? null,
+      emailAddress: patch.emailAddress ?? current?.emailAddress ?? null,
       lastSyncAt: patch.lastSyncAt ?? current?.lastSyncAt ?? null,
+      lastHistoryId: patch.lastHistoryId ?? current?.lastHistoryId ?? null,
       watchExpirationAt: patch.watchExpirationAt ?? current?.watchExpirationAt ?? null,
       connectedAt: patch.connectedAt ?? current?.connectedAt ?? null,
       disconnectedAt: patch.disconnectedAt ?? current?.disconnectedAt ?? null,
@@ -161,14 +163,21 @@ export class GmailRepository {
     return snapshot.docs.map((doc) => doc.data());
   }
 
-  async markWatch(uid: string, watchExpirationAt: string) {
+  async markWatch(uid: string, watchExpirationAt: string, lastHistoryId?: string | null) {
     return this.upsertIntegration(uid, {
       uidUsuario: uid,
       watchExpirationAt,
+      lastHistoryId: lastHistoryId ?? undefined,
     });
   }
 
-  async markConnected(uid: string, readFilter: GmailReadFilter, dateRange: GmailDateRange | null) {
+  async markConnected(
+    uid: string,
+    readFilter: GmailReadFilter,
+    dateRange: GmailDateRange | null,
+    lastHistoryId?: string | null,
+    emailAddress?: string | null,
+  ) {
     return this.upsertIntegration(uid, {
       uidUsuario: uid,
       estado: "connected" as GmailConnectionState,
@@ -177,6 +186,8 @@ export class GmailRepository {
       connectedAt: new Date().toISOString(),
       disconnectedAt: null,
       lastSyncAt: null,
+      lastHistoryId: lastHistoryId ?? null,
+      emailAddress: emailAddress ?? null,
     });
   }
 
@@ -195,5 +206,68 @@ export class GmailRepository {
       estado: "idle",
       lastSyncAt,
     });
+  }
+
+  async markSyncCheckpoint(uid: string, lastSyncAt: string, lastHistoryId: string | null) {
+    return this.upsertIntegration(uid, {
+      uidUsuario: uid,
+      estado: "idle",
+      lastSyncAt,
+      lastHistoryId,
+    });
+  }
+
+  async setSyncing(uid: string) {
+    return this.upsertIntegration(uid, {
+      uidUsuario: uid,
+      estado: "syncing",
+    });
+  }
+
+  async listConnectedIntegrations() {
+    const snapshot = await this.db
+      .collectionGroup("integraciones")
+      .where("estado", "==", "connected")
+      .get();
+
+    return snapshot.docs
+      .filter((doc) => doc.id === "gmail")
+      .map((doc) => ({
+        uid: doc.ref.parent.parent?.id ?? doc.data().uidUsuario,
+        doc: doc.data() as GmailIntegrationDoc,
+      }));
+  }
+
+  async listDueWatchIntegrations(beforeIso?: string) {
+    const snapshot = await this.db
+      .collectionGroup("integraciones")
+      .where("estado", "==", "connected")
+      .get();
+
+    return snapshot.docs
+      .filter((doc) => doc.id === "gmail")
+      .map((doc) => ({
+        uid: doc.ref.parent.parent?.id ?? doc.data().uidUsuario,
+        doc: doc.data() as GmailIntegrationDoc,
+      }))
+      .filter(({ doc }) => {
+        if (!doc.watchExpirationAt) return true;
+        if (!beforeIso) return true;
+        return doc.watchExpirationAt <= beforeIso;
+      });
+  }
+
+  async findIntegrationByEmailAddress(emailAddress: string) {
+    const snapshot = await this.db
+      .collectionGroup("integraciones")
+      .where("emailAddress", "==", emailAddress)
+      .get();
+
+    const doc = snapshot.docs.find((entry) => entry.id === "gmail");
+    if (!doc) return null;
+    return {
+      uid: doc.ref.parent.parent?.id ?? doc.data().uidUsuario,
+      doc: doc.data() as GmailIntegrationDoc,
+    };
   }
 }
