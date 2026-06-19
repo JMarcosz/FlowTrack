@@ -1,20 +1,20 @@
 # Plan maestro v3 - FlowTrack Email Backend
 
 > Este documento complementa el plan maestro v2 con el alcance de ingesta de correo y backend NestJS.
-> No invalida el v2 para el flujo Android existente; solo define la nueva línea de trabajo del backend.
+> No invalida el v2 para el flujo Android existente; solo define la nueva linea de trabajo del backend.
 
 ## Objetivo
 
-Agregar un backend privado en Cloud Run para ingestión de Gmail, sincronización remota y eventos de notificación, sin romper la importación manual local ya existente en Android.
+Agregar un backend privado en Cloud Run para ingestion de Gmail, sincronizacion remota y eventos de notificacion, sin romper la importacion manual local ya existente en Android.
 
 ## Alcance funcional
 
 - OAuth Gmail con callback a Android.
-- Sincronización bajo demanda desde `Sincronizar ahora`.
-- Persistencia de configuración Gmail por usuario en Firestore.
+- Sincronizacion bajo demanda desde `Sincronizar ahora`.
+- Persistencia de configuracion Gmail por usuario en Firestore.
 - Ingesta idempotente de eventos de correo.
-- Detección de duplicados entre correo y cargas manuales.
-- Migración futura de la lógica de notificaciones desde `functions/` a Cloud Run.
+- Deteccion de duplicados entre correo y cargas manuales.
+- Migracion futura de la logica de notificaciones desde `functions/` a Cloud Run.
 
 ## Contratos clave
 
@@ -36,7 +36,7 @@ Agregar un backend privado en Cloud Run para ingestión de Gmail, sincronizació
 ## Backend
 
 - `backend/` usa NestJS.
-- Rutas públicas:
+- Rutas publicas:
   - `GET /health`
   - `POST /v1/integrations/gmail/connect/start`
   - `GET /oauth/google/callback`
@@ -51,6 +51,7 @@ Agregar un backend privado en Cloud Run para ingestión de Gmail, sincronizació
 ## Estado actual
 
 - Scaffold NestJS creado.
-- Implementada validación defensiva de `X-Apigateway-Api-Userinfo` y `X-Firebase-AppCheck`.
-- Implementado `state` OAuth firmado y persistencia básica de la integración Gmail en Firestore.
-- Falta implementar sincronización Gmail real, parser de correos, watch renovado y migración total de `functions/`.
+- Implementada validacion defensiva de `X-Apigateway-Api-Userinfo` y `X-Firebase-AppCheck`.
+- Implementado `state` OAuth firmado y persistencia basica de la integracion Gmail en Firestore.
+- Implementada la ingesta canonica de correos con parser BanReservas, idempotencia por `sourceEventId` y escritura de transacciones/cuentas/tarjetas en Firestore.
+- Falta implementar sincronizacion Gmail real contra la API de Gmail, refresh automatico de watch y migracion total de `functions/`.

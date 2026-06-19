@@ -4,6 +4,7 @@ import { RequestAuthService } from "./common/auth.service";
 import { HealthController } from "./health/health.controller";
 import { GmailController } from "./integrations/gmail/gmail.controller";
 import { GmailRepository } from "./integrations/gmail/gmail.repository";
+import { GmailIngestionService } from "./integrations/gmail/gmail-ingestion.service";
 import { GmailStateService } from "./integrations/gmail/gmail-state.service";
 import { GmailService } from "./integrations/gmail/gmail.service";
 import { InternalController } from "./internal/internal.controller";
@@ -22,6 +23,6 @@ import { PubSubController } from "./pubsub/pubsub.controller";
     PubSubController,
     InternalController,
   ],
-  providers: [RequestAuthService, GmailRepository, GmailStateService, GmailService],
+  providers: [RequestAuthService, GmailRepository, GmailStateService, GmailIngestionService, GmailService],
 })
 export class AppModule {}

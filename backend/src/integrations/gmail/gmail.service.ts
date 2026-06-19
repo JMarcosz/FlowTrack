@@ -4,6 +4,7 @@ import { RequestAuthService } from "../../common/auth.service";
 import { GmailRepository } from "./gmail.repository";
 import { GmailDateRange, GmailReadFilter } from "./gmail.types";
 import { GmailStateService } from "./gmail-state.service";
+import { GmailIngestionService } from "./gmail-ingestion.service";
 import { randomUUID } from "crypto";
 
 export type GmailSyncState = "idle" | "connected" | "syncing" | "error" | "disconnected";
@@ -16,6 +17,7 @@ export class GmailService {
     private readonly authService: RequestAuthService,
     private readonly gmailRepository: GmailRepository,
     private readonly stateService: GmailStateService,
+    private readonly ingestionService: GmailIngestionService,
   ) {}
 
   async startConnect(headers: Record<string, string | undefined>, body: StartConnectRequest) {
@@ -138,32 +140,12 @@ export class GmailService {
 
   async handlePubSubGmail(payload: unknown) {
     this.assertMode("webhook");
-    const event = normalizeUnknownRecord(payload);
-    const sourceEventId = readSourceEventId(event);
-    if (!sourceEventId) {
-      throw new BadRequestException("Missing sourceEventId in Gmail Pub/Sub payload.");
-    }
-
-    await this.gmailRepository.recordEvent(sourceEventId, {
-      kind: "gmail_pubsub",
-      payload: event,
-      receivedAt: new Date().toISOString(),
-    });
-
-    return { action: "pubsub_gmail", accepted: true, sourceEventId };
+    return this.ingestionService.ingest(payload, "pubsub");
   }
 
   async handleEmailIngestion(payload: unknown) {
     this.assertMode("webhook");
-    const event = normalizeUnknownRecord(payload);
-    const sourceEventId = readSourceEventId(event) ?? randomUUID();
-    await this.gmailRepository.recordEvent(sourceEventId, {
-      kind: "email_ingestion",
-      payload: event,
-      receivedAt: new Date().toISOString(),
-    });
-
-    return { action: "email_ingestion", accepted: true, sourceEventId };
+    return this.ingestionService.ingest(payload, "email_ingestion");
   }
 
   async renewWatch(payload: unknown) {

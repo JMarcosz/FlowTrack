@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Timestamp } from "firebase-admin/firestore";
 import { firestore } from "../../common/firebase-admin";
 import { GmailConnectionState, GmailDateRange, GmailIntegrationDoc, GmailOAuthTokensDoc, GmailReadFilter } from "./gmail.types";
 
@@ -16,6 +17,18 @@ export class GmailRepository {
 
   private eventsRef(sourceEventId: string) {
     return this.db.collection("backendEmailEvents").doc(sourceEventId);
+  }
+
+  private accountRef(uid: string, accountId: string) {
+    return this.db.collection("usuarios").doc(uid).collection("cuentas").doc(accountId);
+  }
+
+  private cardRef(uid: string, cardId: string) {
+    return this.db.collection("usuarios").doc(uid).collection("tarjetas").doc(cardId);
+  }
+
+  private transactionRef(uid: string, transactionId: string) {
+    return this.db.collection("usuarios").doc(uid).collection("transacciones").doc(transactionId);
   }
 
   async upsertIntegration(uid: string, patch: Partial<GmailIntegrationDoc> & Pick<GmailIntegrationDoc, "uidUsuario">) {
@@ -68,15 +81,84 @@ export class GmailRepository {
     await this.tokensRef(uid).delete();
   }
 
-  async recordEvent(sourceEventId: string, data: Record<string, unknown>) {
+  async recordEvent(sourceEventId: string, data: Record<string, unknown>, ttlDays = 30) {
+    const now = Timestamp.now();
     await this.eventsRef(sourceEventId).set(
       {
         ...data,
         sourceEventId,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
+        createdAt: data.createdAt ?? now,
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000)),
       },
       { merge: true },
     );
+  }
+
+  async getEvent(sourceEventId: string) {
+    const snap = await this.eventsRef(sourceEventId).get();
+    return snap.exists ? snap.data() : null;
+  }
+
+  async upsertAccount(uid: string, accountId: string, doc: Record<string, unknown>) {
+    const snap = await this.accountRef(uid, accountId).get();
+    const createdAt = snap.exists ? snap.data()?.createdAt ?? Timestamp.now() : Timestamp.now();
+    await this.accountRef(uid, accountId).set(
+      {
+        ...doc,
+        id: accountId,
+        uidUsuario: uid,
+        createdAt,
+        updatedAt: Timestamp.now(),
+      },
+      { merge: true },
+    );
+  }
+
+  async upsertCard(uid: string, cardId: string, doc: Record<string, unknown>) {
+    const snap = await this.cardRef(uid, cardId).get();
+    const createdAt = snap.exists ? snap.data()?.createdAt ?? Timestamp.now() : Timestamp.now();
+    await this.cardRef(uid, cardId).set(
+      {
+        ...doc,
+        id: cardId,
+        uidUsuario: uid,
+        createdAt,
+        updatedAt: Timestamp.now(),
+      },
+      { merge: true },
+    );
+  }
+
+  async upsertTransaction(uid: string, transactionId: string, doc: Record<string, unknown>) {
+    const snap = await this.transactionRef(uid, transactionId).get();
+    const createdAt = snap.exists ? snap.data()?.creadoEn ?? Timestamp.now() : Timestamp.now();
+    await this.transactionRef(uid, transactionId).set(
+      {
+        ...doc,
+        id: transactionId,
+        uidUsuario: uid,
+        creadoEn: createdAt,
+        actualizadoEn: Timestamp.now(),
+      },
+      { merge: true },
+    );
+  }
+
+  async getTransaction(uid: string, transactionId: string) {
+    const snap = await this.transactionRef(uid, transactionId).get();
+    return snap.exists ? snap.data() : null;
+  }
+
+  async listRecentTransactions(uid: string, limit = 200) {
+    const snapshot = await this.db
+      .collection("usuarios")
+      .doc(uid)
+      .collection("transacciones")
+      .orderBy("fecha", "desc")
+      .limit(limit)
+      .get();
+    return snapshot.docs.map((doc) => doc.data());
   }
 
   async markWatch(uid: string, watchExpirationAt: string) {
