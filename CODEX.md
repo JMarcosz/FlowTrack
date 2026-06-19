@@ -51,8 +51,8 @@ FlowTrack es una app Android nativa en Kotlin y Jetpack Compose para importar, a
   - fallback en WorkManager,
   - notificacion sintetica de prueba,
   - FCM por dispositivo,
-  - Cloud Functions para eventos remotos.
-- Existe un scaffold local en `functions/` para desplegar cuando se valide acceso al proyecto Firebase.
+  - backend NestJS para eventos remotos.
+- El scaffold local en `functions/` ya fue retirado; Cloud Run es la unica implementacion de backend activa.
 - Build aun no verificado por esta sesion por bloqueo del wrapper de Gradle al intentar descargar la distribucion.
 
 ## 4. Trabajo local que se debe preservar

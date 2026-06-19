@@ -14,7 +14,7 @@ Agregar un backend privado en Cloud Run para ingestion de Gmail, sincronizacion 
 - Persistencia de configuracion Gmail por usuario en Firestore.
 - Ingesta idempotente de eventos de correo.
 - Deteccion de duplicados entre correo y cargas manuales.
-- Migracion futura de la logica de notificaciones desde `functions/` a Cloud Run.
+- Migracion de la logica de notificaciones desde `functions/` a Cloud Run completada.
 
 ## Contratos clave
 
@@ -55,5 +55,5 @@ Agregar un backend privado en Cloud Run para ingestion de Gmail, sincronizacion 
 - Implementado `state` OAuth firmado y persistencia basica de la integracion Gmail en Firestore.
 - Implementada la ingesta canonica de correos con parser BanReservas, idempotencia por `sourceEventId` y escritura de transacciones/cuentas/tarjetas en Firestore.
 - Implementada la sincronizacion Gmail real: `watch`, `users.messages.list/get`, `users.history.list`, refresh de tokens y renovacion de `watch`.
-- Implementada la logica de notificaciones de `functions/` como servicios internos de Cloud Run para importaciones y presupuestos.
-- Falta decidir si `functions/` se elimina o queda como wrapper legacy hasta cerrar la paridad total.
+- Implementada la logica de notificaciones como servicios internos de Cloud Run para importaciones y presupuestos.
+- `functions/` fue eliminada; Cloud Run es la unica implementacion activa.
