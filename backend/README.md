@@ -15,7 +15,19 @@ Scaffold NestJS para el backend de ingesta Gmail y eventos privados.
 - `SERVICE_MODE` (`web`, `worker`, `webhook`)
 - `FIREBASE_PROJECT_ID`
 - `GOOGLE_APPLICATION_CREDENTIALS`
-- `REQUIRE_APP_CHECK`
+- `GMAIL_STATE_SECRET`
+- `GMAIL_OAUTH_CLIENT_ID`
+- `GMAIL_OAUTH_CLIENT_SECRET`
+- `GMAIL_OAUTH_REDIRECT_URI`
+- `GMAIL_OAUTH_SCOPES`
+- `GMAIL_OAUTH_PROMPT`
+- `REQUIRE_APP_CHECK` (`true` / `false`)
+
+## Seguridad
+
+- `X-Apigateway-Api-Userinfo` se usa como fuente de identidad tras API Gateway.
+- `X-Firebase-AppCheck` se verifica en los endpoints Android.
+- El `state` OAuth se firma con HMAC para el callback de Gmail.
 
 ## Rutas
 
@@ -28,4 +40,3 @@ Scaffold NestJS para el backend de ingesta Gmail y eventos privados.
 - `POST /pubsub/gmail`
 - `POST /pubsub/email-ingestion`
 - `POST /internal/watch/renew`
-

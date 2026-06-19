@@ -50,7 +50,7 @@ Agregar un backend privado en Cloud Run para ingestión de Gmail, sincronizació
 
 ## Estado actual
 
-- Scaffold inicial creado.
-- Falta implementar validación real de JWT, App Check, state firmado, App Engine/Gateway headers y persistencia Firestore.
-- Falta migrar la lógica de `functions/`.
-
+- Scaffold NestJS creado.
+- Implementada validación defensiva de `X-Apigateway-Api-Userinfo` y `X-Firebase-AppCheck`.
+- Implementado `state` OAuth firmado y persistencia básica de la integración Gmail en Firestore.
+- Falta implementar sincronización Gmail real, parser de correos, watch renovado y migración total de `functions/`.
