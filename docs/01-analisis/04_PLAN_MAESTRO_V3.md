@@ -59,3 +59,4 @@ Agregar un backend privado en Cloud Run para ingestion de Gmail, sincronizacion 
 - Implementada la logica de notificaciones como servicios internos de Cloud Run para importaciones y presupuestos.
 - `functions/` fue eliminada; Cloud Run es la unica implementacion activa.
 - Implementado job interno de mantenimiento para renovar watches próximos a vencer.
+- Implementados reintentos para Gmail/OAuth y lock de ejecucion para el job de mantenimiento.

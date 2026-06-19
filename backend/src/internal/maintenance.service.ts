@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { currentServiceMode, isModeAllowed } from "../common/service-mode";
 import { GmailRepository } from "../integrations/gmail/gmail.repository";
 import { GmailSyncService } from "../integrations/gmail/gmail-sync.service";
@@ -17,12 +17,27 @@ export class MaintenanceService {
 
   async renewDueWatches(): Promise<MaintenanceSummary> {
     this.assertWorkerMode();
+    const lockAcquired = await this.gmailRepository.acquireJobLock("gmail-maintenance", 30);
+    if (!lockAcquired) {
+      throw new BadRequestException("Maintenance job is already running.");
+    }
+
+    const startedAt = new Date().toISOString();
     const due = await this.gmailRepository.listDueWatchIntegrations(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString());
     const renewedWatches: Array<{ uid: string; watchExpirationAt: string }> = [];
 
-    for (const item of due) {
-      const result = await this.gmailSyncService.renewWatch(item.uid);
-      renewedWatches.push({ uid: item.uid, watchExpirationAt: result.watchExpirationAt });
+    try {
+      for (const item of due) {
+        const result = await this.gmailSyncService.renewWatch(item.uid);
+        renewedWatches.push({ uid: item.uid, watchExpirationAt: result.watchExpirationAt });
+      }
+    } finally {
+      await this.gmailRepository.releaseJobLock("gmail-maintenance", {
+        jobName: "gmail-maintenance",
+        lastRunAt: startedAt,
+        renewedWatchCount: renewedWatches.length,
+        renewedWatches,
+      });
     }
 
     return {

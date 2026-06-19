@@ -164,31 +164,23 @@ export class GmailApiService {
   private async gmailFetch(uid: string, method: "GET" | "POST", path: string, body?: unknown): Promise<Response> {
     const accessToken = await this.resolveAccessToken(uid);
     const url = `https://gmail.googleapis.com${path}`;
-    const response = await fetch(url, {
+    const execute = async (token: string) => fetch(url, {
       method,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    if (response.status !== 401) {
-      this.assertOk(response, path);
-      return response;
+    let response = await this.withRetry(() => execute(accessToken), `gmail ${path}`);
+    if (response.status === 401) {
+      const refreshed = await this.refreshAccessToken(uid);
+      response = await this.withRetry(() => execute(refreshed), `gmail ${path} retry`);
     }
 
-    const refreshed = await this.refreshAccessToken(uid);
-    const retry = await fetch(url, {
-      method,
-      headers: {
-        Authorization: `Bearer ${refreshed}`,
-        "Content-Type": "application/json",
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    this.assertOk(retry, path);
-    return retry;
+    this.assertOk(response, path);
+    return response;
   }
 
   private async resolveAccessToken(uid: string): Promise<string> {
@@ -219,11 +211,11 @@ export class GmailApiService {
       grant_type: "refresh_token",
     });
 
-    const response = await fetch("https://oauth2.googleapis.com/token", {
+    const response = await this.withRetry(() => fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
-    });
+    }), "oauth2 token refresh");
     this.assertOk(response, "oauth2 token refresh");
 
     const data = await response.json() as GmailTokenResponse;
@@ -251,6 +243,31 @@ export class GmailApiService {
       response.status,
       "",
     );
+  }
+
+  private async withRetry<T>(operation: () => Promise<T>, context: string, attempts = 3): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const result = await operation();
+        if (result instanceof Response && [429, 500, 502, 503, 504].includes(result.status)) {
+          lastError = new GmailApiError(`${context} returned ${result.status}`, result.status, "");
+          if (attempt < attempts) {
+            await sleep(backoffMs(attempt));
+            continue;
+          }
+        }
+        return result;
+      } catch (error) {
+        lastError = error;
+        if (attempt < attempts && isRetryableError(error)) {
+          await sleep(backoffMs(attempt));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(`${context} failed after ${attempts} attempts`);
   }
 }
 
@@ -306,4 +323,19 @@ function stripHtml(value: string): string {
     .replace(/&amp;/gi, "&")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function backoffMs(attempt: number) {
+  return Math.min(1000 * 2 ** (attempt - 1), 8000);
+}
+
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof GmailApiError) {
+    return [429, 500, 502, 503, 504].includes(error.status);
+  }
+  return false;
 }

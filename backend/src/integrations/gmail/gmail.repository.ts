@@ -31,6 +31,10 @@ export class GmailRepository {
     return this.db.collection("usuarios").doc(uid).collection("transacciones").doc(transactionId);
   }
 
+  private jobRef(jobName: string) {
+    return this.db.collection("backendJobs").doc(jobName);
+  }
+
   async upsertIntegration(uid: string, patch: Partial<GmailIntegrationDoc> & Pick<GmailIntegrationDoc, "uidUsuario">) {
     const now = new Date().toISOString();
     const current = await this.getIntegration(uid);
@@ -269,5 +273,39 @@ export class GmailRepository {
       uid: doc.ref.parent.parent?.id ?? doc.data().uidUsuario,
       doc: doc.data() as GmailIntegrationDoc,
     };
+  }
+
+  async acquireJobLock(jobName: string, lockMinutes = 15): Promise<boolean> {
+    const ref = this.jobRef(jobName);
+    const now = new Date();
+    const lockUntil = new Date(now.getTime() + lockMinutes * 60_000);
+
+    return this.db.runTransaction(async (trx) => {
+      const snap = await trx.get(ref);
+      const data = snap.exists ? (snap.data() as Record<string, unknown>) : null;
+      const lockedUntil = data?.lockedUntil instanceof Timestamp ? data.lockedUntil.toDate() : data?.lockedUntil ? new Date(String(data.lockedUntil)) : null;
+      if (lockedUntil && lockedUntil.getTime() > now.getTime()) {
+        return false;
+      }
+
+      trx.set(ref, {
+        jobName,
+        lockedUntil: Timestamp.fromDate(lockUntil),
+        lockAcquiredAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      }, { merge: true });
+      return true;
+    });
+  }
+
+  async releaseJobLock(jobName: string, summary: Record<string, unknown>) {
+    await this.jobRef(jobName).set(
+      {
+        ...summary,
+        lockedUntil: null,
+        updatedAt: Timestamp.now(),
+      },
+      { merge: true },
+    );
   }
 }

@@ -54,3 +54,8 @@ Scaffold NestJS para el backend de ingesta Gmail y eventos privados.
 - `POST /internal/jobs/gmail-maintenance` renueva en lote los `watch` próximos a vencer.
 - `POST /internal/notifications/carga-written` replica el push de estado de importaciones.
 - `POST /internal/notifications/transaccion-created` replica el push de presupuesto excedido.
+
+## Resiliencia
+
+- Las llamadas a Gmail/OAuth tienen reintentos con backoff ante `429` y errores `5xx`.
+- El job de mantenimiento usa un lock en Firestore para evitar ejecuciones concurrentes.
