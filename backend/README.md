@@ -41,6 +41,8 @@ Scaffold NestJS para el backend de ingesta Gmail y eventos privados.
 - `POST /pubsub/gmail`
 - `POST /pubsub/email-ingestion`
 - `POST /internal/watch/renew`
+- `POST /internal/notifications/carga-written`
+- `POST /internal/notifications/transaccion-created`
 
 ## Flujo Gmail
 
@@ -48,3 +50,5 @@ Scaffold NestJS para el backend de ingesta Gmail y eventos privados.
 - `POST /v1/sync/request` hace un full sync contra `users.messages.list`/`get`.
 - `POST /pubsub/gmail` usa `users.history.list` cuando llega `historyId`; si el checkpoint venció, cae a full sync.
 - `POST /internal/watch/renew` renueva el `watch` y actualiza `historyId` y expiración.
+- `POST /internal/notifications/carga-written` replica el push de estado de importaciones.
+- `POST /internal/notifications/transaccion-created` replica el push de presupuesto excedido.

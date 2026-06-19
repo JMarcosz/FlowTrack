@@ -10,6 +10,9 @@ import { GmailIngestionService } from "./integrations/gmail/gmail-ingestion.serv
 import { GmailStateService } from "./integrations/gmail/gmail-state.service";
 import { GmailService } from "./integrations/gmail/gmail.service";
 import { InternalController } from "./internal/internal.controller";
+import { NotificationController } from "./notifications/notification.controller";
+import { NotificationRepository } from "./notifications/notification.repository";
+import { NotificationService } from "./notifications/notification.service";
 import { PubSubController } from "./pubsub/pubsub.controller";
 
 @Module({
@@ -24,7 +27,18 @@ import { PubSubController } from "./pubsub/pubsub.controller";
     GmailController,
     PubSubController,
     InternalController,
+    NotificationController,
   ],
-  providers: [RequestAuthService, GmailRepository, GmailStateService, GmailApiService, GmailIngestionService, GmailSyncService, GmailService],
+  providers: [
+    RequestAuthService,
+    GmailRepository,
+    GmailStateService,
+    GmailApiService,
+    GmailIngestionService,
+    GmailSyncService,
+    GmailService,
+    NotificationRepository,
+    NotificationService,
+  ],
 })
 export class AppModule {}
