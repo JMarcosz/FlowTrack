@@ -47,6 +47,7 @@ Agregar un backend privado en Cloud Run para ingestion de Gmail, sincronizacion 
   - `POST /pubsub/gmail`
   - `POST /pubsub/email-ingestion`
   - `POST /internal/watch/renew`
+  - `POST /internal/jobs/gmail-maintenance`
 
 ## Estado actual
 
@@ -57,3 +58,4 @@ Agregar un backend privado en Cloud Run para ingestion de Gmail, sincronizacion 
 - Implementada la sincronizacion Gmail real: `watch`, `users.messages.list/get`, `users.history.list`, refresh de tokens y renovacion de `watch`.
 - Implementada la logica de notificaciones como servicios internos de Cloud Run para importaciones y presupuestos.
 - `functions/` fue eliminada; Cloud Run es la unica implementacion activa.
+- Implementado job interno de mantenimiento para renovar watches próximos a vencer.

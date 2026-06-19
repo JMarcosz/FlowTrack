@@ -10,6 +10,8 @@ import { GmailIngestionService } from "./integrations/gmail/gmail-ingestion.serv
 import { GmailStateService } from "./integrations/gmail/gmail-state.service";
 import { GmailService } from "./integrations/gmail/gmail.service";
 import { InternalController } from "./internal/internal.controller";
+import { MaintenanceController } from "./internal/maintenance.controller";
+import { MaintenanceService } from "./internal/maintenance.service";
 import { NotificationController } from "./notifications/notification.controller";
 import { NotificationRepository } from "./notifications/notification.repository";
 import { NotificationService } from "./notifications/notification.service";
@@ -27,6 +29,7 @@ import { PubSubController } from "./pubsub/pubsub.controller";
     GmailController,
     PubSubController,
     InternalController,
+    MaintenanceController,
     NotificationController,
   ],
   providers: [
@@ -37,6 +40,7 @@ import { PubSubController } from "./pubsub/pubsub.controller";
     GmailIngestionService,
     GmailSyncService,
     GmailService,
+    MaintenanceService,
     NotificationRepository,
     NotificationService,
   ],
